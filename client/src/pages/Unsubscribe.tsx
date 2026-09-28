@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,19 +22,23 @@ const Unsubscribe = () => {
       setEmail(emailParam);
       setState("confirm");
     } else {
-      setState("error");
-      setErrorMessage("No email address provided. Please use the unsubscribe link from your email.");
+      setState("confirm");
     }
   }, []);
 
   const handleUnsubscribe = async () => {
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setErrorMessage("Enter a valid email address to unsubscribe.");
+      return;
+    }
+    setErrorMessage("");
     setState("processing");
 
     try {
       const response = await fetch("/api/unsubscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, reason }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), reason }),
       });
 
       const data = await response.json();
@@ -78,11 +82,13 @@ const Unsubscribe = () => {
 
               <h2 className="text-xl font-semibold text-primary mb-2">Unsubscribe from Emails</h2>
               <p className="text-muted-foreground mb-4">
-                We're sorry to see you go. Click below to unsubscribe from our email list.
+                Enter the address that receives our emails, then confirm below.
               </p>
 
-              <div className="bg-muted px-4 py-3 rounded-lg mb-6 font-mono text-sm break-all">
-                {email}
+              <div className="mb-6 text-left">
+                <label htmlFor="unsubscribe-email" className="block text-sm font-medium mb-2">Email address</label>
+                <Input id="unsubscribe-email" type="email" autoComplete="email" value={email} onChange={(event) => { setEmail(event.target.value); setErrorMessage(""); }} placeholder="you@example.com" className="min-h-11" />
+                {errorMessage && <p role="alert" className="mt-2 text-sm text-red-700">{errorMessage}</p>}
               </div>
 
               <div className="space-y-4">

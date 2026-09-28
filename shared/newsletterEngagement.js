@@ -188,19 +188,20 @@ export async function subscribeNewsletterContact(
 /** DB-only unsubscribe. Airtable sync removed permanently. */
 export async function unsubscribeNewsletterContact(supabase, normalizedEmail, reason) {
   const now = new Date().toISOString()
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('sp_customers')
     .select('id, newsletter_notes')
     .ilike('email', normalizedEmail)
     .maybeSingle()
 
+  if (lookupError) throw lookupError
   if (!existing) return { updated: false }
 
   const notes = reason?.trim()
     ? `${existing.newsletter_notes || ''}\n\n[Unsubscribed ${now}]\nReason: ${reason.trim()}`.trim()
     : existing.newsletter_notes
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('sp_customers')
     .update({
       newsletter_subscribed: false,
@@ -210,6 +211,7 @@ export async function unsubscribeNewsletterContact(supabase, normalizedEmail, re
     })
     .eq('id', existing.id)
 
+  if (updateError) throw updateError
   return { updated: true }
 }
 
