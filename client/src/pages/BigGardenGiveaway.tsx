@@ -311,13 +311,13 @@ export default function BigGardenGiveaway() {
               <ArrowDown className="h-4 w-4" aria-hidden="true" />
             </button>
             <p className="mt-4 max-w-lg text-xs font-semibold leading-5 text-[#6d756f]">
-              No purchase necessary. One entry per email. Phoenix-area prize.
+              No purchase necessary. One entry per email. For the Phoenix Valley and qualifying nearby areas.
             </p>
           </div>
         </section>
 
         <section aria-label="Winner announcement" className="mt-10 rounded-[1.5rem] border border-[#e6b43c] bg-[#fff8df] p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6">
-          <div className="flex items-start gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f5b934] text-[#173d25]"><CalendarDays className="h-5 w-5" /></span><div><p className="text-xs font-black uppercase tracking-[0.16em] text-[#a34f2b]">Winners announced live</p><h2 className="mt-1 font-heading text-2xl font-black text-[#173d25]">{GIVEAWAY_DRAFT.announcement.date} at {GIVEAWAY_DRAFT.announcement.time}</h2><p className="mt-1 text-sm leading-6 text-[#56635a]">Watch the drawing on Instagram Live during our Saturday {GIVEAWAY_DRAFT.announcement.event}.</p></div></div>
+          <div className="flex items-start gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f5b934] text-[#173d25]"><CalendarDays className="h-5 w-5" /></span><div><p className="text-xs font-black uppercase tracking-[0.16em] text-[#a34f2b]">Winners announced live</p><h2 className="mt-1 font-heading text-2xl font-black text-[#173d25]">{GIVEAWAY_DRAFT.announcement.date} at {GIVEAWAY_DRAFT.announcement.time}</h2><p className="mt-1 text-sm leading-6 text-[#56635a]">Join our {GIVEAWAY_DRAFT.announcement.event} on Instagram Live.</p><p className="mt-3 text-sm font-semibold leading-6 text-[#173d25]">{GIVEAWAY_DRAFT.announcement.callRule}</p></div></div>
           <a href="https://www.instagram.com/soilseedandwater/" target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#173d25] px-5 text-sm font-black text-white sm:mt-0 sm:w-auto"><Instagram className="h-4 w-4" />Follow for the live drawing</a>
         </section>
 
@@ -343,7 +343,7 @@ export default function BigGardenGiveaway() {
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#536057]">
                   {success === "already"
                     ? `We already have a giveaway entry for ${email}. One entry per email.`
-                    : `We saved your entry for ${email}. We will email you if you win.`}
+                    : `We saved your entry for ${email}. Keep your phone nearby on October 3 from 10–11 AM Phoenix time. You must answer our call to claim a prize.`}
                 </p>
               </div>
             ) : (
