@@ -145,6 +145,10 @@ DECLARE added integer; c public.giveaway_reminder_campaigns;
 BEGIN
   SELECT * INTO c FROM public.giveaway_reminder_campaigns WHERE campaign_key=key;
   IF NOT FOUND THEN RETURN jsonb_build_object('skipped','campaign_missing'); END IF;
+  IF c.expires_at<=now() AND c.state NOT IN ('canceled','complete') THEN
+    UPDATE public.giveaway_reminder_campaigns SET state='complete',updated_at=now() WHERE campaign_key=key;
+    c.state:='complete';
+  END IF;
   -- Never revive a paused/canceled campaign; cancellations still run below.
   IF c.state IN ('held','active') AND c.expires_at > now() THEN
     INSERT INTO public.giveaway_reminder_jobs(reminder_id,destination,recipient_name,is_team,status)

@@ -1226,6 +1226,10 @@ export default async function handler(req, res) {
       if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
+      // This one-time campaign must not keep querying providers indefinitely.
+      if (Date.now() > Date.parse('2026-10-04T11:00:00-07:00')) {
+        return res.json({ skipped: 'campaign_finished' });
+      }
       const { default: pg } = await import('pg');
       const { runGiveawayReminderQueue } = await import('../shared/giveawayReminderQueue.js');
       const client = new pg.Client({ connectionString: process.env.DATABASE_URL,
