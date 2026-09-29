@@ -15,7 +15,14 @@ try {
     if(args['--confirm']!=='ACTIVATE-APPROVED-GIVEAWAY' || !args['--approval-note']) throw new Error('Activation requires the final owner approval record');
     if(args['--sms-sender-reviewed']!=='true') throw new Error('Confirm sender registration and capacity before SMS activation');
     const first=Date.parse(args['--first-send-at']);
-    if(!Number.isFinite(first)||first<Date.now()+10*60_000||first>=Date.parse('2026-10-02T00:00:00-07:00')) throw new Error('Choose a future initial send at least 10 minutes ahead and before Friday');
+    const initial=(await db.query(`SELECT count(*)::int n FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
+      WHERE r.campaign_key=$1 AND r.scheduled_at IS NULL AND j.status='held' AND NOT j.cancel_requested`,[GIVEAWAY_REMINDER_KEY])).rows[0].n;
+    // Account for individual provider calls and the minute worker before choosing
+    // a simultaneous first-send time. Never expire most of a large initial batch.
+    const minimumLeadMinutes=Math.ceil(initial/30)+15;
+    if(!Number.isFinite(first)||first<Date.now()+minimumLeadMinutes*60_000||first>=Date.parse('2026-10-02T00:00:00-07:00')) {
+      throw new Error(`Initial send needs at least ${minimumLeadMinutes} minutes to queue safely and must be before Friday`);
+    }
     const hash=crypto.createHash('sha256').update(fs.readFileSync(new URL('../shared/giveawayReminderContent.json',import.meta.url))).digest('hex');
     await db.query('BEGIN');
     const c=(await db.query('SELECT * FROM giveaway_reminder_campaigns WHERE campaign_key=$1 FOR UPDATE',[GIVEAWAY_REMINDER_KEY])).rows[0];
