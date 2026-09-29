@@ -187,30 +187,13 @@ export async function subscribeNewsletterContact(
 
 /** DB-only unsubscribe. Airtable sync removed permanently. */
 export async function unsubscribeNewsletterContact(supabase, normalizedEmail, reason) {
-  const now = new Date().toISOString()
-  const { data: existing } = await supabase
-    .from('sp_customers')
-    .select('id, newsletter_notes')
-    .ilike('email', normalizedEmail)
-    .maybeSingle()
-
-  if (!existing) return { updated: false }
-
-  const notes = reason?.trim()
-    ? `${existing.newsletter_notes || ''}\n\n[Unsubscribed ${now}]\nReason: ${reason.trim()}`.trim()
-    : existing.newsletter_notes
-
-  await supabase
-    .from('sp_customers')
-    .update({
-      newsletter_subscribed: false,
-      newsletter_unsubscribed_at: now,
-      newsletter_notes: notes || null,
-      updated_at: now,
-    })
-    .eq('id', existing.id)
-
-  return { updated: true }
+  const { data, error } = await supabase.rpc('unsubscribe_email_address', {
+    p_email: String(normalizedEmail || '').trim().toLowerCase(),
+    p_reason: typeof reason === 'string' ? reason.slice(0, 1000) : null,
+  })
+  if (error) throw error
+  if (!data?.updated) throw new Error('Unsubscribe was not persisted')
+  return data
 }
 
 async function resolveNewsletterId(supabase, newsletterId, resendEmailId, email) {
@@ -273,6 +256,10 @@ export async function handleResendNewsletterWebhook(supabase, event) {
     kind === 'bounced' &&
     (!bounceType || bounceType.includes('permanent') || bounceType.includes('hard'))
   const suppressContact = kind === 'complained' || kind === 'suppressed' || hardBounce
+
+  if (suppressContact) {
+    await unsubscribeNewsletterContact(supabase, email, `Resend ${kind}`)
+  }
 
   const { data: customer } = await supabase
     .from('sp_customers')

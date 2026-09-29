@@ -1222,6 +1222,36 @@ export default async function handler(req, res) {
       return res.json({ status: 'ok', timestamp: new Date().toISOString() });
     }
 
+    if (path === '/api/cron/giveaway-reminders' && req.method === 'GET') {
+      if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      // This one-time campaign must not keep querying providers indefinitely.
+      if (Date.now() > Date.parse('2026-10-04T11:00:00-07:00')) {
+        return res.json({ skipped: 'campaign_finished' });
+      }
+      const { default: pg } = await import('pg');
+      const { runGiveawayReminderQueue } = await import('../shared/giveawayReminderQueue.js');
+      const client = new pg.Client({ connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
+      await client.connect();
+      try { return res.json(await runGiveawayReminderQueue(client)); }
+      finally { await client.end(); }
+    }
+
+    if (path === '/api/giveaway/reminders/sms-status' && req.method === 'POST') {
+      const { validTwilioCallback, recordSmsStatus } = await import('../shared/giveawayReminderQueue.js');
+      if (!validTwilioCallback(req.headers['x-twilio-signature'], req.body, process.env.GIVEAWAY_TWILIO_AUTH_TOKEN)) {
+        return res.status(403).json({ error: 'Invalid signature' });
+      }
+      const { default: pg } = await import('pg');
+      const client = new pg.Client({ connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
+      await client.connect();
+      try { await recordSmsStatus(client, req.body); return res.status(204).end(); }
+      finally { await client.end(); }
+    }
+
     // Daily Day-3 worm-castings pickup reminders (Vercel Cron)
     if (path === '/api/cron/worm-castings-day3' && req.method === 'GET') {
       const cronSecret = process.env.CRON_SECRET;
@@ -5088,24 +5118,35 @@ ${pages}
       return res.json({ success: true, deliveryStatus: delivery.status });
     }
 
-    // POST /api/unsubscribe - Unsubscribe an email (sp_customers only)
+    // Persist opt-outs for newsletter AND giveaway-only contacts.
     if (path === '/api/unsubscribe' && req.method === 'POST') {
       const body = req.body || {};
       const email = body.email || url.searchParams.get('email');
       const reason = body.reason || (body['List-Unsubscribe'] === 'One-Click' ? 'One-click unsubscribe' : undefined);
 
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
+      if (typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return res.status(400).json({ error: 'A valid email is required' });
       }
 
       const normalizedEmail = email.toLowerCase().trim();
-      console.log('[Unsubscribe] Processing request for:', normalizedEmail);
 
       try {
         const db = await getSupabase();
         const { unsubscribeNewsletterContact } = await import('../shared/newsletterEngagement.js');
         await unsubscribeNewsletterContact(db, normalizedEmail, reason);
-        console.log('[Unsubscribe] Successfully unsubscribed:', normalizedEmail);
+        // Suppression is durable before attempting cancellation. A transient
+        // provider failure is retried by the minute worker, never a resubscribe.
+        let cancellationDb;
+        try {
+          const { default: pg } = await import('pg');
+          const { runGiveawayReminderQueue } = await import('../shared/giveawayReminderQueue.js');
+          cancellationDb = new pg.Client({ connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 3000 });
+          await cancellationDb.connect();
+          await runGiveawayReminderQueue(cancellationDb, { cancellationOnly: true, deadline: Date.now()+10_000 });
+        } catch (error) {
+          console.error('[Unsubscribe] Cancellation queued for retry:', error?.message || error);
+        } finally { if (cancellationDb) await cancellationDb.end(); }
         return res.json({ success: true, message: 'Unsubscribed successfully' });
       } catch (e) {
         console.error('[Unsubscribe] Error:', e?.message || e);
