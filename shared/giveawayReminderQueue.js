@@ -194,6 +194,33 @@ export async function runGiveawayReminderQueue(db, {
       summary.hold='Content changed or not approved; review before scheduling';
       return summary;
     }
+    // A request can lose its receipt near a worker deadline. Resend's original
+    // key/body can be replayed for 24 hours without a duplicate; never do this
+    // for SMS, opted-out recipients, changed content, or an expired key.
+    const uncertainEmails = await db.query(`SELECT j.*,r.channel,r.content_key,r.scheduled_at,r.audience
+      FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
+      WHERE r.campaign_key=$1 AND r.channel='email' AND r.enabled
+        AND j.status='unknown' AND NOT j.cancel_requested AND j.provider_id IS NULL
+        AND j.claimed_at>now()-interval '23 hours' AND j.attempts<4
+        AND r.scheduled_at>now()+interval '1 minute' ORDER BY j.claimed_at LIMIT 5`,[GIVEAWAY_REMINDER_KEY]);
+    for (const job of uncertainEmails.rows) {
+      if (Date.now()+8500>deadline) break;
+      const eligible = (await db.query(`SELECT EXISTS(SELECT 1 FROM giveaway_eligible_recipients($1)
+        WHERE channel='email' AND destination=$2 AND audience=$3) ok`,[GIVEAWAY_REMINDER_KEY,job.destination,job.audience])).rows[0].ok;
+      if (!eligible) continue;
+      await db.query('UPDATE giveaway_reminder_jobs SET attempts=attempts+1,updated_at=now() WHERE id=$1',[job.id]);
+      try {
+        const receipt = await scheduleReminder(job,options);
+        await db.query(`UPDATE giveaway_reminder_jobs SET status='scheduled',provider_id=$2,provider_status=$3,
+          provider_send_at=$4,last_error=NULL,updated_at=now() WHERE id=$1`,[job.id,receipt.id,receipt.status,job.scheduled_at]);
+        summary.scheduled++;
+        summary.recovered=(summary.recovered||0)+1;
+      } catch(error) {
+        await db.query(`UPDATE giveaway_reminder_jobs SET status=$2,last_error=$3,updated_at=now() WHERE id=$1`,
+          [job.id,error.rejected&&!error.retryable?'failed':'unknown',error.message]);
+        summary.errors++;
+      }
+    }
     let smsAllowed = true;
     try { await syncSmsOptOuts(db, options); } catch(error) { smsAllowed=false;summary.sms_hold=error.message; }
     // At one segment/person, reserve 200 of the shared sender's 1,000/day

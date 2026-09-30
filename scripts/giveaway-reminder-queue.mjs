@@ -65,7 +65,15 @@ async function drainApprovedQueue() {
         AND NOT (j.status='failed' AND EXISTS(SELECT 1 FROM message_suppressions s
           WHERE s.channel=r.channel AND s.destination=j.destination)) GROUP BY r.id,j.status`,[GIVEAWAY_REMINDER_KEY])).rows;
       console.log(JSON.stringify({at:new Date().toISOString(),result,pending}));
-      if(result.hold||result.sms_hold||pending.some(x=>['unknown','failed','expired'].includes(x.status))) throw new Error('Inspect queue errors before continuing the approved upload');
+      if(result.hold||result.sms_hold||pending.some(x=>['failed','expired'].includes(x.status))) throw new Error('Inspect queue errors before continuing the approved upload');
+      if(pending.some(x=>x.status==='unknown')) {
+        const blocked=(await pool.query(`SELECT count(*)::int n FROM giveaway_reminder_jobs j
+          JOIN giveaway_reminders r ON r.id=j.reminder_id WHERE r.campaign_key=$1 AND j.status='unknown'
+          AND (r.channel<>'email' OR j.cancel_requested OR j.provider_id IS NOT NULL OR j.attempts>=4
+            OR j.claimed_at IS NULL OR j.claimed_at<=now()-interval '23 hours'
+            OR r.scheduled_at<=now()+interval '1 minute')`,[GIVEAWAY_REMINDER_KEY])).rows[0].n;
+        if(blocked) throw new Error('Unknown provider result needs manual reconciliation');
+      }
       if(!pending.length) break;
       if(result.skipped||result.errors) await new Promise(resolve=>setTimeout(resolve,5000));
     }
