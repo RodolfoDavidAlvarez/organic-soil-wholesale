@@ -61,11 +61,13 @@ async function drainApprovedQueue() {
       if(c?.state!=='active'||!c.approval) throw new Error('Drain requires an active approved campaign');
       const result=await runGiveawayReminderQueue(pool,{env,concurrency:8,maxJobs:200});
       const pending=(await pool.query(`SELECT r.id,j.status,count(*)::int n FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
-        WHERE r.campaign_key=$1 AND j.status IN ('ready','processing','unknown','failed','expired') GROUP BY r.id,j.status`,[GIVEAWAY_REMINDER_KEY])).rows;
+        WHERE r.campaign_key=$1 AND j.status IN ('ready','processing','unknown','failed','expired')
+        AND NOT (j.status='failed' AND EXISTS(SELECT 1 FROM message_suppressions s
+          WHERE s.channel=r.channel AND s.destination=j.destination)) GROUP BY r.id,j.status`,[GIVEAWAY_REMINDER_KEY])).rows;
       console.log(JSON.stringify({at:new Date().toISOString(),result,pending}));
-      if(result.errors||result.hold||result.sms_hold||pending.some(x=>['unknown','failed','expired'].includes(x.status))) throw new Error('Inspect queue errors before continuing the approved upload');
+      if(result.hold||result.sms_hold||pending.some(x=>['unknown','failed','expired'].includes(x.status))) throw new Error('Inspect queue errors before continuing the approved upload');
       if(!pending.length) break;
-      if(result.skipped) await new Promise(resolve=>setTimeout(resolve,5000));
+      if(result.skipped||result.errors) await new Promise(resolve=>setTimeout(resolve,5000));
     }
   } finally {await pool.end();}
 }
