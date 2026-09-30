@@ -68,13 +68,24 @@ async function providerRequest(url, options, fetchImpl) {
   return result;
 }
 
-export async function scheduleReminder(job, { env = process.env, fetchImpl = fetch, now = Date.now() } = {}) {
+export async function scheduleReminder(job, { env = process.env, fetchImpl = fetch, now = Date.now(), deadline = Infinity } = {}) {
   const payload = buildReminderPayload(job, { now, env });
   if (job.channel === 'email') {
-    const result = await providerRequest('https://api.resend.com/emails', {
+    const request = {
       method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json',
         'Idempotency-Key': `giveaway-${job.id}` }, body: JSON.stringify(payload),
-    }, fetchImpl);
+    };
+    let result;
+    try {
+      result = await providerRequest('https://api.resend.com/emails', request, fetchImpl);
+    } catch (error) {
+      // Resend retains this exact request key for 24 hours. Replaying the same
+      // key/body after a connection failure returns the original receipt or
+      // creates it once. SMS has no equivalent guarantee and is never replayed.
+      if (error.rejected || Date.now()+8500>deadline) throw error;
+      await new Promise(resolve=>setTimeout(resolve,400));
+      result = await providerRequest('https://api.resend.com/emails', request, fetchImpl);
+    }
     if (!result.id) throw new Error('Provider accepted email without an ID; reconcile before retry');
     return { id: result.id, status: 'scheduled' };
   }
@@ -191,11 +202,21 @@ export async function runGiveawayReminderQueue(db, {
     if (smsCount.rows[0].n > 800) {smsAllowed=false;summary.sms_hold='Audience exceeds reviewed one-segment SMS capacity; review required';}
     // The cloud worker retains one lane/50 jobs. A supervised initial upload
     // may overlap I/O with a shared lease and atomic SKIP LOCKED claims.
-    // A shared start-time gate caps uploads at four provider calls/sec,
-    // below this account's verified ten requests/sec Resend limit.
+    // A shared gate caps new uploads at four/sec. At most one idempotent
+    // email replay per upload stays below the verified ten requests/sec limit.
     let claimedCount = 0;
     let stopDispatch = false;
     let nextProviderStart = 0;
+    let providerGate = Promise.resolve();
+    function waitForProviderSlot() {
+      const turn = providerGate.then(async()=>{
+        const delay = nextProviderStart-Date.now();
+        if (delay>0) await new Promise(resolve=>setTimeout(resolve,delay));
+        nextProviderStart = Date.now()+250;
+      });
+      providerGate = turn.catch(()=>{});
+      return turn;
+    }
     async function drainLane() {
       while (!stopDispatch && claimedCount < maxJobs && Date.now()<deadline) {
         claimedCount++;
@@ -221,9 +242,7 @@ export async function runGiveawayReminderQueue(db, {
           await db.query("UPDATE giveaway_reminder_jobs SET status='suppressed',cancel_requested=true,updated_at=now() WHERE id=$1",[job.id]);continue;
         }
         try {
-          const slot = Math.max(Date.now(),nextProviderStart);
-          nextProviderStart = slot + 250;
-          if (slot>Date.now()) await new Promise(resolve=>setTimeout(resolve,slot-Date.now()));
+          await waitForProviderSlot();
           const receipt = await scheduleReminder(job, options);
           await db.query(`UPDATE giveaway_reminder_jobs SET status='scheduled',provider_id=$2,provider_status=$3,
             provider_send_at=$4,last_error=NULL,updated_at=now() WHERE id=$1`,[job.id,receipt.id,receipt.status,job.scheduled_at]);

@@ -21,7 +21,7 @@ try {
     // Account for individual provider calls and the minute worker before choosing
     // a simultaneous first-send time. Never expire most of a large initial batch.
     const expedited=action==='activate-and-drain';
-    // The supervised upload is capped at four provider calls/sec.
+    // The supervised upload is capped at four new requests/sec.
     // Only use the shorter lead when this same process immediately drains it.
     const minimumLeadMinutes=expedited?Math.ceil(initial/120)+5:Math.ceil(initial/30)+15;
     if(!Number.isFinite(first)||first<Date.now()+minimumLeadMinutes*60_000||first>=Date.parse('2026-10-02T00:00:00-07:00')) {

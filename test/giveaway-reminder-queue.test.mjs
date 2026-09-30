@@ -40,11 +40,28 @@ test('email retries use a stable job idempotency key and carry scheduled_at',asy
   assert.equal(request.headers['Idempotency-Key'],'giveaway-fixture-job');
   assert.ok(JSON.parse(request.body).scheduled_at);
 });
-test('ambiguous failures are distinguishable from explicit rejections and never retried internally',async()=>{
+test('email connection recovery replays the identical idempotent request only once',async()=>{
+  const requests=[];
+  const result=await scheduleReminder(job,{now,env,fetchImpl:async(url,opts)=>{
+    requests.push({key:opts.headers['Idempotency-Key'],body:opts.body});
+    if(requests.length===1)throw new Error('Connection lost');
+    return new Response('{"id":"original-or-created-once"}',{status:200});
+  }});
+  assert.equal(result.id,'original-or-created-once');assert.equal(requests.length,2);
+  assert.deepEqual(requests[0],requests[1]);
+});
+test('repeated email ambiguity remains an error; SMS ambiguity is never retried',async()=>{
   let calls=0;
   await assert.rejects(scheduleReminder(job,{now,env,fetchImpl:async()=>{calls++;throw new Error('Connection lost');}}),/Connection lost/);
+  assert.equal(calls,2);calls=0;
+  await assert.rejects(scheduleReminder({...job,channel:'sms',content_key:'sms-friday'},{now,env,fetchImpl:async()=>{calls++;throw new Error('Connection lost');}}),/Connection lost/);
   assert.equal(calls,1);
   await assert.rejects(scheduleReminder(job,{now,env,fetchImpl:async()=>new Response('{"code":429}',{status:429})}),e=>e.rejected&&e.retryable);
+});
+test('email recovery respects the worker time budget',async()=>{
+  let calls=0;
+  await assert.rejects(scheduleReminder(job,{now,env,deadline:Date.now()+100,fetchImpl:async()=>{calls++;throw new Error('Connection lost');}}),/Connection lost/);
+  assert.equal(calls,1);
 });
 test('SMS must be provider-confirmed scheduled, preserving an ID on ambiguous acceptance',async()=>{
   await assert.rejects(scheduleReminder({...job,channel:'sms',content_key:'sms-friday'},
