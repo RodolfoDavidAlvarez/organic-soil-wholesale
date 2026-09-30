@@ -21,7 +21,7 @@ try {
     // Account for individual provider calls and the minute worker before choosing
     // a simultaneous first-send time. Never expire most of a large initial batch.
     const expedited=action==='activate-and-drain';
-    // The supervised four-lane upload stays inside the verified 10/sec limit.
+    // The supervised upload is capped at four provider calls/sec.
     // Only use the shorter lead when this same process immediately drains it.
     const minimumLeadMinutes=expedited?Math.ceil(initial/120)+5:Math.ceil(initial/30)+15;
     if(!Number.isFinite(first)||first<Date.now()+minimumLeadMinutes*60_000||first>=Date.parse('2026-10-02T00:00:00-07:00')) {
@@ -54,12 +54,12 @@ try {
 finally {await db.end();}
 
 async function drainApprovedQueue() {
-  const pool=new pg.Pool({connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:false},connectionTimeoutMillis:5000,max:4});
+  const pool=new pg.Pool({connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:false},connectionTimeoutMillis:5000,max:8});
   try {
     for (;;) {
       const c=(await pool.query('SELECT state,approval FROM giveaway_reminder_campaigns WHERE campaign_key=$1',[GIVEAWAY_REMINDER_KEY])).rows[0];
       if(c?.state!=='active'||!c.approval) throw new Error('Drain requires an active approved campaign');
-      const result=await runGiveawayReminderQueue(pool,{env,concurrency:4,maxJobs:200});
+      const result=await runGiveawayReminderQueue(pool,{env,concurrency:8,maxJobs:200});
       const pending=(await pool.query(`SELECT r.id,j.status,count(*)::int n FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
         WHERE r.campaign_key=$1 AND j.status IN ('ready','processing','unknown','failed','expired') GROUP BY r.id,j.status`,[GIVEAWAY_REMINDER_KEY])).rows;
       console.log(JSON.stringify({at:new Date().toISOString(),result,pending}));

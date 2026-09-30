@@ -156,9 +156,9 @@ export async function runGiveawayReminderQueue(db, {
   env = process.env, fetchImpl = fetch, cancellationOnly = false, deadline = Date.now()+45_000,
   concurrency = 1, maxJobs = 50,
 } = {}) {
-  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 4 ||
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8 ||
       !Number.isInteger(maxJobs) || maxJobs < 1 || maxJobs > 200) {
-    throw new Error('Worker limits must be 1–4 lanes and 1–200 jobs');
+    throw new Error('Worker limits must be 1–8 lanes and 1–200 jobs');
   }
   const options = { env, fetchImpl, deadline };
   const summary = { added: 0, scheduled: 0, canceled: 0, already_dispatched: 0, expired: 0, errors: 0 };
@@ -190,11 +190,12 @@ export async function runGiveawayReminderQueue(db, {
     const smsCount = await db.query(`SELECT count(*)::int AS n FROM giveaway_eligible_recipients($1) WHERE channel='sms'`, [GIVEAWAY_REMINDER_KEY]);
     if (smsCount.rows[0].n > 800) {smsAllowed=false;summary.sms_hold='Audience exceeds reviewed one-segment SMS capacity; review required';}
     // The cloud worker retains one lane/50 jobs. A supervised initial upload
-    // may use four lanes with a shared lease and atomic SKIP LOCKED claims.
-    // Each lane waits 550 ms after a call: at most eight scheduling calls/sec,
+    // may overlap I/O with a shared lease and atomic SKIP LOCKED claims.
+    // A shared start-time gate caps uploads at four provider calls/sec,
     // below this account's verified ten requests/sec Resend limit.
     let claimedCount = 0;
     let stopDispatch = false;
+    let nextProviderStart = 0;
     async function drainLane() {
       while (!stopDispatch && claimedCount < maxJobs && Date.now()<deadline) {
         claimedCount++;
@@ -220,6 +221,9 @@ export async function runGiveawayReminderQueue(db, {
           await db.query("UPDATE giveaway_reminder_jobs SET status='suppressed',cancel_requested=true,updated_at=now() WHERE id=$1",[job.id]);continue;
         }
         try {
+          const slot = Math.max(Date.now(),nextProviderStart);
+          nextProviderStart = slot + 250;
+          if (slot>Date.now()) await new Promise(resolve=>setTimeout(resolve,slot-Date.now()));
           const receipt = await scheduleReminder(job, options);
           await db.query(`UPDATE giveaway_reminder_jobs SET status='scheduled',provider_id=$2,provider_status=$3,
             provider_send_at=$4,last_error=NULL,updated_at=now() WHERE id=$1`,[job.id,receipt.id,receipt.status,job.scheduled_at]);
