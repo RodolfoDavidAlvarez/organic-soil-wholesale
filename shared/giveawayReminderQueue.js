@@ -68,13 +68,24 @@ async function providerRequest(url, options, fetchImpl) {
   return result;
 }
 
-export async function scheduleReminder(job, { env = process.env, fetchImpl = fetch, now = Date.now() } = {}) {
+export async function scheduleReminder(job, { env = process.env, fetchImpl = fetch, now = Date.now(), deadline = Infinity } = {}) {
   const payload = buildReminderPayload(job, { now, env });
   if (job.channel === 'email') {
-    const result = await providerRequest('https://api.resend.com/emails', {
+    const request = {
       method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json',
         'Idempotency-Key': `giveaway-${job.id}` }, body: JSON.stringify(payload),
-    }, fetchImpl);
+    };
+    let result;
+    try {
+      result = await providerRequest('https://api.resend.com/emails', request, fetchImpl);
+    } catch (error) {
+      // Resend retains this exact request key for 24 hours. Replaying the same
+      // key/body after a connection failure returns the original receipt or
+      // creates it once. SMS has no equivalent guarantee and is never replayed.
+      if (error.rejected || Date.now()+8500>deadline) throw error;
+      await new Promise(resolve=>setTimeout(resolve,400));
+      result = await providerRequest('https://api.resend.com/emails', request, fetchImpl);
+    }
     if (!result.id) throw new Error('Provider accepted email without an ID; reconcile before retry');
     return { id: result.id, status: 'scheduled' };
   }
@@ -154,7 +165,12 @@ async function syncSmsOptOuts(db, options) {
 
 export async function runGiveawayReminderQueue(db, {
   env = process.env, fetchImpl = fetch, cancellationOnly = false, deadline = Date.now()+45_000,
+  concurrency = 1, maxJobs = 50,
 } = {}) {
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8 ||
+      !Number.isInteger(maxJobs) || maxJobs < 1 || maxJobs > 200) {
+    throw new Error('Worker limits must be 1–8 lanes and 1–200 jobs');
+  }
   const options = { env, fetchImpl, deadline };
   const summary = { added: 0, scheduled: 0, canceled: 0, already_dispatched: 0, expired: 0, errors: 0 };
   // A durable lease also works through a transaction-mode connection pooler.
@@ -178,50 +194,102 @@ export async function runGiveawayReminderQueue(db, {
       summary.hold='Content changed or not approved; review before scheduling';
       return summary;
     }
+    // A request can lose its receipt near a worker deadline. Resend's original
+    // key/body can be replayed for 24 hours without a duplicate; never do this
+    // for SMS, opted-out recipients, changed content, or an expired key.
+    const uncertainEmails = await db.query(`SELECT j.*,r.channel,r.content_key,r.scheduled_at,r.audience
+      FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
+      WHERE r.campaign_key=$1 AND r.channel='email' AND r.enabled
+        AND j.status='unknown' AND NOT j.cancel_requested AND j.provider_id IS NULL
+        AND j.claimed_at>now()-interval '23 hours' AND j.attempts<4
+        AND r.scheduled_at>now()+interval '1 minute' ORDER BY j.claimed_at LIMIT 5`,[GIVEAWAY_REMINDER_KEY]);
+    for (const job of uncertainEmails.rows) {
+      if (Date.now()+8500>deadline) break;
+      const eligible = (await db.query(`SELECT EXISTS(SELECT 1 FROM giveaway_eligible_recipients($1)
+        WHERE channel='email' AND destination=$2 AND audience=$3) ok`,[GIVEAWAY_REMINDER_KEY,job.destination,job.audience])).rows[0].ok;
+      if (!eligible) continue;
+      await db.query('UPDATE giveaway_reminder_jobs SET attempts=attempts+1,updated_at=now() WHERE id=$1',[job.id]);
+      try {
+        const receipt = await scheduleReminder(job,options);
+        await db.query(`UPDATE giveaway_reminder_jobs SET status='scheduled',provider_id=$2,provider_status=$3,
+          provider_send_at=$4,last_error=NULL,updated_at=now() WHERE id=$1`,[job.id,receipt.id,receipt.status,job.scheduled_at]);
+        summary.scheduled++;
+        summary.recovered=(summary.recovered||0)+1;
+      } catch(error) {
+        await db.query(`UPDATE giveaway_reminder_jobs SET status=$2,last_error=$3,updated_at=now() WHERE id=$1`,
+          [job.id,error.rejected&&!error.retryable?'failed':'unknown',error.message]);
+        summary.errors++;
+      }
+    }
     let smsAllowed = true;
     try { await syncSmsOptOuts(db, options); } catch(error) { smsAllowed=false;summary.sms_hold=error.message; }
     // At one segment/person, reserve 200 of the shared sender's 1,000/day
     // T-Mobile allowance for other traffic. Never silently drop excess people.
     const smsCount = await db.query(`SELECT count(*)::int AS n FROM giveaway_eligible_recipients($1) WHERE channel='sms'`, [GIVEAWAY_REMINDER_KEY]);
     if (smsCount.rows[0].n > 800) {smsAllowed=false;summary.sms_hold='Audience exceeds reviewed one-segment SMS capacity; review required';}
-    for (let i=0;i<50 && Date.now()<deadline;i++) {
-      const claimed = await db.query(`WITH candidate AS (
-        SELECT j.id FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
-        JOIN giveaway_reminder_campaigns c ON c.campaign_key=r.campaign_key
-        WHERE j.status='ready' AND NOT j.cancel_requested AND c.state='active' AND c.approval IS NOT NULL
-          AND c.expires_at>now() AND r.enabled AND (r.channel='email' OR (c.sms_sender_ready AND $1))
-        ORDER BY r.scheduled_at,j.created_at,j.id FOR UPDATE OF j SKIP LOCKED LIMIT 1
-      ) UPDATE giveaway_reminder_jobs j SET status='processing',claimed_at=now(),attempts=attempts+1,updated_at=now()
-        FROM candidate x WHERE j.id=x.id RETURNING j.*`, [smsAllowed]);
-      if (!claimed.rows.length) break;
-      const job = (await db.query(`SELECT j.*,r.channel,r.content_key,r.scheduled_at,r.audience FROM giveaway_reminder_jobs j
-        JOIN giveaway_reminders r ON r.id=j.reminder_id WHERE j.id=$1`, [claimed.rows[0].id])).rows[0];
-      const lead = new Date(job.scheduled_at).getTime()-Date.now();
-      if (lead < (job.channel==='sms'?15*60_000:60_000)) {
-        await db.query("UPDATE giveaway_reminder_jobs SET status='expired',last_error='Missed native scheduling lead time',updated_at=now() WHERE id=$1", [job.id]);
-        summary.expired++;continue;
-      }
-      const eligible = await db.query(`SELECT EXISTS(SELECT 1 FROM giveaway_eligible_recipients($1)
-        WHERE channel=$2 AND destination=$3 AND audience=$4) AS ok`,[GIVEAWAY_REMINDER_KEY,job.channel,job.destination,job.audience]);
-      if (!eligible.rows[0].ok) {
-        await db.query("UPDATE giveaway_reminder_jobs SET status='suppressed',cancel_requested=true,updated_at=now() WHERE id=$1",[job.id]);continue;
-      }
-      try {
-        const receipt = await scheduleReminder(job, options);
-        await db.query(`UPDATE giveaway_reminder_jobs SET status='scheduled',provider_id=$2,provider_status=$3,
-          provider_send_at=$4,last_error=NULL,updated_at=now() WHERE id=$1`,[job.id,receipt.id,receipt.status,job.scheduled_at]);
-        summary.scheduled++;
-      } catch(error) {
-        const status = error.rejected ? (error.retryable && job.attempts<3?'ready':'failed') : 'unknown';
-        await db.query(`UPDATE giveaway_reminder_jobs SET status=$2,provider_id=coalesce($3,provider_id),last_error=$4,updated_at=now() WHERE id=$1`,
-          [job.id,status,error.providerId||null,error.message]);
-        if (Number(error.providerCode)===21610) await db.query(`INSERT INTO message_suppressions(channel,destination,reason)
-          VALUES('sms',$1,'Twilio opt-out 21610') ON CONFLICT DO NOTHING`,[job.destination]);
-        summary.errors++;
-        if (status==='unknown'||error.retryable) break;
-      }
-      await new Promise(resolve=>setTimeout(resolve,550));
+    // The cloud worker retains one lane/50 jobs. A supervised initial upload
+    // may overlap I/O with a shared lease and atomic SKIP LOCKED claims.
+    // A shared gate caps new uploads at four/sec. At most one idempotent
+    // email replay per upload stays below the verified ten requests/sec limit.
+    let claimedCount = 0;
+    let stopDispatch = false;
+    let nextProviderStart = 0;
+    let providerGate = Promise.resolve();
+    function waitForProviderSlot() {
+      const turn = providerGate.then(async()=>{
+        const delay = nextProviderStart-Date.now();
+        if (delay>0) await new Promise(resolve=>setTimeout(resolve,delay));
+        nextProviderStart = Date.now()+250;
+      });
+      providerGate = turn.catch(()=>{});
+      return turn;
     }
+    async function drainLane() {
+      while (!stopDispatch && claimedCount < maxJobs && Date.now()<deadline) {
+        claimedCount++;
+        const claimed = await db.query(`WITH candidate AS (
+          SELECT j.id FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
+          JOIN giveaway_reminder_campaigns c ON c.campaign_key=r.campaign_key
+          WHERE j.status='ready' AND NOT j.cancel_requested AND c.state='active' AND c.approval IS NOT NULL
+            AND c.expires_at>now() AND r.enabled AND (r.channel='email' OR (c.sms_sender_ready AND $1))
+          ORDER BY r.scheduled_at,j.created_at,j.id FOR UPDATE OF j SKIP LOCKED LIMIT 1
+        ) UPDATE giveaway_reminder_jobs j SET status='processing',claimed_at=now(),attempts=attempts+1,updated_at=now()
+          FROM candidate x WHERE j.id=x.id RETURNING j.*`, [smsAllowed]);
+        if (!claimed.rows.length) { stopDispatch = true; break; }
+        const job = (await db.query(`SELECT j.*,r.channel,r.content_key,r.scheduled_at,r.audience FROM giveaway_reminder_jobs j
+          JOIN giveaway_reminders r ON r.id=j.reminder_id WHERE j.id=$1`, [claimed.rows[0].id])).rows[0];
+        const lead = new Date(job.scheduled_at).getTime()-Date.now();
+        if (lead < (job.channel==='sms'?15*60_000:60_000)) {
+          await db.query("UPDATE giveaway_reminder_jobs SET status='expired',last_error='Missed native scheduling lead time',updated_at=now() WHERE id=$1", [job.id]);
+          summary.expired++;continue;
+        }
+        const eligible = await db.query(`SELECT EXISTS(SELECT 1 FROM giveaway_eligible_recipients($1)
+          WHERE channel=$2 AND destination=$3 AND audience=$4) AS ok`,[GIVEAWAY_REMINDER_KEY,job.channel,job.destination,job.audience]);
+        if (!eligible.rows[0].ok) {
+          await db.query("UPDATE giveaway_reminder_jobs SET status='suppressed',cancel_requested=true,updated_at=now() WHERE id=$1",[job.id]);continue;
+        }
+        try {
+          await waitForProviderSlot();
+          const receipt = await scheduleReminder(job, options);
+          await db.query(`UPDATE giveaway_reminder_jobs SET status='scheduled',provider_id=$2,provider_status=$3,
+            provider_send_at=$4,last_error=NULL,updated_at=now() WHERE id=$1`,[job.id,receipt.id,receipt.status,job.scheduled_at]);
+          summary.scheduled++;
+        } catch(error) {
+          const status = error.rejected ? (error.retryable && job.attempts<3?'ready':'failed') : 'unknown';
+          await db.query(`UPDATE giveaway_reminder_jobs SET status=$2,provider_id=coalesce($3,provider_id),last_error=$4,updated_at=now() WHERE id=$1`,
+            [job.id,status,error.providerId||null,error.message]);
+          if (Number(error.providerCode)===21610) await db.query(`INSERT INTO message_suppressions(channel,destination,reason)
+            VALUES('sms',$1,'Twilio opt-out 21610') ON CONFLICT DO NOTHING`,[job.destination]);
+          summary.errors++;
+          if (status==='unknown'||error.retryable) { stopDispatch = true; break; }
+        }
+        await new Promise(resolve=>setTimeout(resolve,550));
+      }
+    }
+    // Settle every in-flight lane before releasing the lease, even if one fails.
+    const lanes = await Promise.allSettled(Array.from({length:concurrency},()=>drainLane()));
+    const failed = lanes.find(lane=>lane.status==='rejected');
+    if (failed) throw failed.reason;
     await cancelPending(db, options, summary);
     return summary;
   } finally {

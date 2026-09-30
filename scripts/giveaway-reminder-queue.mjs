@@ -11,15 +11,19 @@ const action=args['--action']||'status';
 const db=new pg.Client({connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:false},connectionTimeoutMillis:5000});
 await db.connect();
 try {
-  if(action==='activate') {
+  if(action==='activate' || action==='activate-and-drain') {
     if(args['--confirm']!=='ACTIVATE-APPROVED-GIVEAWAY' || !args['--approval-note']) throw new Error('Activation requires the final owner approval record');
+    if(!('--send' in args) || !('--allow-production' in args)) throw new Error('Public activation requires --send --allow-production');
     if(args['--sms-sender-reviewed']!=='true') throw new Error('Confirm sender registration and capacity before SMS activation');
     const first=Date.parse(args['--first-send-at']);
     const initial=(await db.query(`SELECT count(*)::int n FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
       WHERE r.campaign_key=$1 AND r.scheduled_at IS NULL AND j.status='held' AND NOT j.cancel_requested`,[GIVEAWAY_REMINDER_KEY])).rows[0].n;
     // Account for individual provider calls and the minute worker before choosing
     // a simultaneous first-send time. Never expire most of a large initial batch.
-    const minimumLeadMinutes=Math.ceil(initial/30)+15;
+    const expedited=action==='activate-and-drain';
+    // The supervised upload is capped at four new requests/sec.
+    // Only use the shorter lead when this same process immediately drains it.
+    const minimumLeadMinutes=expedited?Math.ceil(initial/120)+5:Math.ceil(initial/30)+15;
     if(!Number.isFinite(first)||first<Date.now()+minimumLeadMinutes*60_000||first>=Date.parse('2026-10-02T00:00:00-07:00')) {
       throw new Error(`Initial send needs at least ${minimumLeadMinutes} minutes to queue safely and must be before Friday`);
     }
@@ -33,14 +37,45 @@ try {
     await db.query('SELECT reconcile_giveaway_reminders($1)',[GIVEAWAY_REMINDER_KEY]);
     await db.query('COMMIT');
     console.log('Activation recorded. Cloud worker will schedule approved messages.');
+    if(expedited) await drainApprovedQueue();
+  } else if(action==='drain') {
+    if(!('--send' in args) || !('--allow-production' in args)) throw new Error('Drain requires --send --allow-production');
+    await drainApprovedQueue();
   } else if(action==='reconcile') {
     console.log(JSON.stringify((await db.query('SELECT reconcile_giveaway_reminders($1) AS result',[GIVEAWAY_REMINDER_KEY])).rows[0].result));
   } else if(action==='wake') {
     console.log(JSON.stringify(await runGiveawayReminderQueue(db,{env})));
-  } else if(action!=='status') throw new Error('Use status, reconcile, wake, or activate');
+  } else if(action!=='status') throw new Error('Use status, reconcile, wake, activate, activate-and-drain, or drain');
   const campaign=(await db.query('SELECT campaign_key,state,expires_at,approval IS NOT NULL AS approved,sms_sender_ready FROM giveaway_reminder_campaigns WHERE campaign_key=$1',[GIVEAWAY_REMINDER_KEY])).rows;
   const schedule=(await db.query(`SELECT r.id,r.channel,r.scheduled_at,j.status,count(j.id)::int jobs FROM giveaway_reminders r
     LEFT JOIN giveaway_reminder_jobs j ON j.reminder_id=r.id WHERE r.campaign_key=$1 GROUP BY r.id,j.status ORDER BY r.scheduled_at NULLS FIRST,r.id`,[GIVEAWAY_REMINDER_KEY])).rows;
   console.log(JSON.stringify({campaign,schedule},null,2));
 } catch(error) {await db.query('ROLLBACK').catch(()=>{});console.error(error.message);process.exitCode=1;}
 finally {await db.end();}
+
+async function drainApprovedQueue() {
+  const pool=new pg.Pool({connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:false},connectionTimeoutMillis:5000,max:8});
+  try {
+    for (;;) {
+      const c=(await pool.query('SELECT state,approval FROM giveaway_reminder_campaigns WHERE campaign_key=$1',[GIVEAWAY_REMINDER_KEY])).rows[0];
+      if(c?.state!=='active'||!c.approval) throw new Error('Drain requires an active approved campaign');
+      const result=await runGiveawayReminderQueue(pool,{env,concurrency:8,maxJobs:200});
+      const pending=(await pool.query(`SELECT r.id,j.status,count(*)::int n FROM giveaway_reminder_jobs j JOIN giveaway_reminders r ON r.id=j.reminder_id
+        WHERE r.campaign_key=$1 AND j.status IN ('ready','processing','unknown','failed','expired')
+        AND NOT (j.status='failed' AND EXISTS(SELECT 1 FROM message_suppressions s
+          WHERE s.channel=r.channel AND s.destination=j.destination)) GROUP BY r.id,j.status`,[GIVEAWAY_REMINDER_KEY])).rows;
+      console.log(JSON.stringify({at:new Date().toISOString(),result,pending}));
+      if(result.hold||result.sms_hold||pending.some(x=>['failed','expired'].includes(x.status))) throw new Error('Inspect queue errors before continuing the approved upload');
+      if(pending.some(x=>x.status==='unknown')) {
+        const blocked=(await pool.query(`SELECT count(*)::int n FROM giveaway_reminder_jobs j
+          JOIN giveaway_reminders r ON r.id=j.reminder_id WHERE r.campaign_key=$1 AND j.status='unknown'
+          AND (r.channel<>'email' OR j.cancel_requested OR j.provider_id IS NOT NULL OR j.attempts>=4
+            OR j.claimed_at IS NULL OR j.claimed_at<=now()-interval '23 hours'
+            OR r.scheduled_at<=now()+interval '1 minute')`,[GIVEAWAY_REMINDER_KEY])).rows[0].n;
+        if(blocked) throw new Error('Unknown provider result needs manual reconciliation');
+      }
+      if(!pending.length) break;
+      if(result.skipped||result.errors) await new Promise(resolve=>setTimeout(resolve,5000));
+    }
+  } finally {await pool.end();}
+}
