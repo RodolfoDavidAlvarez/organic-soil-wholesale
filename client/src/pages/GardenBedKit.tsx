@@ -35,7 +35,7 @@ export default function GardenBedKit() {
       });
       const data = await response.json();
       if (!response.ok || !data.success || !data.leadId) throw new Error(data.error || 'We could not confirm your request. Please try again.');
-      setReceipt({ id: String(data.leadId), quantity });
+      setReceipt({ id: String(data.leadId), quantity: data.quantity || quantity });
       try { trackEvent('Garden Bed Order Request Submitted', { quantity, fulfillment, value: quantity * GARDEN_BED.price, currency: 'USD' }); } catch { /* Analytics must never hide a saved request. */ }
       requestAnimationFrame(() => { resultRef.current?.focus(); resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
     } catch (e) {

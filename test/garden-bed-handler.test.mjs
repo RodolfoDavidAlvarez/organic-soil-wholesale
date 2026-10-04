@@ -27,7 +27,7 @@ test('actual deployed handler saves, routes, escapes notification, and deduplica
  assert.match(f.rows[0].message,/85009/);assert.equal(f.emails.length,1);assert.ok(!f.emails[0].html.includes('<script>'));
  assert.equal(f.leads.length,1);assert.equal(f.leads[0].source_data.order.line_items[0].quantity,3);
  assert.equal(f.leads[0].source_data.order.estimated_total,1797);
- const second=await f.request(valid);assert.equal(second.body.leadId,1);assert.equal(f.rows.length,1);assert.equal(f.emails.length,1);assert.equal(f.leads.length,1);
+ const second=await f.request({...valid,quantity:4});assert.equal(second.body.leadId,1);assert.equal(second.body.quantity,3);assert.equal(f.rows.length,1);assert.equal(f.emails.length,1);assert.equal(f.leads.length,1);
 });
 test('invalid quantities and missing consent cause no writes or notifications',async()=>{
  const f=fixture();for(const override of [{quantity:0},{quantity:1.2},{contact_consent:false},{zip:'x'}]){const r=await f.request({...valid,...override});assert.equal(r.code,400)}

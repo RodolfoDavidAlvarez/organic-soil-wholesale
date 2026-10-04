@@ -5980,10 +5980,10 @@ ${pages}
       if (preferred_date) insertData.preferred_date = preferred_date;
       if (isGardenBed) {
         insertData.subject = `Garden bed order request — ${order.line_items[0].quantity} bed(s) · $${order.estimated_total}`;
-        const previous = await sb.from('contact_messages').select('id').eq('email', email)
+        const previous = await sb.from('contact_messages').select('id, subject').eq('email', email)
           .like('message', `%Request reference: ${body.request_token}`).limit(1).maybeSingle();
         if (previous.error) return res.status(503).json({ error: 'Please try again in a moment.', requestId });
-        if (previous.data) return res.json({ success: true, leadId: previous.data.id, requestId });
+        if (previous.data) return res.json({ success: true, leadId: previous.data.id, quantity: Number(previous.data.subject.match(/— (\d+) bed/)?.[1]) || order.line_items[0].quantity, requestId });
       }
       const { data, error } = await sb.from('contact_messages').insert(insertData).select().single();
       if (error) {
@@ -6065,6 +6065,7 @@ ${pages}
           ? 'Thanks — a rep will call you about this order shortly.'
           : 'Quote request submitted successfully',
         leadId: data.id,
+        ...(isGardenBed ? { quantity: order.line_items[0].quantity } : {}),
         requestId,
       });
     }
