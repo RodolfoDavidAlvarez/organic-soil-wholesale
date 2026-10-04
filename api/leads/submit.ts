@@ -1,3 +1,4 @@
+import { normalizeGardenBedRequest } from '../../shared/gardenBedOrders.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { randomUUID } from 'node:crypto';
 import {
@@ -35,6 +36,12 @@ export default async function handler(
   }
 
   try {
+    if ((payload as Record<string, unknown>)?.source === 'osw_garden_bed_order') {
+      const normalized = normalizeGardenBedRequest(payload);
+      if (normalized.honeypot) return res.status(200).json({ success: true, requestId });
+      if (normalized.error) return res.status(400).json({ error: normalized.error, requestId });
+      payload = normalized.payload;
+    }
     const result = await processLeadSubmission(
       payload as Record<string, unknown>
     );
@@ -43,6 +50,7 @@ export default async function handler(
       success: true,
       message: result.message,
       leadId: result.leadId,
+      ...(result.quantity ? { quantity: result.quantity } : {}),
       requestId,
     });
   } catch (error: unknown) {

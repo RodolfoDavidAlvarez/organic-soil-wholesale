@@ -1,4 +1,4 @@
-import { normalizeGardenBedRequest } from '../shared/gardenBedOrders.js';
+import { normalizeGardenBedRequest, enrichMirroredGardenBedLead } from '../shared/gardenBedOrders.js';
 // Vercel Serverless Function with CRM Business Card Capture
 import QRCode from 'qrcode';
 import crypto from 'node:crypto';
@@ -6020,7 +6020,8 @@ ${pages}
       // Forward to MOS sales portal (production path previously skipped this).
       try {
         const secret = process.env.MOS_LEAD_INGEST_SECRET;
-        if (secret) {
+        const alreadyMirrored = isGardenBed && await enrichMirroredGardenBedLead(sb, data.id, body);
+        if (secret && !alreadyMirrored) {
           const mosSource = isOrderCallback ? 'osw_order_callback' : 'osw_lead_form';
           const mosMessage = `${isRlsBrand ? 'Regenerative Landscaper Supply lead. ' : ''}${isOrderCallback
             ? `Callback requested — ${itemCount} line items${estimated != null ? ` · ~$${estimated.toFixed(0)}` : ''}\n\n${orderNotes}`
@@ -6051,7 +6052,7 @@ ${pages}
           if (!r.ok) {
             console.error('[leads/submit] MOS forward', r.status, (await r.text().catch(() => '')).slice(0, 200));
           }
-        } else {
+        } else if (!alreadyMirrored) {
           console.warn('[leads/submit] MOS_LEAD_INGEST_SECRET not set — lead not forwarded');
         }
       } catch (e) {

@@ -29,7 +29,7 @@ export function normalizeGardenBedRequest(input = {}) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token)) return fail('Please reload the page and try again.');
   const fulfillmentLabel = { pickup: 'Local pickup — coordinate with team', delivery: `Delivery quote requested — ZIP ${zip}`, discuss: 'Please help me decide pickup or delivery' }[fulfillment];
   return { payload: {
-    name, email, phone, lead_type: 'order_callback', source: 'osw_garden_bed_order',
+    name, email, phone: '+1' + digits.slice(-10), lead_type: 'order_callback', source: 'osw_garden_bed_order',
     source_url: 'https://www.organicsoilwholesale.com/products/garden-bed-kit',
     request_token: token,
     notes: [
@@ -48,4 +48,21 @@ export function normalizeGardenBedRequest(input = {}) {
       ...(fulfillment === 'delivery' ? {delivery_zip: zip} : {}),
     },
   }};
+}
+
+// The database may already mirror contact_messages into the sales queue.
+// Enrich that row instead of creating a second lead via the HTTP intake.
+export async function enrichMirroredGardenBedLead(sb, contactId, payload) {
+  const existing = await sb.from('sp_leads').select('id, source_data')
+    .eq('source_data->>contact_message_id', String(contactId)).limit(1).maybeSingle();
+  if (existing.error) throw new Error('Could not check mirrored garden-bed lead');
+  if (!existing.data) return false;
+  const updated = await sb.from('sp_leads').update({
+    source: 'osw_order_callback', source_url: payload.source_url,
+    source_data: { ...existing.data.source_data, osw_contact_message_id: contactId,
+      campaign: 'garden_bed_launch', request_token: payload.request_token,
+      lead_type: 'order_callback', order: payload.order },
+  }).eq('id', existing.data.id);
+  if (updated.error) console.error('[garden-bed] Mirror retained; order metadata update failed');
+  return true;
 }

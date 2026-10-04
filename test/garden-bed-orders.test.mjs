@@ -23,3 +23,11 @@ test('contact inputs trimmed, email normalized, and notes bounded',()=>{
  const {payload:p}=normalizeGardenBedRequest({...valid,name:'  Garden Test  ',email:' TEST@example.com ',notes:'x'.repeat(3000)});
  assert.equal(p.name,'Garden Test');assert.equal(p.email,'test@example.com');assert.ok(p.notes.length<3000);
 });
+test('existing database mirror is enriched instead of creating another sales lead',async()=>{
+ const {enrichMirroredGardenBedLead}=await import('../shared/gardenBedOrders.js');
+ let updated;
+ const sb={from:()=>({select(){return this},eq(){return this},limit(){return this},async maybeSingle(){return {data:{id:12,source_data:{contact_message_id:9}}}},update(value){updated=value;return {eq:async()=>({error:null})}}})};
+ const {payload}=normalizeGardenBedRequest(valid);
+ assert.equal(await enrichMirroredGardenBedLead(sb,9,payload),true);
+ assert.equal(updated.source_data.order.estimated_total,1198);assert.equal(updated.source_data.contact_message_id,9);
+});

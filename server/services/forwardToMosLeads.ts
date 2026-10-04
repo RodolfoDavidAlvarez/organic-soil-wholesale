@@ -30,7 +30,7 @@ export interface MosLeadPayload {
 const MOS_ENDPOINT =
   process.env.MOS_LEAD_INGEST_URL || 'https://myorganicsoil.com/api/leads';
 
-export function forwardToMosLeads(payload: MosLeadPayload): void {
+export async function forwardToMosLeads(payload: MosLeadPayload): Promise<void> {
   const secret = process.env.MOS_LEAD_INGEST_SECRET;
   if (!secret) {
     console.warn('[mos-lead-forward] MOS_LEAD_INGEST_SECRET not set — skipping');
@@ -42,8 +42,8 @@ export function forwardToMosLeads(payload: MosLeadPayload): void {
     return;
   }
 
-  // Fire-and-forget. Do not await.
-  fetch(MOS_ENDPOINT, {
+  // Callers handling serverless requests await delivery before returning.
+  return fetch(MOS_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

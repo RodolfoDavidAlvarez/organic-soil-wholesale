@@ -1,3 +1,4 @@
+import { enrichMirroredGardenBedLead } from '../../shared/gardenBedOrders.js';
 import { supabase } from "../db/supabase.js";
 import { sendAdminLeadNotification, sendCustomerQuoteConfirmation } from "./emailNotifications.js";
 import { forwardToMosLeads, type MosLeadSource } from "./forwardToMosLeads.js";
@@ -46,6 +47,7 @@ export interface LeadSubmissionResult {
   leadId: number;
   message: string;
   submittedAt: string;
+  quantity?: number;
 }
 
 export class LeadSubmissionError extends Error {
@@ -166,10 +168,10 @@ export async function processLeadSubmission(
 
   if (payload.source === 'osw_garden_bed_order' && payload.request_token) {
     insertData.subject = `Garden bed order request — ${order?.line_items?.[0]?.quantity} bed(s) · $${estimated}`;
-    const previous = await supabase.from('contact_messages').select('id').eq('email', email)
+    const previous = await supabase.from('contact_messages').select('id, subject').eq('email', email)
       .like('message', `%Request reference: ${payload.request_token}`).limit(1).maybeSingle();
     if (previous.error) throw new LeadSubmissionError('Please try again in a moment.', 503);
-    if (previous.data) return {leadId: previous.data.id, message: 'Request received.', submittedAt};
+    if (previous.data) return {leadId: previous.data.id, quantity: Number(previous.data.subject.match(/— (\d+) bed/)?.[1]) || order?.line_items?.[0]?.quantity, message: 'Request received.', submittedAt};
   }
 
   const { data, error } = await supabase
@@ -185,23 +187,25 @@ export async function processLeadSubmission(
     );
   }
 
+  const emailEscape = (value: string) => value.replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character] || character));
+  const forEmail = (value: string) => payload.source === 'osw_garden_bed_order' ? emailEscape(value) : value;
   try {
     const notifyNotes = isOrderCallback ? orderNotes : notes;
     await Promise.all([
       sendAdminLeadNotification({
-        name,
-        email,
+        name: forEmail(name),
+        email: forEmail(email),
         phone,
-        notes: notifyNotes,
+        notes: forEmail(notifyNotes || ""),
         submittedAt,
         brandName,
       }),
       emailRaw
         ? sendCustomerQuoteConfirmation({
-            name,
-            email: emailRaw,
+            name: forEmail(name),
+            email: forEmail(emailRaw),
             phone,
-            notes: notifyNotes,
+            notes: forEmail(notifyNotes || ""),
             submittedAt,
             brandName,
           })
@@ -216,7 +220,12 @@ export async function processLeadSubmission(
     ? "osw_order_callback"
     : "osw_lead_form";
 
-  forwardToMosLeads({
+  let alreadyMirrored = false;
+  if (payload.source === 'osw_garden_bed_order') {
+    try { alreadyMirrored = await enrichMirroredGardenBedLead(supabase, data.id, payload); }
+    catch (error) { console.error('Garden bed mirror check failed:', error); }
+  }
+  if (!alreadyMirrored) await forwardToMosLeads({
     full_name: name,
     email,
     phone,
@@ -241,5 +250,6 @@ export async function processLeadSubmission(
       ? "Thanks — a rep will call you about this order shortly."
       : "Thank you! We'll contact you shortly.",
     submittedAt,
+    ...(payload.source === 'osw_garden_bed_order' ? { quantity: order?.line_items?.[0]?.quantity } : {}),
   };
 }

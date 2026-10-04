@@ -22,7 +22,8 @@ router.post('/submit', async (req, res) => {
     res.json({
       success: true,
       message: result.message,
-      leadId: result.leadId
+      leadId: result.leadId,
+      ...(result.quantity ? { quantity: result.quantity } : {})
     });
   } catch (error) {
     console.error('Lead submission error:', error);

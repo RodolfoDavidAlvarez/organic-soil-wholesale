@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { normalizeGardenBedRequest } from '../shared/gardenBedOrders.js';
 const source=await readFile(new URL('../api/index.js',import.meta.url),'utf8');
 const route=source.slice(source.indexOf("    // POST /api/leads/submit\n"),source.indexOf('    // ========== SCHEDULING ENDPOINTS'));
-const execute=new (Object.getPrototypeOf(async function(){}).constructor)('req','res','normalizeGardenBedRequest','getSupabase','getResend','fetch','process','escapeHtml',"const path='/api/leads/submit', requestId='fixture', startedAt=Date.now();\n"+route);
+const execute=new (Object.getPrototypeOf(async function(){}).constructor)('req','res','normalizeGardenBedRequest','enrichMirroredGardenBedLead','getSupabase','getResend','fetch','process','escapeHtml',"const path='/api/leads/submit', requestId='fixture', startedAt=Date.now();\n"+route);
 function fixture({dbFailure=false, emailFailure=false}={}){
  const rows=[],emails=[],leads=[];
  const sb={from(table){let inserted,reference;return {
@@ -15,7 +15,7 @@ function fixture({dbFailure=false, emailFailure=false}={}){
   then(resolve){return Promise.resolve({data:table==='admin_notifications'?[{email:'fixture@example.com'}]:[]}).then(resolve)}
  }}};
  return {rows,emails,leads,async request(body){const res={code:200,setHeader(){},status(n){this.code=n;return this},json(body){this.body=body;return this}};
- await execute({body,method:'POST'},res,normalizeGardenBedRequest,async()=>sb,async()=>({emails:{async send(message){if(emailFailure)throw Error('fixture email failure');emails.push(message);return {data:{id:'fixture'}};}}}),async(url,options)=>{leads.push(JSON.parse(options.body));return {ok:true}}, {env:{MOS_LEAD_INGEST_SECRET:'test-only'}},value=>String(value).replaceAll('<','&lt;').replaceAll('>','&gt;'));
+ await execute({body,method:'POST'},res,normalizeGardenBedRequest,async()=>false,async()=>sb,async()=>({emails:{async send(message){if(emailFailure)throw Error('fixture email failure');emails.push(message);return {data:{id:'fixture'}};}}}),async(url,options)=>{leads.push(JSON.parse(options.body));return {ok:true}}, {env:{MOS_LEAD_INGEST_SECRET:'test-only'}},value=>String(value).replaceAll('<','&lt;').replaceAll('>','&gt;'));
  return res;
  }};
 }
