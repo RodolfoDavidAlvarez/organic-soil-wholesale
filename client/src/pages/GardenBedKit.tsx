@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight, Check, CheckCircle2, Loader2, Minus, Plus, Sprout } from 'lucide-react';
+import { ArrowRight, Check, CheckCircle2, Loader2, Minus, PlayCircle, Plus, Sprout } from 'lucide-react';
 import SEO from '@/components/layout/SEO';
 import { trackEvent } from '@/lib/analytics';
 import { GARDEN_BED } from '@shared/gardenBedOrders.js';
@@ -54,6 +54,7 @@ export default function GardenBedKit() {
             <h1 className="mt-5 font-heading text-4xl font-bold leading-[1.12] tracking-tight sm:text-5xl">A little space.<br />A lot to grow.</h1>
             <p className="mt-4 text-lg text-stone-600">Your 4 × 8 ft garden bed, built around steel corners and natural lumber. Start with the essentials. Make the garden your own.</p>
             <div className="mt-5 flex flex-wrap items-center gap-4 lg:hidden"><strong className="text-2xl">$599 <span className="text-sm font-normal">per bed</span></strong><a href="#order-request" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#264027] px-5 font-semibold text-white">Request your bed <ArrowRight className="h-4 w-4" /></a></div>
+            <a href="#garden-bed-film" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold underline underline-offset-4"><PlayCircle className="h-5 w-5" />Watch the garden bed come together</a>
             <figure className="mt-7">
               <img src={GARDEN_BED.image} width="1200" height="800" alt="Garden bed concept showing a wood frame and steel corner posts" className="aspect-[4/3] w-full rounded-3xl bg-[#ece8dc] object-contain p-3" fetchPriority="high" />
               <figcaption className="mt-3 text-xs leading-relaxed text-stone-500">Concept image from our garden-bed video. Soil, mulch, plants, irrigation, and accessories shown are not included.</figcaption>
@@ -106,6 +107,25 @@ export default function GardenBedKit() {
             </>}
           </div>
         </div>
+        <section id="garden-bed-film" aria-labelledby="garden-bed-film-title" className="mt-14 scroll-mt-24 overflow-hidden rounded-3xl bg-[#203b29] text-[#f6f4ec]">
+          <div className="grid items-center gap-8 p-5 sm:p-8 lg:grid-cols-2 lg:gap-12 lg:p-12">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[.18em] text-[#dfbd88]">Meet your next garden</p>
+              <h2 id="garden-bed-film-title" className="mt-4 font-heading text-3xl font-bold leading-tight sm:text-4xl">From the first board<br />to room to grow.</h2>
+              <p className="mt-5 max-w-lg leading-relaxed text-[#d3dece]">Join Astrid and Sabrina for a look at our garden bed, how the frame comes together, and the layers inside it.</p>
+              <p className="mt-4 max-w-lg text-sm leading-relaxed text-[#d3dece]">The $599 kit includes four steel posts, lumber, pea gravel, and soil cloth. Delivery, soil, mulch, and amendments are sold separately.</p>
+              <a href="#order-request" className="mt-7 inline-flex min-h-12 items-center gap-3 rounded-xl bg-[#efd5a6] px-5 font-semibold text-[#203b29]">Request your garden bed <ArrowRight className="h-4 w-4" /></a>
+            </div>
+            <figure className="mx-auto w-full max-w-[360px]">
+              <video controls playsInline preload="none" poster="/videos/garden-bed-v8-poster.webp" aria-label="Soil Seed and Water garden bed introduction and assembly" className="aspect-[9/16] w-full rounded-2xl bg-black shadow-xl">
+                <source src="/videos/garden-bed-v8.mp4" type="video/mp4" />
+                <track kind="captions" src="/videos/garden-bed-v8.en.vtt" srcLang="en" label="English" />
+                Your browser does not support embedded video. <a href="/videos/garden-bed-v8.mp4">Watch the garden-bed video.</a>
+              </video>
+              <figcaption className="mt-3 text-xs leading-relaxed text-[#c4d1bf]">Introduction + assembly · English captions available.<br />Music: “Funky Chunk” by <a href="https://incompetech.com/" target="_blank" rel="noopener noreferrer" className="underline">Kevin MacLeod</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" className="underline">CC BY 4.0</a>. Music excerpt mixed and faded.</figcaption>
+            </figure>
+          </div>
+        </section>
         <p className="mt-12 flex items-center justify-center gap-2 text-sm text-stone-600"><Sprout className="h-4 w-4" />Made for your next growing season.</p>
       </div>
     </div>
