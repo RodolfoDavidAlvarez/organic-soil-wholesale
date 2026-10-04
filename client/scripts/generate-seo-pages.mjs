@@ -295,6 +295,14 @@ const routes = [
     schemas: [localBusinessSchema],
   },
   {
+    path: "/products/garden-bed-kit",
+    title: "4 × 8 Garden Bed Kit — $599 Launch Offer | Organic Soil Wholesale",
+    description: "Request a $599 garden bed kit with four steel posts, lumber, pea gravel, and soil cloth. Limited-time launch offer. No payment today. Delivery, soil and mulch separate.",
+    canonical: absoluteUrl("/products/garden-bed-kit"),
+    image: absoluteUrl("/images/garden-bed/garden-bed-kit.webp"),
+    schemas: [localBusinessSchema],
+  },
+  {
     path: "/keep-growing",
     title: "Keep Growing With Us | Soil Seed & Water",
     description: "Be first to hear about future giveaways, garden tips, new products, and local events from Soil Seed & Water.",

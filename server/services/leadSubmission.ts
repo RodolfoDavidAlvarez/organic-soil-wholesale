@@ -38,6 +38,7 @@ export interface LeadSubmissionPayload {
   source?: string;
   source_url?: string;
   brand_id?: string;
+  request_token?: string;
   order?: OrderCallbackOrder;
 }
 
@@ -162,6 +163,14 @@ export async function processLeadSubmission(
     created_at: submittedAt,
   };
   if (preferred_date) insertData.preferred_date = preferred_date;
+
+  if (payload.source === 'osw_garden_bed_order' && payload.request_token) {
+    insertData.subject = `Garden bed order request — ${order?.line_items?.[0]?.quantity} bed(s) · $${estimated}`;
+    const previous = await supabase.from('contact_messages').select('id').eq('email', email)
+      .like('message', `%Request reference: ${payload.request_token}`).limit(1).maybeSingle();
+    if (previous.error) throw new LeadSubmissionError('Please try again in a moment.', 503);
+    if (previous.data) return {leadId: previous.data.id, message: 'Request received.', submittedAt};
+  }
 
   const { data, error } = await supabase
     .from("contact_messages")

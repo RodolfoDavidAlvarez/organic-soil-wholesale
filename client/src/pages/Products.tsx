@@ -1,3 +1,4 @@
+import GardenBedLaunchCard from "@/components/GardenBedLaunchCard";
 import { useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -445,6 +446,7 @@ const Products = () => {
           </div>
 
           <PayPickupGrid />
+          <GardenBedLaunchCard />
 
           {/* Pickup logistics — shown after the products, where they're relevant */}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:mt-4">

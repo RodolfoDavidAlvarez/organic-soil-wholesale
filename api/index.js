@@ -1,3 +1,4 @@
+import { normalizeGardenBedRequest } from '../shared/gardenBedOrders.js';
 // Vercel Serverless Function with CRM Business Card Capture
 import QRCode from 'qrcode';
 import crypto from 'node:crypto';
@@ -5878,7 +5879,14 @@ ${pages}
     // POST /api/leads/submit
     if (path === '/api/leads/submit' && req.method === 'POST') {
       console.info(JSON.stringify({ event: 'lead_submission_started', requestId }));
-      const body = req.body || {};
+      let body = req.body || {};
+      const isGardenBed = body.source === 'osw_garden_bed_order';
+      if (isGardenBed) {
+        const normalized = normalizeGardenBedRequest(body);
+        if (normalized.honeypot) return res.json({ success: true });
+        if (normalized.error) return res.status(400).json({ error: normalized.error, requestId });
+        body = normalized.payload;
+      }
       const {
         name, phone, notes, preferred_date, order, source_url, brand_id,
       } = body;
@@ -5970,6 +5978,13 @@ ${pages}
         created_at: new Date().toISOString(),
       };
       if (preferred_date) insertData.preferred_date = preferred_date;
+      if (isGardenBed) {
+        insertData.subject = `Garden bed order request — ${order.line_items[0].quantity} bed(s) · $${order.estimated_total}`;
+        const previous = await sb.from('contact_messages').select('id').eq('email', email)
+          .like('message', `%Request reference: ${body.request_token}`).limit(1).maybeSingle();
+        if (previous.error) return res.status(503).json({ error: 'Please try again in a moment.', requestId });
+        if (previous.data) return res.json({ success: true, leadId: previous.data.id, requestId });
+      }
       const { data, error } = await sb.from('contact_messages').insert(insertData).select().single();
       if (error) {
         console.error(JSON.stringify({ event: 'lead_submission_failed', requestId, status: 500, reason: 'database_insert', durationMs: Date.now() - startedAt }), error);
@@ -5986,7 +6001,7 @@ ${pages}
           from: `${isRlsBrand ? 'Regenerative Landscaper Supply' : 'Organic Soil Wholesale'} <info@soilseedandwater.com>`,
           replyTo: 'ralvarez@soilseedandwater.com',
           to,
-          subject: isOrderCallback
+          subject: isGardenBed ? `Garden bed order request from ${name}` : isOrderCallback
             ? `${isRlsBrand ? '[RLS] ' : ''}Callback about order from ${name}`
             : `${isRlsBrand ? '[RLS] ' : ''}New quote request from ${name}`,
           html: `<p><strong>${isOrderCallback ? 'Callback requested about an order' : 'New lead from the website'}${isRlsBrand ? ' · Regenerative Landscaper Supply' : ''}</strong></p><ul><li><strong>Name:</strong> ${escapeHtml(name)}</li><li><strong>Email:</strong> ${escapeHtml(emailRaw || '(none — phone callback)')}</li><li><strong>Phone:</strong> ${escapeHtml(phone)}</li>${preferred_date ? `<li><strong>Preferred Date:</strong> ${escapeHtml(preferred_date)}</li>` : ''}</ul><pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(orderNotes)}</pre>`,
@@ -6029,6 +6044,7 @@ ${pages}
                 brand_name: leadBrand,
                 lead_type: isOrderCallback ? 'order_callback' : 'lead_form',
                 ...(isOrderCallback && order ? { order } : {}),
+                ...(isGardenBed ? { campaign: 'garden_bed_launch', request_token: body.request_token } : {}),
               },
             }),
           });

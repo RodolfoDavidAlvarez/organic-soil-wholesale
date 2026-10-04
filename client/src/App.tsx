@@ -172,6 +172,8 @@ const RedirectTo = ({ href }: { href: string }) => {
   return null;
 };
 
+const GardenBedKit = lazy(() => import("@/pages/GardenBedKit"));
+
 function Router() {
   const useLandscaperSupplyAsDefault = import.meta.env.VITE_DEFAULT_BRAND === "rls";
   return (
@@ -193,6 +195,8 @@ function Router() {
         <Route path="/" component={useLandscaperSupplyAsDefault ? LandscaperSupply : Home} />
         <Route path="/pickup" component={Pickup} />
         <Route path="/products/mulch/:id" component={MulchDetail} />
+        <Route path="/products/garden-bed-kit" component={GardenBedKit} />
+        <Route path="/garden-bed" component={GardenBedKit} />
         <Route path="/products/:slug" component={ProductDetail} />
         <Route path="/products" component={Products} />
         <Route path="/about" component={About} />
@@ -258,8 +262,8 @@ function Router() {
         <Route path="/promo/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
         <Route path="/promo">{() => <RedirectTo href="/offers" />}</Route>
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
-        <Route path="/keep-growing" component={NewsletterSignup} />
-        <Route path="/newsletter" component={NewsletterSignup} />
+        <Route path="/keep-growing"><NewsletterSignup /></Route>
+        <Route path="/newsletter"><NewsletterSignup /></Route>
         <Route path="/win" component={BigGardenGiveaway} />
         <Route path="/big-garden-giveaway" component={BigGardenGiveaway} />
 

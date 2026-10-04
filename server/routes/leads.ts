@@ -1,3 +1,4 @@
+import { normalizeGardenBedRequest } from '../../shared/gardenBedOrders.js';
 import { Router } from 'express';
 import {
   processLeadSubmission,
@@ -9,8 +10,14 @@ const router = Router();
 // Submit lead
 router.post('/submit', async (req, res) => {
   try {
-    console.log('Lead submission request received:', req.body);
-    const result = await processLeadSubmission(req.body);
+    let payload = req.body;
+    if (payload?.source === 'osw_garden_bed_order') {
+      const normalized = normalizeGardenBedRequest(payload);
+      if (normalized.honeypot) return res.json({ success: true });
+      if (normalized.error) return res.status(400).json({ error: normalized.error });
+      payload = normalized.payload;
+    }
+    const result = await processLeadSubmission(payload);
 
     res.json({
       success: true,

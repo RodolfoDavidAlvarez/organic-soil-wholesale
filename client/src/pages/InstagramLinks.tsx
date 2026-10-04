@@ -36,6 +36,7 @@ export default function InstagramLinks() {
   const channel = channelFromPath(window.location.pathname);
   const channelName = channelDetails[channel].name;
   const links = {
+    gardenBed: trackedLink(channel, "/products/garden-bed-kit", "garden_bed_launch", "garden_bed_order"),
     community: trackedLink(channel, "/keep-growing", "keep_growing", "community_signup"),
     careers: trackedLink(channel, "/careers/sales", "sales_recruitment_2026", "sales_representative_careers"),
     offers: trackedLink(channel, "/offers", "fall_garden_bundles_2026", "fall_garden_bundles"),
@@ -78,6 +79,15 @@ export default function InstagramLinks() {
         </header>
 
         <section className="mt-7 space-y-3" aria-label="Featured links">
+          <a href={links.gardenBed} onClick={() => recordClick("garden-bed-kit")} className="grid min-h-40 grid-cols-[1fr_112px] overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-[#fff8e8] sm:grid-cols-[1fr_155px]">
+            <span className="flex flex-col justify-center p-5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#8b6940]">New · Limited-time launch offer</span>
+              <span className="mt-2 font-heading text-2xl font-bold">Your garden bed. $599.</span>
+              <span className="mt-2 text-sm">4 steel posts, lumber, pea gravel &amp; soil cloth. Delivery and growing materials extra.</span>
+              <span className="mt-3 flex items-center gap-2 font-bold">Request your bed <ArrowRight className="h-4 w-4" /></span>
+            </span>
+            <img src="/images/garden-bed/garden-bed-kit.webp" alt="Wood and steel garden bed concept" className="h-full w-full object-cover" />
+          </a>
           <a
             href={links.community}
             onClick={() => recordClick("keep-growing")}
