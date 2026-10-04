@@ -1,14 +1,13 @@
 /**
  * Phoenix Fall Garden Giveaway (/win) entry validation and persistence.
  *
- * Entries are OPEN by default. No Vercel env is required in production.
- * Set GIVEAWAY_ENTRIES_OPEN=false to pause new entries. This path never
- * sends a customer or marketing email.
+ * The October 3, 2026 drawing is complete. This campaign is permanently
+ * closed to public entries, including from previously loaded browser tabs.
  */
 
 export const GIVEAWAY_SOURCE = 'win-giveaway';
 export const GIVEAWAY_CAMPAIGN_KEY = 'phoenix-fall-garden-2026';
-export const GIVEAWAY_ENTRIES_CLOSED_MESSAGE = 'Entries are not open yet.';
+export const GIVEAWAY_ENTRIES_CLOSED_MESSAGE = 'This giveaway has ended. Keep growing with us at /keep-growing for future giveaways and updates.';
 export const GIVEAWAY_FOLLOW_COPY = 'Follow at least one account — tap Follow, then check the box.';
 
 export const GIVEAWAY_CUSTOMER_TYPES = Object.freeze([
@@ -62,21 +61,9 @@ const GARDEN_STATUS_VALUES = new Set(GIVEAWAY_GARDEN_STATUSES.map(([value]) => v
 const GROWING_VALUES = new Set(GIVEAWAY_GROWING_OPTIONS.map(([value]) => value));
 const SOCIAL_KEYS = GIVEAWAY_SOCIAL_CHANNELS.map((channel) => channel.key);
 
-function envObject(env) {
-  if (env && typeof env === 'object') return env;
-  if (typeof process !== 'undefined' && process.env) return process.env;
-  return {};
-}
-
-function isClosedFlag(value) {
-  const raw = String(value ?? '').trim().toLowerCase();
-  return raw === '0' || raw === 'false' || raw === 'no' || raw === 'off';
-}
-
-export function areGiveawayEntriesOpen(env) {
-  const value = envObject(env).GIVEAWAY_ENTRIES_OPEN;
-  if (value == null || String(value).trim() === '') return true;
-  return !isClosedFlag(value);
+// An old deployment environment flag must never reopen the completed draw.
+export function areGiveawayEntriesOpen(_env) {
+  return false;
 }
 
 function trimText(value, max) {

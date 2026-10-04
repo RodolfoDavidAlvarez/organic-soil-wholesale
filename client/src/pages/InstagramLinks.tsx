@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ArrowRight, BellRing, Briefcase, ExternalLink, Gift, Trophy } from "lucide-react";
+import { ArrowRight, BellRing, Briefcase, ExternalLink, Gift, Sprout } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { trackEvent } from "@/lib/analytics";
 
@@ -36,7 +36,7 @@ export default function InstagramLinks() {
   const channel = channelFromPath(window.location.pathname);
   const channelName = channelDetails[channel].name;
   const links = {
-    giveaway: trackedLink(channel, "/win", "september_garden_giveaway_2026", "big_garden_giveaway"),
+    community: trackedLink(channel, "/keep-growing", "keep_growing", "community_signup"),
     careers: trackedLink(channel, "/careers/sales", "sales_recruitment_2026", "sales_representative_careers"),
     offers: trackedLink(channel, "/offers", "fall_garden_bundles_2026", "fall_garden_bundles"),
     gardenClass: trackedLink(channel, "/classes#class-alert-signup", "fall_garden_classes_2026", "garden_class_alerts"),
@@ -65,7 +65,7 @@ export default function InstagramLinks() {
         <title>Choose Your Next Step | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Apply to join Soil Seed & Water, enter the Big Garden Giveaway, shop fall garden bundles, or join garden class alerts."
+          content="Keep growing with Soil Seed & Water: future giveaways, garden tips, new products, local events, and garden bundles."
         />
       </Helmet>
 
@@ -74,22 +74,22 @@ export default function InstagramLinks() {
           <p className="font-heading text-xl font-bold text-[#20251f] sm:text-2xl">Welcome to Soil Seed and Water</p>
           <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#8b6940]">Welcome, {channelName} friends</p>
           <h1 className="mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">What would you like to do?</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">Choose an option below. We are hiring, and our giveaway, garden bundles, and class alerts are available now.</p>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">There’s more growing here. Stay connected, explore our garden bundles, or find your next opportunity.</p>
         </header>
 
         <section className="mt-7 space-y-3" aria-label="Featured links">
           <a
-            href={links.giveaway}
-            onClick={() => recordClick("big-garden-giveaway")}
+            href={links.community}
+            onClick={() => recordClick("keep-growing")}
             className="group grid min-h-40 grid-cols-[1fr_112px] overflow-hidden rounded-3xl bg-[#173d25] text-white shadow-[0_14px_34px_rgba(19,61,42,0.22)] transition-transform active:scale-[0.99] sm:grid-cols-[1fr_155px]"
           >
             <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f5bb45]"><Trophy className="h-4 w-4" /> Three winners · Free entry</span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Enter the Big Garden Giveaway</span>
-              <span className="mt-2 text-sm font-semibold text-[#dce7de]">Grand prize: a $5,000 complete garden</span>
-              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f5d77d]">Enter now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f5bb45]"><Sprout className="h-4 w-4" /> Be part of what’s growing</span>
+              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Keep Growing With Us</span>
+              <span className="mt-2 text-sm font-semibold text-[#dce7de]">Future giveaways, garden tips, new products & local events</span>
+              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f5d77d]">Count me in <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
             </span>
-            <img src="/images/giveaway/complete-fall-garden-hero-v9.png" alt="Complete raised-bed garden giveaway" className="h-full w-full object-cover" />
+            <img src="/images/giveaway/complete-fall-garden-hero-v9.png" alt="A thriving raised-bed vegetable garden" className="h-full w-full object-cover" />
           </a>
 
           <a

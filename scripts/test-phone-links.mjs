@@ -169,6 +169,7 @@ try {
     assert.match(mobileCta.text || "", /Call.*\(623\) 263-3386/, `${route}: mobile CTA visible fallback`);
   }
 
+  // Official-number links are intentionally locked against third-party rewrites.
   await page.evaluate(() => {
     const link = document.querySelector('a[data-mobile-phone-cta="true"]');
     if (!link) throw new Error("mobile CallRail fixture target not found");
@@ -178,9 +179,9 @@ try {
   });
   await page.waitForFunction(() => {
     const link = document.querySelector('a[data-mobile-phone-cta="true"]');
-    return link?.getAttribute("href") === "tel:+16023133897" &&
-      link?.getAttribute("aria-label") === "Call (602) 313-3897" &&
-      link?.querySelector("[data-official-support-phone-text]")?.textContent === "(602) 313-3897";
+    return link?.getAttribute("href") === "tel:+16232633386" &&
+      link?.getAttribute("aria-label") === "Call (623) 263-3386" &&
+      link?.querySelector("[data-official-support-phone-text]")?.textContent === "(623) 263-3386";
   });
 
   await page.goto(baseUrl, { waitUntil: "networkidle2" });
@@ -195,17 +196,17 @@ try {
   });
   await page.waitForFunction(() => {
     const link = [...document.querySelectorAll('a[data-official-support-phone="true"]')].find((candidate) =>
-      candidate.querySelector("[data-official-support-phone-text]")?.textContent?.includes("313-3897"),
+      candidate.querySelector("[data-official-support-phone-text]"),
     );
     return (
-      link?.getAttribute("href") === "tel:+16023133897" &&
-      link?.getAttribute("aria-label") === "Call (602) 313-3897"
+      link?.getAttribute("href") === "tel:+16232633386" &&
+      link?.getAttribute("aria-label") === "Call (623) 263-3386"
     );
   });
 
   const synchronized = await page.evaluate(() => {
     const link = [...document.querySelectorAll('a[data-official-support-phone="true"]')].find((candidate) =>
-      candidate.querySelector("[data-official-support-phone-text]")?.textContent?.includes("313-3897"),
+      candidate.querySelector("[data-official-support-phone-text]"),
     );
     return {
       text: link?.querySelector("[data-official-support-phone-text]")?.textContent,
@@ -214,9 +215,9 @@ try {
     };
   });
   assert.deepEqual(synchronized, {
-    text: "(602) 313-3897",
-    href: "tel:+16023133897",
-    aria: "Call (602) 313-3897",
+    text: "(623) 263-3386",
+    href: "tel:+16232633386",
+    aria: "Call (623) 263-3386",
   });
 
   await browser.close();

@@ -10,6 +10,12 @@ const Footer = () => {
 
   return (
     <footer className="relative z-10 mt-auto border-t border-white/10 bg-[#101f16] text-white">
+      {!["/keep-growing", "/newsletter"].includes(location) && <div className="border-b border-white/10 bg-[#193d2d]">
+        <div className="container mx-auto flex flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between">
+          <div><h2 className="font-heading text-2xl font-bold">Keep Growing With Us</h2><p className="mt-2 max-w-xl text-sm leading-6 text-white/80">Future giveaways, garden tips, new products, and local events. Be part of what’s growing.</p></div>
+          <Link href="/keep-growing?source=website-footer" className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-[#e8d3a8] px-6 py-3 font-bold text-[#133d2a] hover:bg-[#f3e0b5]">Count me in</Link>
+        </div>
+      </div>}
       <div className="py-14">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">

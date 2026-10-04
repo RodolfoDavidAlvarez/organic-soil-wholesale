@@ -258,6 +258,7 @@ function Router() {
         <Route path="/promo/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
         <Route path="/promo">{() => <RedirectTo href="/offers" />}</Route>
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
+        <Route path="/keep-growing" component={NewsletterSignup} />
         <Route path="/newsletter" component={NewsletterSignup} />
         <Route path="/win" component={BigGardenGiveaway} />
         <Route path="/big-garden-giveaway" component={BigGardenGiveaway} />

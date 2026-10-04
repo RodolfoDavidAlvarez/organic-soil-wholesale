@@ -9,10 +9,10 @@ import {
 
 /**
  * Phoenix Fall Garden Giveaway landing page (/win).
- * Entries are open. Server also defaults open unless GIVEAWAY_ENTRIES_OPEN=false.
+ * Archived campaign details. The October 3 drawing is complete; public signup is closed.
  */
 export const GIVEAWAY_DRAFT = {
-  acceptingEntries: true,
+  acceptingEntries: false,
   source: GIVEAWAY_SOURCE,
   campaignName: "September Big Garden Giveaway",
   eyebrow: "Phoenix. September is bigger than August.",
