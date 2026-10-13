@@ -37,3 +37,13 @@ test('provider failures are safe to retry only after status review',async(t)=>{
   const res=response();await handler({method:'GET',query:{action:'status'},headers:{authorization:`Bearer ${token}`}},res)
   assert.equal(res.statusCode,503);assert.doesNotMatch(JSON.stringify(res.body),/private infrastructure/)
 })
+
+test('optional future-card permission forwards only through customer checkout',async(t)=>{
+  const received=[]
+  t.mock.method(globalThis,'fetch',async(url,opts)=>{received.push({url,opts});return {status:200,json:async()=>({ok:true})}})
+  for(const action of ['checkout','quote']){
+    const res=response();await handler({method:'POST',query:{action},headers:{origin},body:{token,quote_id:'q',accepted:true,future_card_accepted:true,future_card_terms_digest:'separate-consent',payment_method:'pm_never_forward',test_schedule:'accelerated'}},res)
+  }
+  assert.deepEqual(JSON.parse(received[0].opts.body),{quote_id:'q',accepted:true,future_card_accepted:true,future_card_terms_digest:'separate-consent',token})
+  assert.deepEqual(JSON.parse(received[1].opts.body),{token})
+})

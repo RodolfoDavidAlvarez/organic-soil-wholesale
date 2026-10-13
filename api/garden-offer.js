@@ -1,6 +1,6 @@
 const ORIGIN = 'https://www.organicsoilwholesale.com'
 const METHODS = Object.freeze({config:'GET',slots:'GET',status:'GET',quote:'POST',checkout:'POST',delivery:'POST'})
-const FIELDS = Object.freeze({quote:['plan','name','email','phone','line1','line2','city','state','postal_code','discount_code'],checkout:['quote_id','terms_digest','accepted'],delivery:['preferred_date','alternative_date','window','contact_name','contact_phone','access_notes','acknowledged']})
+const FIELDS = Object.freeze({quote:['plan','name','email','phone','line1','line2','city','state','postal_code','discount_code'],checkout:['quote_id','terms_digest','accepted','future_card_accepted','future_card_terms_digest'],delivery:['preferred_date','alternative_date','window','contact_name','contact_phone','access_notes','acknowledged']})
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store')
   res.setHeader('Referrer-Policy','no-referrer')
@@ -17,7 +17,7 @@ export default async function handler(req,res) {
   try {
     const upstream=await fetch(`https://sswworld.com/api/garden-bed?action=${action}`,{method:req.method,redirect:'error',signal:AbortSignal.timeout(50000),headers:{'Content-Type':'application/json',Origin:ORIGIN,...(token?{Authorization:`Bearer ${token}`}:{})},...(req.method==='POST'?{body:JSON.stringify({...payload,token})}:{})})
     const data=await upstream.json()
-    if(action==='config')return res.status(upstream.status).json({prices:data.prices,version:data.version,payments_enabled:data.payments_enabled,manual_entry_enabled:false})
+    if(action==='config')return res.status(upstream.status).json({prices:data.prices,version:data.version,payments_enabled:data.payments_enabled,manual_entry_enabled:false,future_card_reuse_enabled:data.future_card_reuse_enabled===true})
     return res.status(upstream.status).json(data)
   }catch{return res.status(503).json({error:'The payment service is temporarily unavailable. Check your payment status before trying again or call (623) 263-3386.'})}
 }

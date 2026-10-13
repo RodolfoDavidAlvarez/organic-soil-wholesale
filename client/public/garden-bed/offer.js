@@ -39,7 +39,7 @@ function setBusy(value) {
   if (manualDisclosure) manualDisclosure.querySelector('summary').setAttribute('aria-disabled', String(value))
 }
 function clearAuthorizations() {
-  for (const id of ['payment-consent', 'recording-stopped', 'customer-authorized']) if ($('#' + id)) $('#' + id).checked = false
+  for (const id of ['payment-consent', 'future-card-consent', 'recording-stopped', 'customer-authorized']) if ($('#' + id)) $('#' + id).checked = false
   if ($('#manual-result')) { $('#manual-result').textContent = ''; $('#manual-result').hidden = true }
   if (card) card.clear()
 }
@@ -56,6 +56,13 @@ const edit = document.createElement('button')
 edit.id = 'edit-details'; edit.type = 'button'; edit.className = 'edit-details'; edit.textContent = 'Edit details'
 edit.addEventListener('click', () => { invalidate(); form.scrollIntoView({ behavior: 'smooth', block: 'start' }) })
 review.prepend(edit)
+const futureCardChoice = document.createElement('label'); futureCardChoice.className = 'check'; futureCardChoice.hidden = true
+futureCardChoice.innerHTML = '<input id="future-card-consent" type="checkbox"><span><strong>Optional: save this card for future orders</strong><br><span id="future-card-terms"></span></span>'
+$('#card-security-note').after(futureCardChoice)
+function futureCardConsent() {
+  const accepted = !!quote?.future_card_terms_digest && !futureCardChoice.hidden && $('#future-card-consent').checked
+  return { future_card_accepted: accepted, ...(accepted ? { future_card_terms_digest: quote.future_card_terms_digest } : {}) }
+}
 form.addEventListener('input', invalidate)
 document.querySelectorAll('[name=plan]').forEach(element => element.addEventListener('change', () => {
   invalidate()
@@ -76,6 +83,8 @@ function showQuote(data) {
   row($('#summary'), 'Order total', money(data.total_cents), true)
   data.schedule.forEach((step, index) => row($('#payment-schedule'), index === 0 ? 'Due today' : `Payment ${index + 1} · ${dateLabel(step)}`, money(step.amount_cents), index === 0))
   $('#consent-text').textContent = data.terms; clearAuthorizations()
+  futureCardChoice.hidden = data.is_test || !data.future_card_terms || !data.future_card_terms_digest
+  $('#future-card-terms').textContent = data.future_card_terms || ''
   $('#pay-button').textContent = `Continue to Stripe · ${money(data.schedule[0].amount_cents)} today`
   $('#review').querySelector('h3').textContent = data.is_test ? 'Review your staff test' : 'Review your order'
   if (data.is_test) $('#post-payment-note').textContent = 'This is a real staff test payment. No product or delivery is included. After payment is verified, you can practice submitting delivery preferences.'
@@ -112,7 +121,7 @@ $('#pay-button').addEventListener('click', async () => {
   if (!$('#payment-consent').checked) { error(Error('Accept the payment authorization above to continue.')); return }
   setBusy(true); formError.hidden = true
   try {
-    const data = await api('checkout', { quote_id: quote.id, terms_digest: quote.terms_digest, accepted: true })
+    const data = await api('checkout', { quote_id: quote.id, terms_digest: quote.terms_digest, accepted: true, ...futureCardConsent() })
     const url = new URL(data.url)
     if (url.protocol !== 'https:' || !['checkout.stripe.com', 'www.organicsoilwholesale.com', 'organicsoilwholesale.com'].includes(url.hostname)) throw Error('Could not verify the payment link.')
     location.assign(url.href)
@@ -146,6 +155,8 @@ function renderStatus(data) {
     if (step.payment_url) paymentLink(step.payment_url, `Resolve payment ${step.number} securely`, 'invoice.stripe.com', statusSchedule)
   }
   if (data.installments?.length > 1) row(statusSchedule, 'Card saved securely with Stripe', data.card_saved ? 'Yes' : 'Not confirmed')
+  if (data.card_summary && /^\d{4}$/.test(data.card_summary.last4)) row(statusSchedule, 'Saved card', `${String(data.card_summary.brand).toUpperCase()} ending ${data.card_summary.last4} · ${data.card_summary.exp_month}/${data.card_summary.exp_year}`)
+  if (data.future_card_reuse?.consented || data.future_card_reuse?.status === 'revoked') row(statusSchedule, 'Future orders', ({ ready: 'Saved with your permission. Each new order needs approval.', pending: 'Card saving is being confirmed.', needs_review: 'Card saving needs office review.', revoked: 'Future-purchase permission withdrawn. Existing authorized installment payments continue.' })[data.future_card_reuse.status] || 'Not confirmed')
   if (data.delivery_allowed) void showDelivery(data)
 }
 async function showDelivery(data) {
@@ -224,7 +235,7 @@ async function setupStaffEntry() {
         const result = await stripe.createPaymentMethod({ type: 'card', card, billing_details: { name: details.name, email: details.email, phone: details.phone, address: { line1: details.line1, line2: details.line2, city: details.city, state: 'AZ', postal_code: details.postal_code, country: 'US' } } })
         if (result.error) throw Error(result.error.message)
         submitted = true
-        await api('manual-pay', { quote_id: quote.id, terms_digest: quote.terms_digest, accepted: true, customer_authorized: true, recording_stopped: true, payment_method: result.paymentMethod.id })
+        await api('manual-pay', { quote_id: quote.id, terms_digest: quote.terms_digest, accepted: true, customer_authorized: true, recording_stopped: true, payment_method: result.paymentMethod.id, ...futureCardConsent() })
         card.clear(); await status()
       } catch (e) { if (submitted) { card.clear(); await recoverPaymentError(e) } else resultNode.textContent = e.message }
       finally { setBusy(false) }
