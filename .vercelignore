@@ -27,3 +27,8 @@ coverage/
 
 # Keep only built files
 !dist/
+
+.env*
+!.env.example
+node_modules
+client/node_modules
