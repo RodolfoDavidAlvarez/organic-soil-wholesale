@@ -1,0 +1,65 @@
+{
+  "note": "Existing company photography, resized and compressed only for the local homepage design. No generated or retouched photos added.",
+  "photos": [
+    {
+      "asset": "client/public/images/community/garden-class-640.webp",
+      "source": "client/public/email-assets/garden-reset-saturday.jpg"
+    },
+    {
+      "asset": "client/public/images/community/garden-class-1200.webp",
+      "source": "client/public/email-assets/garden-reset-saturday.jpg"
+    },
+    {
+      "asset": "client/public/images/community/pickup-neighbors-640.webp",
+      "source": "/Users/rodolfoalvarez/Documents/Soil Seed and Water/Marketing Plan/Email Templates/assets/free-worm-castings-second-chance-2026-08/source-originals/20260804_102045.JPG"
+    },
+    {
+      "asset": "client/public/images/community/growing-garden-640.webp",
+      "source": "/Users/rodolfoalvarez/Documents/Soil Seed and Water/New content/UFE Annual Event Ready Go Garden at GCu/IMG_3331.jpeg"
+    },
+    {
+      "asset": "client/public/images/community/growing-garden-1200.webp",
+      "source": "/Users/rodolfoalvarez/Documents/Soil Seed and Water/New content/UFE Annual Event Ready Go Garden at GCu/IMG_3331.jpeg"
+    },
+    {
+      "asset": "client/public/images/community/seedling-800.webp",
+      "source": "/Users/rodolfoalvarez/Documents/Soil Seed and Water/OSW-Photo-Review/08-Pro-Photo-4568.jpg"
+    },
+    {
+      "asset": "client/public/images/community/home-delivery-640.webp",
+      "source": "/Users/rodolfoalvarez/Downloads/IMG_4655.JPEG",
+      "note": "Delivery photo supplied by Rodolfo October 14, 2026."
+    },
+    {
+      "asset": "client/public/images/community/home-delivery-1000.webp",
+      "source": "/Users/rodolfoalvarez/Downloads/IMG_4655.JPEG",
+      "note": "Delivery photo supplied by Rodolfo October 14, 2026."
+    },
+    {
+      "asset": "client/public/images/community/yard-trailer-pickup-480.webp",
+      "source": "/Users/rodolfoalvarez/Documents/Soil Seed and Water/outputs/osw-homepage-design-20261014/gallery-uploads/IMG_4637.jpg",
+      "note": "Responsive website copy of user-provided photography."
+    },
+    {
+      "asset": "client/public/images/community/yard-trailer-pickup-800.webp",
+      "source": "/Users/rodolfoalvarez/Documents/Soil Seed and Water/outputs/osw-homepage-design-20261014/gallery-uploads/IMG_4637.jpg",
+      "note": "Responsive website copy of user-provided photography."
+    },
+    {
+      "asset": "client/public/images/community/garden-harvest-480.webp",
+      "source": "/Users/rodolfoalvarez/Downloads/36B653FD-8F6B-4F9D-A068-67BAF8A8924B.jpeg",
+      "note": "Responsive website copy of user-provided photography."
+    },
+    {
+      "asset": "client/public/images/community/garden-harvest-800.webp",
+      "source": "/Users/rodolfoalvarez/Downloads/36B653FD-8F6B-4F9D-A068-67BAF8A8924B.jpeg",
+      "note": "Responsive website copy of user-provided photography."
+    }
+  ],
+  "excluded_photos": [
+    {
+      "source": "/Users/rodolfoalvarez/Documents/Soil Seed and Water/New content/Ready Go Garden Harvesting food and flowers/IMG_3403.jpeg",
+      "reason": "User identified the subject as Daniel Nowell and requested removal because he is no longer part of the business. Do not reuse this portrait in current homepage imagery."
+    }
+  ]
+}

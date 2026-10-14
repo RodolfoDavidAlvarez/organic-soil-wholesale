@@ -191,8 +191,8 @@ const Home = () => {
     <div className="min-h-screen bg-background">
 
       <SEO
-        title="Arizona-Made Organic Compost & Soil | Wholesale Bulk Supplier"
-        description="Arizona's leading wholesale supplier of locally-produced organic soil amendments, compost, and potting soil in bulk. Serving landscapers, commercial growers, and farms with pallets, supersacks, and truckloads. Made in Arizona."
+        title="Soil, Garden Beds & Bulk Delivery in Arizona"
+        description="Arizona-made soil, compost and mulch for your next growing project. Explore garden bed packages, pickup bundles and bulk delivery. Call our local team for help."
         keywords="Arizona compost, Arizona made soil, local compost Arizona, bulk organic soil, wholesale compost, dairy compost bulk, worm castings wholesale, commercial soil supplier, soil amendments wholesale, potting soil bulk, landscaper soil supplier, golf course soil, supersack soil, pallet soil, wholesale plant nutrients, HB 2819"
         canonical="https://organicsoilwholesale.com"
         structuredData={{
@@ -202,7 +202,7 @@ const Home = () => {
             "@type": "SpeakableSpecification",
             cssSelector: ["h1", ".speakable"],
           },
-          name: "Organic Soil Wholesale - Arizona-Made Premium Bulk Soil Products",
+          name: "Organic Soil Wholesale - Soil, Garden Beds and Bulk Delivery",
           url: "https://organicsoilwholesale.com",
           potentialAction: {
             "@type": "SearchAction",
@@ -212,129 +212,135 @@ const Home = () => {
         }}
       />
 
-      {/* Turf Daddy Hero — Organic Soil Wholesale brand */}
-      <section className="relative isolate overflow-hidden bg-stone-900 text-white">
-        <div className="absolute inset-0 -z-10">
-          <img
-            src="/images/performance/home-hero-960.webp"
-            srcSet="/images/performance/home-hero-640.webp 640w, /images/performance/home-hero-960.webp 960w, /images/performance/home-hero-1200.webp 1200w"
-            sizes="100vw"
-            alt="Turf Daddy applied to a lawn"
-            width="1200"
-            height="1200"
-            className="h-full w-full object-cover opacity-40"
-            loading="eager"
-            decoding="async"
-            {...{ fetchpriority: "high" }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-stone-950/90 via-stone-950/70 to-stone-950/40" />
-          <div className="absolute inset-x-0 bottom-0 hidden h-24 bg-gradient-to-t from-[#f4f0e5] to-transparent lg:block" />
-        </div>
-        <div className="container mx-auto px-4 py-12 sm:py-16 md:py-28 lg:py-36">
-          <div className="grid items-center gap-12 lg:grid-cols-12">
-            <div className="lg:col-span-5">
-              <div className="mb-5">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-stone-300/80">
-                  by Soil Seed &amp; Water
-                </p>
-              </div>
-              <h1 className="font-heading text-4xl font-extrabold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
-                Bulk soil that <span className="text-[#d6c1a0]">grows results</span> you can see.
-              </h1>
-              <p className="mt-5 max-w-xl text-base text-stone-200 md:text-lg">
-                Dairy compost, worm castings, premium potting blends and amendments — produced in Arizona, delivered by the pallet, supersack, or truckload to landscapers, farms, and nurseries.
-              </p>
-              <div className="mt-7 grid grid-cols-2 gap-3 sm:mt-8 sm:flex sm:flex-row">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => {
-                    trackEvent("Hero CTA Clicked", { cta: "request_quote" });
-                    navigate(`/order${window.location.search}`);
-                  }}
-                  className="h-14 min-w-0 justify-center px-2 text-[17px] font-extrabold leading-tight text-stone-950 sm:px-7 sm:text-lg"
-                >
-                  Request a Quote
-                </Button>
-                <Button
-                  size="lg"
-                  onClick={() => {
-                    trackEvent("Hero CTA Clicked", { cta: "shop_products" });
-                    navigate(`/products${window.location.search}`);
-                  }}
-                  className="h-14 min-w-0 justify-center gap-1 bg-[#d6c1a0] px-2 text-[17px] font-extrabold leading-tight tracking-tight text-stone-950 shadow-xl ring-1 ring-white/30 hover:bg-[#c4a878] sm:gap-1.5 sm:px-7 sm:text-lg"
-                >
-                  <span className="whitespace-nowrap">Get Soil Today</span>
-                  <ArrowRight className="h-5 w-5 shrink-0 stroke-[3]" />
-                </Button>
-              </div>
-              <a
-                href={CUSTOMER_SUPPORT_PHONE_TEL}
-                aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
-                data-official-support-phone="true"
-                data-hero-phone-cta="true"
-                data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)}
-                onClick={() => trackEvent("Hero CTA Clicked", { cta: "call" })}
-                className="-mx-2 mt-2 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg px-2 text-sm font-semibold text-white/85 underline-offset-4 hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-stone-950"
-              >
-                <Phone className="h-4 w-4" />
-                Need help? Call <span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
-              </a>
-              <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/15 pt-5 text-sm text-stone-300 sm:mt-8 sm:gap-6 sm:pt-6">
-                <div>
-                  <p className="font-bold text-white">Made in AZ</p>
-                  <p className="text-xs text-stone-400">Phoenix-based</p>
-                </div>
-                <div>
-                  <p className="font-bold text-white">OMRI eligible</p>
-                  <p className="text-xs text-stone-400">Organic-program ready</p>
-                </div>
-                <div>
-                  <p className="font-bold text-white">Same-week</p>
-                  <p className="text-xs text-stone-400">delivery across AZ</p>
-                </div>
-              </div>
+      <section className="bg-[#f7f5ef] text-[#264027]">
+        <div className="mx-auto grid max-w-7xl items-center gap-6 px-5 py-6 sm:px-8 md:grid-cols-[.85fr_1.15fr] md:gap-8 lg:gap-12 lg:py-12">
+          <div className="order-2 md:order-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">Arizona soil. A growing community.</p>
+            <h1 className="mt-4 font-heading text-[38px] font-semibold leading-[1.08] tracking-[-0.05em] sm:text-5xl lg:text-[60px]">Good soil.<br />Good people.<br /><span className="text-[#748259]">Let’s grow.</span></h1>
+            <p className="mt-5 max-w-lg text-[15px] leading-7 text-[#626b5d] sm:text-base">A few bags, a fresh garden bed, or a bigger project. Find your soil, meet our team, and get growing with a little local help.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/products" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[#264027] px-5 text-sm font-semibold text-white hover:bg-[#3c5233]" onClick={() => trackEvent("Hero CTA Clicked", { cta: "shop_products" })}>Shop soil &amp; bundles <ArrowRight className="h-4 w-4" /></Link>
+              <a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY} for delivery`} data-official-support-phone="true" data-hero-phone-cta="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-12 items-center gap-2 rounded-md border border-[#a8b29e] px-5 text-sm font-semibold"><Phone className="h-4 w-4" />Call for delivery</a>
             </div>
-            <div className="hidden lg:col-span-7 lg:block">
-              <div className="relative">
-                <div className="absolute -inset-10 rounded-3xl bg-gradient-to-br from-[#d6c1a0]/40 to-transparent blur-3xl" />
-                <figure className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-white/10">
-                  <img
-                    src="/images/performance/home-results-1280.webp"
-                    srcSet="/images/performance/home-results-640.webp 640w, /images/performance/home-results-768.webp 768w, /images/performance/home-results-1280.webp 1280w"
-                    sizes="55vw"
-                    alt="Turf Daddy before-and-after lawn transformation"
-                    width="1280"
-                    height="696"
-                    loading="lazy"
-                    decoding="async"
-                    className="block w-full"
-                  />
-                  <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-5 md:p-6">
-                    <p className="text-base font-semibold leading-tight text-white md:text-lg">
-                      Turf Daddy testimonial <span className="text-[#d6c1a0]">before / after results.</span>
-                    </p>
-                  </figcaption>
-                </figure>
-              </div>
+            <p className="mt-5 text-xs text-[#626b5d]">Bags from <strong>$10.99</strong> <span className="mx-2">·</span> Garden bundles from <strong>$99</strong></p>
+            <a href={PHOENIX_YARD_DIRECTIONS_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-2 text-[11px] text-[#626b5d]"><MapPin className="h-4 w-4" />Phoenix pickup · 1634 N 19th Ave <ArrowUpRight className="h-3.5 w-3.5" /></a>
+          </div>
+          <div className="order-1 min-w-0 md:order-2">
+            <figure>
+              <img
+                src="/images/community/garden-class-1200.webp"
+                srcSet="/images/community/garden-class-640.webp 640w, /images/community/garden-class-1200.webp 1200w"
+                sizes="(min-width: 768px) 55vw, 100vw"
+                alt="Our Phoenix garden class gathered together at the yard"
+                width="1200" height="552" loading="eager"
+                className="w-full rounded-md"
+              />
+              <figcaption className="flex flex-wrap justify-between gap-1 py-2 text-[10px] text-[#626b5d]">
+                <span>Our garden class. Our kind of Saturday.</span>
+                <span>Phoenix, Arizona</span>
+              </figcaption>
+            </figure>
+            <div className="mt-2 hidden grid-cols-2 gap-3 md:grid">
+              <figure>
+                <img src="/images/community/yard-trailer-pickup-800.webp" srcSet="/images/community/yard-trailer-pickup-480.webp 480w, /images/community/yard-trailer-pickup-800.webp 800w" sizes="(min-width: 1280px) 330px, 28vw" alt="A pickup order loaded into a trailer at the Phoenix soil yard" width="800" height="1067" loading="lazy" decoding="async" className="aspect-[3/2] w-full rounded-md object-cover object-[center_70%]" />
+                <figcaption className="pt-2 text-[10px] text-[#626b5d]">A good day at the pickup yard.</figcaption>
+              </figure>
+              <figure>
+                <img src="/images/community/growing-garden-640.webp" alt="Leafy vegetables and flowers growing in a Ready Go Garden community garden" width="640" height="480" loading="lazy" className="aspect-[3/2] w-full rounded-md object-cover" />
+                <figcaption className="pt-2 text-[10px] text-[#626b5d]">And a little inspiration for what’s next.</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <nav aria-label="Choose your project" className="mx-auto grid max-w-7xl border-y border-[#d9dece] px-5 sm:px-8 md:grid-cols-3">
+          {[
+            ["01", "Start a garden bed", "Explore the bed and growing materials.", "#new-garden-package"],
+            ["02", "Refresh what’s growing", "Find a soil and amendment bundle.", "#garden-bundles-heading"],
+            ["03", "Plan a bigger project", "Pallets, super sacks and bulk loads.", "#home-delivery"],
+          ].map(([number, title, description, href]) => <a key={number} href={href} className="flex min-h-24 items-center gap-4 border-b border-[#d9dece] py-5 last:border-b-0 md:border-b-0 md:px-5"><span className="text-xs text-[#8a9676]">{number}</span><span className="flex-1"><strong className="block text-sm font-semibold">{title}</strong><span className="mt-1 block text-[11px] text-[#626b5d]">{description}</span></span><ArrowUpRight className="h-4 w-4" /></a>)}
+        </nav>
+      </section>
+
+      <section id="new-garden-package" aria-labelledby="new-garden-heading" className="scroll-mt-24 bg-[#f7f5ef] px-5 py-12 text-[#264027] sm:px-8 lg:py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b795b]">The new garden bed package</p><h2 id="new-garden-heading" className="mt-3 font-heading text-3xl font-semibold leading-tight tracking-[-0.04em] lg:text-4xl">A place to grow.<br />A good place to start.</h2></div>
+            <p className="max-w-sm text-sm leading-7 text-[#626b5d]">A locally made raised bed, paired with the materials to fill it. Here’s what comes together in the new package.</p>
+          </div>
+          <div className="grid items-start gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-12">
+            <div>
+              <figure><img src="/garden-bed/bundle.jpg" alt="Illustration of the garden bed package with growing materials, mulch and pea gravel totes" width="1200" height="800" loading="lazy" className="aspect-[3/2] w-full rounded-md object-cover" /><figcaption className="mt-2 text-[10px] leading-4 text-[#626b5d]">Package illustration. Plants, irrigation, shade accessories and assembly are not included.</figcaption></figure>
+              <h3 className="mt-6 text-xl font-semibold">The bed. The materials. The next step.</h3>
+              <p className="mt-3 text-sm leading-7 text-[#626b5d]">Wood panels and heavy-duty metal corners give your garden a sturdy home. Growing materials, setup instructions and an assembly video help you get started.</p>
+              <div className="mt-5 flex flex-wrap items-center gap-4"><a href="/garden-bed-offer.html" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[#264027] px-5 text-sm font-semibold text-white">Explore the full package <ArrowRight className="h-4 w-4" /></a><a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} data-official-support-phone="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Talk it through <ArrowUpRight className="h-4 w-4" /></a></div>
+              <p className="mt-4 max-w-xl text-[11px] leading-5 text-[#626b5d]">The current full-package offer is for our giveaway community, with Arizona delivery starting in November. Call for eligibility, pricing and delivery details.</p>
+            </div>
+            <div className="rounded-md bg-[#eaedde] p-6 sm:p-8">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b795b]">What’s included</p><h3 className="mt-3 text-xl font-semibold">One bed. A solid start.</h3>
+              <ul className="mt-5 divide-y divide-[#cdd6c1]">
+                {[
+                  ["Raised garden bed", "4 × 8 ft · 2 ft deep"],
+                  ["Lumber, metal posts, soil cloth & screws", "Included"],
+                  ["Raw mulch", "2 cubic yards"],
+                  ["Pea gravel", "1 cubic yard"],
+                  ["Potting soil", "10 bags"],
+                  ["Nature’s Blanket", "6 bags"],
+                  ["Worm castings", "2 × 9 lb bags"],
+                  ["Dairy compost", "2 × 9 lb bags"],
+                  ["Setup instructions & assembly video", "Included"],
+                ].map(([name, amount]) => <li key={name} className="flex justify-between gap-4 py-3 text-xs leading-5"><span className="max-w-[60%]">{name}</span><strong className="text-right font-semibold">{amount}</strong></li>)}
+              </ul>
+              <div className="mt-5 border-t border-[#c1cbb5] pt-5"><p className="text-xs">Just need the bed kit?</p><Link href="/products/garden-bed-kit" className="mt-1 inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Explore the $599 kit <ArrowUpRight className="h-4 w-4" /></Link><p className="text-[10px] leading-5 text-[#626b5d]">Growing materials, assembly and delivery sold separately.</p></div>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="bg-stone-900 px-4 pb-6 lg:hidden">
-        <MobileResultsProof />
-      </div>
+      <section aria-labelledby="garden-bundles-heading" className="bg-[#e9edde] px-5 py-12 text-[#264027] sm:px-8">
+        <div className="mx-auto max-w-7xl"><div className="mb-6"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">For the garden you’re growing · Phoenix pickup</p><h2 id="garden-bundles-heading" className="mt-3 scroll-mt-24 font-heading text-3xl font-semibold tracking-[-0.04em]">A little refresh. Or a bigger beginning.</h2><p className="mt-3 text-sm text-[#626b5d]">Choose the materials that fit your project. New beds need enough growing mix for their size and depth.</p></div><DealHubCards source="homepage-bundles" layout="carousel" /></div>
+      </section>
 
-      <section aria-labelledby="garden-bundles-heading" className="bg-[#f7f5ef] px-4 pb-10 pt-8 sm:pb-12 sm:pt-10 lg:pt-12">
-        <div className="container mx-auto max-w-5xl">
-          <div className="mb-5">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Already priced · pickup or delivery</p>
-            <h2 id="garden-bundles-heading" className="mt-2 font-heading text-2xl font-extrabold leading-tight text-[#183a23] sm:text-3xl">
-              Fall garden bundles.
-            </h2>
+      <section aria-labelledby="growing-community-heading" className="bg-[#f7f5ef] px-5 py-12 text-[#264027] sm:px-8 lg:py-16">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">People, pickup days &amp; deliveries</p>
+              <h2 id="growing-community-heading" className="mt-3 font-heading text-3xl font-semibold tracking-[-0.04em] lg:text-4xl">From our yard to your garden.</h2>
+            </div>
+            <p className="max-w-sm text-sm leading-7 text-[#626b5d]">Come by for soil, a conversation, or a little inspiration. There’s a whole community growing here.</p>
           </div>
-          <DealHubCards source="homepage-bundles" layout="carousel" />
+          <div className="grid grid-cols-2 items-start gap-4 lg:grid-cols-[.8fr_1.4fr_.8fr] lg:gap-6">
+            <figure>
+              <img src="/images/community/pickup-neighbors-640.webp" alt="A customer and team member at the Phoenix yard with a bag of worm castings" width="640" height="853" loading="lazy" className="aspect-[3/4] w-full rounded-md object-cover" />
+              <figcaption className="mt-3 text-xs font-medium">Pick up. Say hello.</figcaption>
+            </figure>
+            <figure className="order-3 col-span-2 lg:order-none lg:col-span-1 lg:pt-8">
+              <img src="/images/community/growing-garden-1200.webp" srcSet="/images/community/growing-garden-640.webp 640w, /images/community/growing-garden-1200.webp 1200w" sizes="(min-width: 1024px) 46vw, 100vw" alt="Rows of vegetables and flowers at the Ready Go Garden community garden" width="1200" height="900" loading="lazy" className="aspect-[4/3] w-full rounded-md object-cover" />
+              <figcaption className="mt-3 text-xs font-medium">A little space. Plenty of possibility.</figcaption>
+            </figure>
+            <figure>
+              <img src="/images/community/garden-harvest-800.webp" srcSet="/images/community/garden-harvest-480.webp 480w, /images/community/garden-harvest-800.webp 800w" sizes="(min-width: 1024px) 27vw, 50vw" alt="A hand holding a striped garden vegetable on the vine among green leaves" width="800" height="1067" loading="lazy" decoding="async" className="aspect-[3/4] w-full rounded-md object-cover" />
+              <figcaption className="mt-3 text-xs font-medium">Something good is growing.</figcaption>
+            </figure>
+          </div>
+          <a href={PHOENIX_YARD_DIRECTIONS_URL} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold"><MapPin className="h-4 w-4" />Visit the Phoenix pickup yard <ArrowUpRight className="h-4 w-4" /></a>
+        </div>
+      </section>
+
+      <section id="home-delivery" aria-labelledby="home-delivery-heading" className="scroll-mt-24 bg-[#263c2a] px-5 py-12 text-[#f6f3e9] sm:px-8 lg:py-16">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 md:grid-cols-[.9fr_1.1fr] lg:gap-20">
+          <figure className="order-2 overflow-hidden rounded-md md:order-none">
+            <img
+              src="/images/community/home-delivery-1000.webp"
+              srcSet="/images/community/home-delivery-640.webp 640w, /images/community/home-delivery-1000.webp 1000w"
+              sizes="(min-width: 1280px) 550px, (min-width: 768px) 45vw, 100vw"
+              alt="Super sacks of soil delivered on pallets to a residential garden project"
+              width="1000" height="1755" loading="lazy" decoding="async"
+              className="aspect-[4/5] w-full object-cover object-[center_60%]"
+            />
+            <figcaption className="bg-[#192e20] px-4 py-3 text-xs">Super sacks, delivered to your project.</figcaption>
+          </figure>
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d5c394]">Pallets · Super sacks · Bulk</p><h2 id="home-delivery-heading" className="mt-4 font-heading text-4xl font-semibold leading-tight tracking-[-0.04em] lg:text-5xl">More soil.<br />Better value.</h2><p className="mt-5 max-w-xl text-sm leading-7 text-[#d1dac8]">Have a bigger project in mind? Ask about pallet and bulk pricing. We’ll help you choose the material, amount and delivery that fit the job.</p><div className="mt-6 border-t border-[#53664b] pt-6"><h3 className="text-xl font-semibold">Need delivery? Just call.</h3><p className="mt-2 text-sm leading-7 text-[#d1dac8]">Tell us what you need and where it’s going. Our team will confirm availability, freight and timing.</p></div><div className="mt-6 flex flex-wrap items-center gap-4"><a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} data-official-support-phone="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-12 items-center gap-2 rounded-md bg-[#eee3c9] px-5 text-sm font-semibold text-[#264027]"><Phone className="h-4 w-4" /><span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span></a><Link href="/order" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Request a bulk quote <ArrowUpRight className="h-4 w-4" /></Link></div></div>
         </div>
       </section>
 
@@ -350,10 +356,11 @@ const Home = () => {
           <div className="overflow-hidden rounded-2xl bg-[#264027] text-white shadow-[0_18px_40px_rgba(24,58,35,0.24)] ring-1 ring-black/10">
             <div className="flex flex-col sm:flex-row sm:items-stretch">
               <img
-                src="/email-assets/garden-reset-saturday.jpg"
-                alt="Garden Reset class at the Phoenix yard"
-                width="900"
-                height="420"
+                src="/images/community/seedling-800.webp"
+                alt="A young plant growing in soil beside drip irrigation"
+                width="800"
+                height="533"
+                loading="lazy"
                 className="h-32 w-full object-cover object-center sm:h-auto sm:w-48 md:w-56"
               />
               <div className="flex flex-1 flex-col justify-center gap-4 px-5 py-5 sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-5">

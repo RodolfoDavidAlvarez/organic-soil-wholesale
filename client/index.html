@@ -77,9 +77,9 @@
         preload.type = 'image/webp';
         preload.setAttribute('fetchpriority', 'high');
         if (path === '/') {
-          preload.href = '/images/performance/home-hero-640.webp';
-          preload.setAttribute('imagesrcset', '/images/performance/home-hero-640.webp 640w, /images/performance/home-hero-960.webp 960w, /images/performance/home-hero-1200.webp 1200w');
-          preload.setAttribute('imagesizes', '100vw');
+          preload.href = '/images/community/garden-class-1200.webp';
+          preload.imageSrcset = '/images/community/garden-class-640.webp 640w, /images/community/garden-class-1200.webp 1200w';
+          preload.imageSizes = '(min-width: 768px) 55vw, 100vw';
         } else {
           return;
         }
