@@ -8,3 +8,7 @@ header a{white-space:nowrap}
 .payment-methods{display:grid;grid-template-columns:1fr 1fr;gap:12px}.payment-methods .choice{padding:16px}.payment-methods .choice:has(input:checked){padding:15px}.payment-methods small{margin-top:8px}.summary div>span:last-child{max-width:65%;overflow-wrap:anywhere;flex-shrink:1}@media(max-width:480px){.payment-methods{grid-template-columns:1fr}}
 
 .summary div>span.amount{flex-shrink:0;white-space:nowrap;overflow-wrap:normal}
+
+.assembly-video{margin:24px 0 0}.assembly-video video{display:block;width:100%;max-width:280px;height:auto;aspect-ratio:9/16;object-fit:contain;border-radius:10px;background:#172b1b}.assembly-video figcaption{font-size:12px;line-height:1.5;color:#617058;margin-top:10px}.assembly-guide-link{display:inline-flex;align-items:center;min-height:44px;font-size:13px;text-underline-offset:3px}.assembly-video video:focus-visible{outline:3px solid #b38a58;outline-offset:3px}
+
+.package-details{align-items:start}
