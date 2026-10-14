@@ -12,3 +12,13 @@ header a{white-space:nowrap}
 .assembly-video{margin:24px 0 0}.assembly-video video{display:block;width:100%;max-width:280px;height:auto;aspect-ratio:9/16;object-fit:contain;border-radius:10px;background:#172b1b}.assembly-video figcaption{font-size:12px;line-height:1.5;color:#617058;margin-top:10px}.assembly-guide-link{display:inline-flex;align-items:center;min-height:44px;font-size:13px;text-underline-offset:3px}.assembly-video video:focus-visible{outline:3px solid #b38a58;outline-offset:3px}
 
 .package-details{align-items:start}
+
+@font-face{font-family:OfferBrand;src:url('/fonts/montserrat-latin.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+.offer-header{max-width:none;padding:0;background:#fff;border-top:4px solid #b38a58;border-bottom:1px solid #dfe4d6}
+.offer-nav{display:flex;align-items:center;gap:28px;width:100%;max-width:1180px;margin:auto;padding:16px 28px}
+.offer-brand{display:flex;flex-direction:column;justify-content:center;min-height:44px;gap:4px;margin-right:auto}
+.offer-brand-name{font:800 23px/1.1 OfferBrand,Arial,sans-serif;letter-spacing:-.8px;color:#183a23}.offer-brand-name>span{color:#215330}.offer-brand-name em{font-style:italic;color:#8f7000}
+.offer-brand-byline{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6c7567}
+.offer-links{display:flex;align-items:center;gap:22px}.offer-links a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;font-size:14px;font-weight:600}.offer-links a:hover{text-decoration:underline;text-underline-offset:5px}
+.offer-phone{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border:1px solid #dfe4d6;border-radius:7px;background:#f7f6ef;font-size:13px;font-weight:600}.offer-phone:hover{background:#edf1e5}
+@media(max-width:760px){.offer-nav{display:grid;grid-template-columns:1fr auto;gap:10px 16px;padding:14px 20px}.offer-brand{grid-column:1/-1}.offer-brand-name{font-size:22px}.offer-links{gap:20px}.offer-links a{font-size:13px}.offer-phone{font-size:12px;padding:10px}}
