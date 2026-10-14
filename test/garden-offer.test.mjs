@@ -47,3 +47,17 @@ test('optional future-card permission forwards only through customer checkout',a
   assert.deepEqual(JSON.parse(received[0].opts.body),{quote_id:'q',accepted:true,future_card_accepted:true,future_card_terms_digest:'separate-consent',token})
   assert.deepEqual(JSON.parse(received[1].opts.body),{token})
 })
+
+
+test('ACH config and method forward without exposing bank details or staff timing',async(t)=>{
+  const received=[]
+  t.mock.method(globalThis,'fetch',async(url,opts)=>{received.push({url,opts});return {status:200,json:async()=>({ach_enabled:true,preferred_payment_method:'us_bank_account',manual_entry_enabled:true})}})
+  const config=response();await handler({method:'GET',query:{action:'config'},headers:{}},config)
+  assert.equal(config.body.ach_enabled,true);assert.equal(config.body.preferred_payment_method,'us_bank_account');assert.equal(config.body.manual_entry_enabled,false)
+  const res=response();await handler({method:'POST',query:{action:'quote'},headers:{origin},body:{token,payment_method_type:'us_bank_account',plan:'monthly',test_schedule:'accelerated'}},res)
+  assert.deepEqual(JSON.parse(received[1].opts.body),{payment_method_type:'us_bank_account',plan:'monthly',token})
+  for(const key of ['account_number','routing_number','bank_account','us_bank_account','bank_details','iban']){
+    const blocked=response();await handler({method:'POST',query:{action:'quote'},headers:{origin},body:{token,[key]:'fixture-never-forward'}},blocked);assert.equal(blocked.statusCode,400)
+  }
+  assert.equal(received.length,2)
+})

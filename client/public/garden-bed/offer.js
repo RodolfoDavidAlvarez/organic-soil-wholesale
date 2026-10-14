@@ -29,7 +29,7 @@ function error(e) { formError.textContent = e.message; formError.hidden = false;
 function row(parent, label, value, total = false) {
   const item = document.createElement('div'), left = document.createElement('span'), right = document.createElement('span')
   if (total) item.className = 'total'
-  left.textContent = label; right.textContent = value; item.append(left, right); parent.append(item)
+  left.textContent = label; right.textContent = value; if (/^\$[\d,.]+$/.test(value)) right.className = 'amount'; item.append(left, right); parent.append(item)
 }
 function setBusy(value) {
   busy = value
@@ -59,36 +59,54 @@ review.prepend(edit)
 const futureCardChoice = document.createElement('label'); futureCardChoice.className = 'check'; futureCardChoice.hidden = true
 futureCardChoice.innerHTML = '<input id="future-card-consent" type="checkbox"><span><strong>Optional: save this card for future orders</strong><br><span id="future-card-terms"></span></span>'
 $('#card-security-note').after(futureCardChoice)
+const methodField = document.createElement('fieldset'); methodField.id = 'payment-method-field'; methodField.hidden = true
+methodField.innerHTML = '<legend>How would you like to pay?</legend><div class="payment-methods"><label class="choice"><input type="radio" name="payment_method_type" value="us_bank_account"><strong>Pay by bank (ACH)</strong><small>Preferred · securely connect your bank with Stripe. Verification and processing can take several business days.</small></label><label class="choice"><input type="radio" name="payment_method_type" value="card" checked><strong>Card</strong><small>Pay securely with a credit or debit card through Stripe.</small></label></div>'
+form.prepend(methodField)
+const selectedBank = () => form.elements.payment_method_type.value === 'us_bank_account'
+function updateTestTiming() {
+  const field = $('#test-schedule-field')
+  if (!field) return
+  field.hidden = !staffTest || $('[name=plan]:checked').value !== 'monthly' || selectedBank()
+  if (selectedBank()) form.elements.test_schedule.value = 'monthly'
+}
+methodField.addEventListener('change', updateTestTiming)
 function futureCardConsent() {
-  const accepted = !!quote?.future_card_terms_digest && !futureCardChoice.hidden && $('#future-card-consent').checked
+  const accepted = quote?.payment_method_type !== 'us_bank_account' && !!quote?.future_card_terms_digest && !futureCardChoice.hidden && $('#future-card-consent').checked
   return { future_card_accepted: accepted, ...(accepted ? { future_card_terms_digest: quote.future_card_terms_digest } : {}) }
 }
 form.addEventListener('input', invalidate)
 document.querySelectorAll('[name=plan]').forEach(element => element.addEventListener('change', () => {
   invalidate()
-  if ($('#test-schedule-field')) $('#test-schedule-field').hidden = !staffTest || element.value !== 'monthly'
+  updateTestTiming()
 }))
 $('a[href="#choose"]').addEventListener('click', event => { event.preventDefault(); $('#choose').scrollIntoView({ behavior: 'smooth' }) })
 if (token) $('#access-note').hidden = true
 else $('#review-button').disabled = true
 if (staffMode) {
   const field = document.createElement('label'); field.id = 'test-schedule-field'; field.className = 'field notice'; field.hidden = true
-  field.innerHTML = 'Staff test timing<select name="test_schedule"><option value="monthly">Normal monthly dates</option><option value="accelerated">Accelerated $1 staff test</option></select><span class="muted">Accelerated timing requires an authorized staff test offer. The next charges are about 1 and 2 hours after this quote. Review the exact charge times below before authorizing. Customer plans always use monthly dates.</span>'
+  field.innerHTML = 'Staff test timing<select name="test_schedule"><option value="monthly">Normal monthly dates</option><option value="accelerated">Accelerated $1 staff test</option></select><span class="muted">Card tests only: the next charges are about 1 and 2 hours after this quote. Review the exact Arizona times before authorizing. Bank payments use normal monthly dates and can take several business days to process.</span>'
   form.prepend(field)
 }
 function showQuote(data) {
-  quote = data; $('#summary').replaceChildren(); $('#payment-schedule').replaceChildren()
+  quote = data; const bank = data.payment_method_type === 'us_bank_account'
+  if (manualDisclosure) { manualDisclosure.open = false; manualDisclosure.hidden = bank }
+  if ($('#staff-entry-note')) $('#staff-entry-note').hidden = bank
+  $('#pay-button').hidden = false
+  $('#summary').replaceChildren(); $('#payment-schedule').replaceChildren()
   row($('#summary'), data.is_test ? 'Staff test · no product or delivery' : 'Package', money(data.subtotal_cents))
   row($('#summary'), 'Tax', money(data.tax_cents)); row($('#summary'), 'Delivery', data.is_test ? 'Not applicable' : 'Free')
   row($('#summary'), 'Order total', money(data.total_cents), true)
-  data.schedule.forEach((step, index) => row($('#payment-schedule'), index === 0 ? 'Due today' : `Payment ${index + 1} · ${dateLabel(step)}`, money(step.amount_cents), index === 0))
+  row($('#summary'), 'Payment method', bank ? 'Bank (ACH)' : 'Card')
+  data.schedule.forEach((step, index) => row($('#payment-schedule'), index === 0 ? (bank ? 'First bank debit' : 'Due today') : `Payment ${index + 1} · ${dateLabel(step)}`, money(step.amount_cents), index === 0))
   $('#consent-text').textContent = data.terms; clearAuthorizations()
-  futureCardChoice.hidden = data.is_test || !data.future_card_terms || !data.future_card_terms_digest
+  futureCardChoice.hidden = bank || data.is_test || !data.future_card_terms || !data.future_card_terms_digest
   $('#future-card-terms').textContent = data.future_card_terms || ''
-  $('#pay-button').textContent = `Continue to Stripe · ${money(data.schedule[0].amount_cents)} today`
+  $('#pay-button').textContent = bank ? `Continue to Stripe · ${money(data.schedule[0].amount_cents)} bank debit` : `Continue to Stripe · ${money(data.schedule[0].amount_cents)} today`
   $('#review').querySelector('h3').textContent = data.is_test ? 'Review your staff test' : 'Review your order'
   if (data.is_test) $('#post-payment-note').textContent = 'This is a real staff test payment. No product or delivery is included. After payment is verified, you can practice submitting delivery preferences.'
-  $('#card-security-note').textContent = data.schedule.length > 1
+  $('#card-security-note').textContent = bank
+    ? `Stripe securely collects your bank details and bank-debit authorization. ${data.schedule.length > 1 ? 'One authorization covers exactly these three payments. This plan ends after three payments. ' : 'One bank debit. No recurring charges. '}Bank verification and processing can take several business days. Delivery preferences unlock only after the first payment is verified as received. We do not collect your bank account or routing number.`
+    : data.schedule.length > 1
     ? 'Stripe securely saves this card for exactly two more automatic payments on the dates shown. This plan ends after three payments. We do not store your full card number or security code.'
     : 'One payment. No recurring charges. Stripe handles your card details; we do not store your full card number or security code.'
   choiceIntro.forEach(element => { element.hidden = true }); $('#choose').classList.add('is-review')
@@ -98,7 +116,7 @@ form.addEventListener('submit', async event => {
   event.preventDefault(); if (busy) return
   // Read enabled fields before locking the form.
   const data = Object.fromEntries(new FormData(form)); data.plan = $('[name=plan]:checked').value
-  if (data.plan !== 'monthly' || data.test_schedule !== 'accelerated') delete data.test_schedule
+  if (data.plan !== 'monthly' || data.payment_method_type === 'us_bank_account' || data.test_schedule !== 'accelerated') delete data.test_schedule
   setBusy(true); formError.hidden = true
   try { const result = await api('quote', data); if (result.existing_order) await status(); else showQuote(result) }
   catch (e) { error(e) }
@@ -134,27 +152,37 @@ const refresh = document.createElement('button'); refresh.type = 'button'; refre
 refresh.addEventListener('click', async () => { if (busy) return; setBusy(true); refresh.disabled = true; try { await status() } finally { setBusy(false); refresh.disabled = false } })
 statusActions.append(refresh)
 function paymentLink(url, label, allowedHost, parent = statusActions) {
-  try { const parsed = new URL(url); if (parsed.protocol !== 'https:' || parsed.hostname !== allowedHost) return
+  try { const parsed = new URL(url); if (parsed.protocol !== 'https:' || parsed.hostname !== allowedHost || parsed.username || parsed.password || parsed.port) return
     const link = document.createElement('a'); link.href = parsed.href; link.textContent = label; link.className = 'button'; parent.append(link)
   } catch { /* Untrusted or missing provider URLs never become links. */ }
 }
 function renderStatus(data) {
+  const bank = data.payment_method_type === 'us_bank_account'
+  const verifying = bank && !!data.verification_url
+  const processing = bank && (data.payment_pending || data.installments?.some(step => step.status === 'processing'))
   $('#offer').hidden = true; $('#delivery').hidden = false; $('#delivery-content').hidden = true
   statusActions.querySelectorAll('a').forEach(link => link.remove()); statusSchedule.replaceChildren(); statusSchedule.hidden = !data.order_number
   $('#delivery h1').textContent = data.delivery_allowed ? (data.is_test ? 'Staff test payment received' : 'Let’s plan your delivery.') : 'Your payment status'
   $('#payment-status').textContent = data.converted
     ? `${data.order_number} · ${money(data.paid_cents)} received · ${money(data.balance_cents)} remaining${data.is_test ? ' · STAFF TEST — no delivery.' : ''}`
     : 'Your payment has not been confirmed. Resume the secure payment below, or refresh to check again.'
-  if (data.checkout_url) paymentLink(data.checkout_url, 'Resume secure payment', 'checkout.stripe.com')
-  if (!data.converted && data.installments?.some(step => ['failed', 'requires_action'].includes(step.status))) $('#payment-status').textContent = 'No payment has been received. This attempt needs office review before another payment. Contact your representative.'
+  if (verifying) {
+    $('#payment-status').textContent = `${data.order_number} · Verify your bank account securely with Stripe. This debit is not confirmed until verification and processing finish. This can take several business days. ${data.delivery_allowed ? 'The first payment has been received.' : 'Delivery remains locked until the first payment is received.'}`
+    paymentLink(data.verification_url, 'Verify bank account with Stripe', 'payments.stripe.com')
+    paymentLink(data.verification_url, 'Verify bank account with Stripe', 'verify.stripe.com')
+    paymentLink(data.verification_url, 'Verify bank account with Stripe', 'hooks.stripe.com')
+  } else if (processing) $('#payment-status').textContent = `${data.order_number} · Bank payment processing. This can take several business days. Do not submit another payment. Refresh for updates. Delivery preferences unlock after the first payment is verified as received.`
+  if (data.checkout_url && !verifying && !processing) paymentLink(data.checkout_url, 'Resume secure payment', 'checkout.stripe.com')
+  if (!verifying && !processing && !data.converted && data.installments?.some(step => ['failed', 'requires_action'].includes(step.status))) $('#payment-status').textContent = 'No payment has been received. This attempt needs office review before another payment. Contact your representative.'
   if (data.status === 'manual_review') $('#payment-status').textContent += ' Office review is required.'
   else if (data.status === 'paused') $('#payment-status').textContent += ' Automatic payments are paused. Contact the office for help.'
   for (const step of data.installments || []) {
-    const state = ({ paid: 'Paid', pending: 'Scheduled', processing: 'Processing', failed: 'Needs attention', requires_action: 'Needs authorization' })[step.status] || step.status
+    const state = ({ paid: 'Paid', pending: 'Scheduled', processing: 'Processing', failed: 'Needs attention', requires_action: bank ? 'Needs bank verification or attention' : 'Needs authorization' })[step.status] || step.status
     row(statusSchedule, `Payment ${step.number} · ${dateLabel(step)} · ${state}`, money(step.amount_cents))
     if (step.payment_url) paymentLink(step.payment_url, `Resolve payment ${step.number} securely`, 'invoice.stripe.com', statusSchedule)
   }
-  if (data.installments?.length > 1) row(statusSchedule, 'Card saved securely with Stripe', data.card_saved ? 'Yes' : 'Not confirmed')
+  if (data.installments?.length > 1) row(statusSchedule, bank ? 'Bank saved for this plan with Stripe' : 'Card saved securely with Stripe', (bank ? data.payment_method_saved : data.card_saved) ? 'Yes' : 'Not confirmed')
+  if (bank && data.bank_summary && /^\d{4}$/.test(data.bank_summary.last4)) row(statusSchedule, 'Bank account', `${data.bank_summary.bank_name || 'Bank'} ending ${data.bank_summary.last4}`)
   if (data.card_summary && /^\d{4}$/.test(data.card_summary.last4)) row(statusSchedule, 'Saved card', `${String(data.card_summary.brand).toUpperCase()} ending ${data.card_summary.last4} · ${data.card_summary.exp_month}/${data.card_summary.exp_year}`)
   if (data.future_card_reuse?.consented || data.future_card_reuse?.status === 'revoked') row(statusSchedule, 'Future orders', ({ ready: 'Saved with your permission. Each new order needs approval.', pending: 'Card saving is being confirmed.', needs_review: 'Card saving needs office review.', revoked: 'Future-purchase permission withdrawn. Existing authorized installment payments continue.' })[data.future_card_reuse.status] || 'Not confirmed')
   if (data.delivery_allowed) void showDelivery(data)
@@ -189,7 +217,7 @@ async function status() {
   try {
     const data = await api('status')
     staffTest = staffMode && data.is_test === true
-    if ($('#test-schedule-field')) $('#test-schedule-field').hidden = !staffTest || $('[name=plan]:checked').value !== 'monthly'
+    updateTestTiming()
     if (!data.order_number) {
       $('#offer').hidden = false; $('#delivery').hidden = true
       if (quote) { setBusy(false); invalidate() }
@@ -210,10 +238,9 @@ $('#delivery-form').addEventListener('submit', async event => {
   catch (e) { $('#delivery-result').textContent = e.message }
   finally { setBusy(false); button.disabled = false }
 })
-async function setupStaffEntry() {
+async function setupStaffEntry(config) {
   const note = document.createElement('p'); note.className = 'muted'; note.id = 'staff-entry-note'; review.append(note)
   try {
-    const config = await api('config')
     if (!config.manual_entry_enabled || !config.publishable_key) { note.textContent = config.manual_entry_message || 'Phone card entry is unavailable. Continue with secure Stripe checkout.'; return }
     const script = document.createElement('script'); script.src = 'https://js.stripe.com/v3/'
     await new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; document.head.append(script) })
@@ -221,12 +248,12 @@ async function setupStaffEntry() {
     card = elements.create('card', { hidePostalCode: true, style: { base: { fontSize: '16px', color: '#264027' } } })
     manualDisclosure = document.createElement('details'); manualDisclosure.className = 'staff-entry'
     manualDisclosure.innerHTML = '<summary>Representative: enter a card by phone</summary><div class="staff-entry-content"><h3>Authorize a phone payment</h3><p class="muted">Read the exact total, payment dates and authorization above to the customer. Stop call recording and transcription before collecting card details.</p><label class="check"><input id="recording-stopped" type="checkbox"><span>Call recording and transcription are stopped.</span></label><label class="check"><input id="customer-authorized" type="checkbox"><span>The customer authorized the exact amounts, dates and saved-card terms above.</span></label><div id="stripe-card" class="card-note"></div><button id="manual-pay" type="button" class="wide">Collect authorized payment</button><p id="manual-result" class="error" role="status" hidden></p></div>'
-    note.remove(); review.append(manualDisclosure)
+    note.remove(); manualDisclosure.hidden = quote?.payment_method_type === 'us_bank_account'; review.append(manualDisclosure)
     manualDisclosure.querySelector('summary').addEventListener('click', event => { if (busy) event.preventDefault() })
     manualDisclosure.addEventListener('toggle', () => { $('#pay-button').hidden = manualDisclosure.open; clearAuthorizations() })
     card.mount('#stripe-card')
     $('#manual-pay').addEventListener('click', async () => {
-      if (busy || !quote) return
+      if (busy || !quote || quote.payment_method_type === 'us_bank_account') return
       const resultNode = $('#manual-result'); resultNode.hidden = false
       if (!$('#payment-consent').checked || !$('#recording-stopped').checked || !$('#customer-authorized').checked) { resultNode.textContent = 'Confirm the payment authorization and both phone-payment checkboxes first.'; return }
       const details = Object.fromEntries(new FormData(form)); let submitted = false
@@ -242,5 +269,11 @@ async function setupStaffEntry() {
     })
   } catch { note.textContent = 'Phone card entry could not load. You can still continue with secure Stripe checkout.' }
 }
-if (token) { setBusy(true); await status(); setBusy(false) }
-if (staffMode && token) void setupStaffEntry()
+if (token) {
+  setBusy(true)
+  const config = await api('config').catch(() => ({}))
+  methodField.hidden = config.ach_enabled !== true
+  if (config.ach_enabled === true && config.preferred_payment_method === 'us_bank_account') form.elements.payment_method_type.value = 'us_bank_account'
+  await status(); setBusy(false)
+  if (staffMode) void setupStaffEntry(config)
+}

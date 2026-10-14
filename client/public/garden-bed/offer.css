@@ -4,3 +4,7 @@ fieldset{border:0;padding:0;margin:20px 0}legend{font-size:13px;font-weight:bold
 
 .is-review #review{padding-top:0;margin-top:0;border-top:0}.staff-mode #offer{max-width:760px}.staff-mode #offer>:not(#choose){display:none}.staff-mode #choose{margin-top:0}
 header a{white-space:nowrap}
+
+.payment-methods{display:grid;grid-template-columns:1fr 1fr;gap:12px}.payment-methods .choice{padding:16px}.payment-methods .choice:has(input:checked){padding:15px}.payment-methods small{margin-top:8px}.summary div>span:last-child{max-width:65%;overflow-wrap:anywhere;flex-shrink:1}@media(max-width:480px){.payment-methods{grid-template-columns:1fr}}
+
+.summary div>span.amount{flex-shrink:0;white-space:nowrap;overflow-wrap:normal}
