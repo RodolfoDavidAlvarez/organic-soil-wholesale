@@ -158,6 +158,7 @@ function paymentLink(url, label, allowedHost, parent = statusActions) {
 }
 function renderStatus(data) {
   const bank = data.payment_method_type === 'us_bank_account'
+  const returned = bank && (data.bank_returned || data.installments?.some(step => step.returned_cents > 0))
   const verifying = bank && !!data.verification_url
   const processing = bank && (data.payment_pending || data.installments?.some(step => step.status === 'processing'))
   $('#offer').hidden = true; $('#delivery').hidden = false; $('#delivery-content').hidden = true
@@ -174,10 +175,11 @@ function renderStatus(data) {
   } else if (processing) $('#payment-status').textContent = `${data.order_number} · Bank payment processing. This can take several business days. Do not submit another payment. Refresh for updates. Delivery preferences unlock after the first payment is verified as received.`
   if (data.checkout_url && !verifying && !processing) paymentLink(data.checkout_url, 'Resume secure payment', 'checkout.stripe.com')
   if (!verifying && !processing && !data.converted && data.installments?.some(step => ['failed', 'requires_action'].includes(step.status))) $('#payment-status').textContent = 'No payment has been received. This attempt needs office review before another payment. Contact your representative.'
+  if (returned) $('#payment-status').textContent = `${data.order_number} · A bank payment was returned or reversed. Contact the office before another payment or delivery. Automatic payments need office review.`
   if (data.status === 'manual_review') $('#payment-status').textContent += ' Office review is required.'
   else if (data.status === 'paused') $('#payment-status').textContent += ' Automatic payments are paused. Contact the office for help.'
   for (const step of data.installments || []) {
-    const state = ({ paid: 'Paid', pending: 'Scheduled', processing: 'Processing', failed: 'Needs attention', requires_action: bank ? 'Needs bank verification or attention' : 'Needs authorization' })[step.status] || step.status
+    const state = bank && step.returned_cents > 0 ? 'Returned/reversed' : ({ manual_review: 'Office review', paid: 'Paid', pending: 'Scheduled', processing: 'Processing', failed: 'Needs attention', requires_action: bank ? 'Needs bank verification or attention' : 'Needs authorization' })[step.status] || step.status
     row(statusSchedule, `Payment ${step.number} · ${dateLabel(step)} · ${state}`, money(step.amount_cents))
     if (step.payment_url) paymentLink(step.payment_url, `Resolve payment ${step.number} securely`, 'invoice.stripe.com', statusSchedule)
   }
