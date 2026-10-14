@@ -2,6 +2,18 @@ const $ = s => document.querySelector(s)
 const fragment = new URLSearchParams(location.hash.slice(1))
 const token = fragment.get('offer') || fragment.get('order') || ''
 const staffMode = fragment.get('staff') === '1'
+function offerIdentity() {
+  const params = new URLSearchParams(location.hash.slice(1))
+  return JSON.stringify([params.get('offer') || '', params.get('order') || '', params.get('staff') === '1'])
+}
+const loadedIdentity = offerIdentity()
+function ensureOfferIdentity() {
+  if (offerIdentity() === loadedIdentity) return true
+  location.reload()
+  return false
+}
+// A same-page offer link must never retain another offer's quote or authorization.
+window.addEventListener('hashchange', ensureOfferIdentity)
 if (location.hostname.endsWith('organicsoilwholesale.com') && staffMode) {
   location.replace('https://sswworld.com/garden-bed-staff.html' + location.hash)
   throw Error('Opening staff checkout.')
@@ -17,6 +29,7 @@ if (staffMode) document.body.classList.add('staff-mode')
 // Payment errors must remain visible after the address form is hidden.
 $('#choose').append(formError)
 async function api(action, body) {
+  if (!ensureOfferIdentity()) throw Error('The offer link changed. Reloading your offer.')
   let response
   try {
     response = await fetch(`/api/garden-bed?action=${action}`, { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify({ ...body, token }) } : {}) })
