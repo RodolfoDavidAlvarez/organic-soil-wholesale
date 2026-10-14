@@ -6,7 +6,7 @@ if (location.hostname.endsWith('organicsoilwholesale.com') && staffMode) {
   location.replace('https://sswworld.com/garden-bed-staff.html' + location.hash)
   throw Error('Opening staff checkout.')
 }
-let quote = null, busy = false, card = null, manualDisclosure = null, staffTest = false
+let quote = null, busy = false, card = null, manualDisclosure = null, staffTest = false, customerPilot = false
 const money = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n / 100)
 const dateLabel = step => step.due_at
   ? new Date(step.due_at).toLocaleString('en-US', { timeZone: 'America/Phoenix', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' Arizona time'
@@ -66,8 +66,8 @@ const selectedBank = () => form.elements.payment_method_type.value === 'us_bank_
 function updateTestTiming() {
   const field = $('#test-schedule-field')
   if (!field) return
-  field.hidden = !staffTest || $('[name=plan]:checked').value !== 'monthly' || selectedBank()
-  if (selectedBank()) form.elements.test_schedule.value = 'monthly'
+  field.hidden = customerPilot || !staffTest || $('[name=plan]:checked').value !== 'monthly' || selectedBank()
+  if (customerPilot || selectedBank()) form.elements.test_schedule.value = 'monthly'
 }
 methodField.addEventListener('change', updateTestTiming)
 function futureCardConsent() {
@@ -88,12 +88,13 @@ if (staffMode) {
   form.prepend(field)
 }
 function showQuote(data) {
+  customerPilot = data.customer_pilot === true
   quote = data; const bank = data.payment_method_type === 'us_bank_account'
-  if (manualDisclosure) { manualDisclosure.open = false; manualDisclosure.hidden = bank }
-  if ($('#staff-entry-note')) $('#staff-entry-note').hidden = bank
+  if (manualDisclosure) { manualDisclosure.open = false; manualDisclosure.hidden = bank || customerPilot }
+  if ($('#staff-entry-note')) $('#staff-entry-note').hidden = bank || customerPilot
   $('#pay-button').hidden = false
   $('#summary').replaceChildren(); $('#payment-schedule').replaceChildren()
-  row($('#summary'), data.is_test ? 'Staff test · no product or delivery' : 'Package', money(data.subtotal_cents))
+  row($('#summary'), customerPilot ? 'Customer test · no product or delivery' : data.is_test ? 'Staff test · no product or delivery' : 'Package', money(data.subtotal_cents))
   row($('#summary'), 'Tax', money(data.tax_cents)); row($('#summary'), 'Delivery', data.is_test ? 'Not applicable' : 'Free')
   row($('#summary'), 'Order total', money(data.total_cents), true)
   row($('#summary'), 'Payment method', bank ? 'Bank (ACH)' : 'Card')
@@ -102,10 +103,11 @@ function showQuote(data) {
   futureCardChoice.hidden = bank || data.is_test || !data.future_card_terms || !data.future_card_terms_digest
   $('#future-card-terms').textContent = data.future_card_terms || ''
   $('#pay-button').textContent = bank ? `Continue to Stripe · ${money(data.schedule[0].amount_cents)} bank debit` : `Continue to Stripe · ${money(data.schedule[0].amount_cents)} today`
-  $('#review').querySelector('h3').textContent = data.is_test ? 'Review your staff test' : 'Review your order'
-  if (data.is_test) $('#post-payment-note').textContent = 'This is a real staff test payment. No product or delivery is included. After payment is verified, you can practice submitting delivery preferences.'
+  $('#review').querySelector('h3').textContent = customerPilot ? 'Review your $1 customer test' : data.is_test ? 'Review your staff test' : 'Review your order'
+  if (customerPilot) $('#post-payment-note').textContent = 'This is one real $1 customer test payment, including tax. No product or delivery is included. No future payments or card reuse are authorized.'
+  else if (data.is_test) $('#post-payment-note').textContent = 'This is a real staff test payment. No product or delivery is included. After payment is verified, you can practice submitting delivery preferences.'
   $('#card-security-note').textContent = bank
-    ? `Stripe securely collects your bank details and bank-debit authorization. ${data.schedule.length > 1 ? 'One authorization covers exactly these three payments. This plan ends after three payments. ' : 'One bank debit. No recurring charges. '}Bank verification and processing can take several business days. Delivery preferences unlock only after the first payment is verified as received. We do not collect your bank account or routing number.`
+    ? `Stripe securely collects your bank details and bank-debit authorization. ${data.schedule.length > 1 ? 'One authorization covers exactly these three payments. This plan ends after three payments. ' : 'One bank debit. No recurring charges. '}Bank verification and processing can take several business days. ${customerPilot ? 'This customer test includes no product or delivery.' : 'Delivery preferences unlock only after the first payment is verified as received.'} We do not collect your bank account or routing number.`
     : data.schedule.length > 1
     ? 'Stripe securely saves this card for exactly two more automatic payments on the dates shown. This plan ends after three payments. We do not store your full card number or security code.'
     : 'One payment. No recurring charges. Stripe handles your card details; we do not store your full card number or security code.'
@@ -115,7 +117,7 @@ function showQuote(data) {
 form.addEventListener('submit', async event => {
   event.preventDefault(); if (busy) return
   // Read enabled fields before locking the form.
-  const data = Object.fromEntries(new FormData(form)); data.plan = $('[name=plan]:checked').value
+  const data = Object.fromEntries(new FormData(form)); data.plan = customerPilot ? 'upfront' : $('[name=plan]:checked').value
   if (data.plan !== 'monthly' || data.payment_method_type === 'us_bank_account' || data.test_schedule !== 'accelerated') delete data.test_schedule
   setBusy(true); formError.hidden = true
   try { const result = await api('quote', data); if (result.existing_order) await status(); else showQuote(result) }
@@ -157,22 +159,23 @@ function paymentLink(url, label, allowedHost, parent = statusActions) {
   } catch { /* Untrusted or missing provider URLs never become links. */ }
 }
 function renderStatus(data) {
+  const pilot = data.customer_pilot === true
   const bank = data.payment_method_type === 'us_bank_account'
   const returned = bank && (data.bank_returned || data.installments?.some(step => step.returned_cents > 0))
   const verifying = bank && !!data.verification_url
   const processing = bank && (data.payment_pending || data.installments?.some(step => step.status === 'processing'))
   $('#offer').hidden = true; $('#delivery').hidden = false; $('#delivery-content').hidden = true
   statusActions.querySelectorAll('a').forEach(link => link.remove()); statusSchedule.replaceChildren(); statusSchedule.hidden = !data.order_number
-  $('#delivery h1').textContent = data.delivery_allowed ? (data.is_test ? 'Staff test payment received' : 'Let’s plan your delivery.') : 'Your payment status'
+  $('#delivery h1').textContent = pilot && data.converted ? 'Customer test payment received' : data.delivery_allowed ? (data.is_test ? 'Staff test payment received' : 'Let’s plan your delivery.') : 'Your payment status'
   $('#payment-status').textContent = data.converted
-    ? `${data.order_number} · ${money(data.paid_cents)} received · ${money(data.balance_cents)} remaining${data.is_test ? ' · STAFF TEST — no delivery.' : ''}`
+    ? `${data.order_number} · ${money(data.paid_cents)} received · ${money(data.balance_cents)} remaining${pilot ? ' · CUSTOMER TEST — no product or delivery.' : data.is_test ? ' · STAFF TEST — no delivery.' : ''}`
     : 'Your payment has not been confirmed. Resume the secure payment below, or refresh to check again.'
   if (verifying) {
-    $('#payment-status').textContent = `${data.order_number} · Verify your bank account securely with Stripe. This debit is not confirmed until verification and processing finish. This can take several business days. ${data.delivery_allowed ? 'The first payment has been received.' : 'Delivery remains locked until the first payment is received.'}`
+    $('#payment-status').textContent = `${data.order_number} · Verify your bank account securely with Stripe. This debit is not confirmed until verification and processing finish. This can take several business days. ${pilot ? 'This customer test includes no product or delivery.' : data.delivery_allowed ? 'The first payment has been received.' : 'Delivery remains locked until the first payment is received.'}`
     paymentLink(data.verification_url, 'Verify bank account with Stripe', 'payments.stripe.com')
     paymentLink(data.verification_url, 'Verify bank account with Stripe', 'verify.stripe.com')
     paymentLink(data.verification_url, 'Verify bank account with Stripe', 'hooks.stripe.com')
-  } else if (processing) $('#payment-status').textContent = `${data.order_number} · Bank payment processing. This can take several business days. Do not submit another payment. Refresh for updates. Delivery preferences unlock after the first payment is verified as received.`
+  } else if (processing) $('#payment-status').textContent = `${data.order_number} · Bank payment processing. This can take several business days. Do not submit another payment. Refresh for updates. ${pilot ? 'This customer test includes no product or delivery.' : 'Delivery preferences unlock after the first payment is verified as received.'}`
   if (data.checkout_url && !verifying && !processing) paymentLink(data.checkout_url, 'Resume secure payment', 'checkout.stripe.com')
   if (!verifying && !processing && !data.converted && data.installments?.some(step => ['failed', 'requires_action'].includes(step.status))) $('#payment-status').textContent = 'No payment has been received. This attempt needs office review before another payment. Contact your representative.'
   if (returned) $('#payment-status').textContent = `${data.order_number} · A bank payment was returned or reversed. Contact the office before another payment or delivery. Automatic payments need office review.`
@@ -187,7 +190,7 @@ function renderStatus(data) {
   if (bank && data.bank_summary && /^\d{4}$/.test(data.bank_summary.last4)) row(statusSchedule, 'Bank account', `${data.bank_summary.bank_name || 'Bank'} ending ${data.bank_summary.last4}`)
   if (data.card_summary && /^\d{4}$/.test(data.card_summary.last4)) row(statusSchedule, 'Saved card', `${String(data.card_summary.brand).toUpperCase()} ending ${data.card_summary.last4} · ${data.card_summary.exp_month}/${data.card_summary.exp_year}`)
   if (data.future_card_reuse?.consented || data.future_card_reuse?.status === 'revoked') row(statusSchedule, 'Future orders', ({ ready: 'Saved with your permission. Each new order needs approval.', pending: 'Card saving is being confirmed.', needs_review: 'Card saving needs office review.', revoked: 'Future-purchase permission withdrawn. Existing authorized installment payments continue.' })[data.future_card_reuse.status] || 'Not confirmed')
-  if (data.delivery_allowed) void showDelivery(data)
+  if (data.delivery_allowed && !pilot) void showDelivery(data)
 }
 async function showDelivery(data) {
   const content = $('#delivery-content'), deliveryForm = $('#delivery-form'), address = data.address
@@ -218,7 +221,19 @@ async function showDelivery(data) {
 async function status() {
   try {
     const data = await api('status')
-    staffTest = staffMode && data.is_test === true
+    customerPilot = data.customer_pilot === true
+    staffTest = staffMode && data.is_test === true && !customerPilot
+    if (customerPilot) {
+      $('[name=plan][value=upfront]').checked = true
+      $('[name=plan][value=monthly]').closest('label').hidden = true
+      $('#choose h2').textContent = 'Your $1 customer test'
+      $('#choose > p').textContent = 'One real payment, including tax. Use your private coupon and the email it was issued for. No product or delivery is included.'
+      form.elements.discount_code.required = true
+      form.elements.discount_code.closest('label').firstChild.textContent = 'Private test coupon'
+      const upfront = $('[name=plan][value=upfront]').closest('label')
+      upfront.querySelector('.price').textContent = '$1.00'
+      upfront.querySelector('small').textContent = 'One payment, tax included. No installments or future-use permission.'
+    }
     updateTestTiming()
     if (!data.order_number) {
       $('#offer').hidden = false; $('#delivery').hidden = true
@@ -277,5 +292,5 @@ if (token) {
   methodField.hidden = config.ach_enabled !== true
   if (config.ach_enabled === true && config.preferred_payment_method === 'us_bank_account') form.elements.payment_method_type.value = 'us_bank_account'
   await status(); setBusy(false)
-  if (staffMode) void setupStaffEntry(config)
+  if (staffMode && !customerPilot) void setupStaffEntry(config)
 }
