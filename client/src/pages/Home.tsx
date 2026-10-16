@@ -23,6 +23,7 @@ import DeferredMount from "@/components/DeferredMount";
 import LazyYouTube from "@/components/LazyYouTube";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { DealHubCards } from "@/components/DealList";
+import RaisedGardenBedVideo from "@/components/RaisedGardenBedVideo";
 
 const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarousel"));
 
@@ -317,11 +318,12 @@ const Home = () => {
           </div>
           <div className="grid items-start gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-12">
             <div>
-              <figure><img src="/garden-bed/bundle.jpg" alt="Illustration of the garden bed package with growing materials, mulch and pea gravel totes" width="1200" height="800" loading="lazy" className="aspect-[3/2] w-full rounded-md object-cover" /><figcaption className="mt-2 text-[10px] leading-4 text-[#626b5d]">Package illustration. Plants, irrigation, shade accessories and assembly are not included.</figcaption></figure>
+              <figure><img src="/garden-bed/bundle-960.webp" srcSet="/garden-bed/bundle-480.webp 480w, /garden-bed/bundle-960.webp 960w" sizes="(min-width: 1024px) 55vw, 100vw" alt="Illustration of the garden bed package with growing materials, mulch and pea gravel totes" width="960" height="640" loading="lazy" decoding="async" className="aspect-[3/2] w-full rounded-md object-cover" /><figcaption className="mt-2 text-[10px] leading-4 text-[#626b5d]">Package illustration. Plants, irrigation, shade accessories and assembly are not included.</figcaption></figure>
               <h3 className="mt-6 text-xl font-semibold">The bed and growing materials. All together.</h3>
               <p className="mt-3 text-sm leading-7 text-[#626b5d]">Wood panels and heavy-duty metal corners give your garden a sturdy home. Growing materials, setup instructions and an assembly video help you get started.</p>
               <div className="mt-5 flex flex-wrap items-center gap-4"><a href="/garden-bed-offer.html" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[#264027] px-5 text-sm font-semibold text-white">See the bundle &amp; payment options <ArrowRight className="h-4 w-4" /></a><a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} data-official-support-phone="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Talk it through <ArrowUpRight className="h-4 w-4" /></a></div>
               <p className="mt-4 max-w-xl text-[11px] leading-5 text-[#626b5d]">The current full-package offer is for our giveaway community, with free Arizona delivery in November 2026 only. Call for eligibility, pricing and delivery details.</p>
+              <RaisedGardenBedVideo />
             </div>
             <div className="rounded-md bg-[#eaedde] p-6 sm:p-8">
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b795b]">What’s included</p><h3 className="mt-3 text-xl font-semibold">One bed. A solid start.</h3>
