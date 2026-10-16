@@ -212,42 +212,42 @@ const Home = () => {
         }}
       />
 
-      <section className="bg-[#f7f5ef] text-[#264027]">
-        <div className="mx-auto grid max-w-7xl items-center gap-6 px-5 py-6 sm:px-8 md:grid-cols-[.85fr_1.15fr] md:gap-8 lg:gap-12 lg:py-12">
-          <div className="order-2 md:order-1">
-            <p className="inline-flex rounded-full bg-[#f0dfc7] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#79512b]">Arizona soil. A growing community.</p>
-            <h1 className="mt-4 font-heading text-[38px] font-semibold leading-[1.08] tracking-[-0.05em] sm:text-5xl lg:text-[60px]">Good soil.<br />Good people.<br /><span className="text-[#a44f35]">Let’s grow.</span></h1>
-            <p className="mt-5 max-w-lg text-[15px] leading-7 text-[#626b5d] sm:text-base">A few bags, a fresh garden bed, or a bigger project. Find your soil, meet our team, and get growing with a little local help.</p>
-            <div className="mt-6 flex flex-wrap gap-3">
+      <section aria-labelledby="soil-shopping-heading" className="bg-[#f7f5ef] text-[#264027]">
+        <div className="mx-auto grid max-w-7xl items-center gap-7 px-5 py-7 sm:px-8 md:grid-cols-[.95fr_1.05fr] md:gap-8 lg:gap-12 lg:py-12">
+          <div>
+            <p className="inline-flex rounded-full bg-[#f0dfc7] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#79512b]">Your local soil source · Phoenix, Arizona</p>
+            <h1 id="soil-shopping-heading" className="mt-4 font-heading text-[38px] font-semibold leading-[1.08] tracking-[-0.05em] sm:text-5xl lg:text-[56px]">Organic soil.<br />Happy gardens.<br /><span className="text-[#a44f35]">Better value.</span></h1>
+            <p className="mt-4 max-w-lg text-[15px] leading-6 text-[#626b5d] sm:text-base sm:leading-7">Shop nutrient-rich dairy compost, worm castings, growing mixes and enhanced mulch. Order bags for Phoenix pickup, or call us for delivery.</p>
+            <div className="mt-5 flex flex-wrap gap-3">
               <Link href="/products" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[#264027] px-5 text-sm font-semibold text-white hover:bg-[#3c5233]" onClick={() => trackEvent("Hero CTA Clicked", { cta: "shop_products" })}>Shop soil &amp; bundles <ArrowRight className="h-4 w-4" /></Link>
               <a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY} for delivery`} data-official-support-phone="true" data-hero-phone-cta="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-12 items-center gap-2 rounded-md border border-[#ddc18f] bg-[#f3e4c9] px-5 text-sm font-semibold hover:bg-[#ecd7b1]"><Phone className="h-4 w-4" />Call for delivery</a>
             </div>
-            <p className="mt-5 text-xs text-[#626b5d]">Bags from <strong>$10.99</strong> <span className="mx-2">·</span> Garden bundles from <strong>$99</strong></p>
+            <p className="mt-4 text-xs leading-6 text-[#626b5d]">Bags from <strong>$10.99</strong> <span className="mx-2">·</span> Garden bundles from <strong>$99</strong></p>
+            <a href="#home-delivery" className="mt-3 flex min-h-11 items-center gap-3 border-l-2 border-[#bd8150] pl-3 text-sm">
+              <span><strong className="block text-[#895335]">More soil. Better value.</strong><span className="text-xs text-[#626b5d]">Ask about pallet and bulk pricing.</span></span><ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </a>
             <a href={PHOENIX_YARD_DIRECTIONS_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-2 text-[11px] text-[#626b5d]"><MapPin className="h-4 w-4" />Phoenix pickup · 1634 N 19th Ave <ArrowUpRight className="h-3.5 w-3.5" /></a>
           </div>
-          <div className="order-1 min-w-0 md:order-2">
+          <div className="grid min-w-0 grid-cols-[1.08fr_1fr] items-start gap-3 sm:gap-4">
             <figure>
               <img
-                src="/images/community/garden-class-1200.webp"
-                srcSet="/images/community/garden-class-640.webp 640w, /images/community/garden-class-1200.webp 1200w"
-                sizes="(min-width: 768px) 55vw, 100vw"
-                alt="Our Phoenix garden class gathered together at the yard"
-                width="1200" height="552" loading="eager"
+                src="/images/community/customer-taking-soil-home-800.webp"
+                srcSet="/images/community/customer-taking-soil-home-480.webp 480w, /images/community/customer-taking-soil-home-800.webp 800w"
+                sizes="(min-width: 1280px) 310px, (min-width: 768px) 26vw, 52vw"
+                alt="A customer taking home bags of soil beside stacked products at our Phoenix pickup yard"
+                width="800" height="1067" loading="eager" fetchPriority="high" decoding="async"
                 className="w-full rounded-md"
               />
-              <figcaption className="flex flex-wrap justify-between gap-1 py-2 text-[10px] text-[#626b5d]">
-                <span>Our garden class. Our kind of Saturday.</span>
-                <span>Phoenix, Arizona</span>
-              </figcaption>
+              <figcaption className="pt-2 text-[11px] leading-5 text-[#626b5d]">Good soil. Ready to take home.</figcaption>
             </figure>
-            <div className="mt-2 hidden grid-cols-2 gap-3 md:grid">
+            <div className="grid gap-3 sm:gap-4">
               <figure>
-                <img src="/images/community/yard-trailer-pickup-800.webp" srcSet="/images/community/yard-trailer-pickup-480.webp 480w, /images/community/yard-trailer-pickup-800.webp 800w" sizes="(min-width: 1280px) 330px, 28vw" alt="A pickup order loaded into a trailer at the Phoenix soil yard" width="800" height="1067" loading="lazy" decoding="async" className="aspect-[3/2] w-full rounded-md object-cover object-[center_70%]" />
-                <figcaption className="pt-2 text-[10px] text-[#626b5d]">A good day at the pickup yard.</figcaption>
+                <img src="/images/community/garden-harvest-800.webp" srcSet="/images/community/garden-harvest-480.webp 480w, /images/community/garden-harvest-800.webp 800w" sizes="(min-width: 1280px) 285px, (min-width: 768px) 24vw, 48vw" alt="A grower showing a striped garden vegetable growing on the vine" width="800" height="1067" loading="lazy" decoding="async" className="aspect-[3/2] w-full rounded-md object-cover object-[center_60%]" />
+                <figcaption className="pt-2 text-[11px] leading-5 text-[#626b5d]">From the garden. Still on the vine.</figcaption>
               </figure>
               <figure>
-                <img src="/images/community/growing-garden-640.webp" alt="Leafy vegetables and flowers growing in a Ready Go Garden community garden" width="640" height="480" loading="lazy" className="aspect-[3/2] w-full rounded-md object-cover" />
-                <figcaption className="pt-2 text-[10px] text-[#626b5d]">And a little inspiration for what’s next.</figcaption>
+                <img src="/images/community/growing-garden-640.webp" srcSet="/images/community/growing-garden-640.webp 640w, /images/community/growing-garden-1200.webp 1200w" sizes="(min-width: 1280px) 285px, (min-width: 768px) 24vw, 48vw" alt="Vegetables and flowers growing in soil bags at the Ready Go Garden community garden" width="640" height="480" loading="lazy" decoding="async" className="aspect-[3/2] w-full rounded-md object-cover" />
+                <figcaption className="pt-2 text-[11px] leading-5 text-[#626b5d]">Vegetables and flowers, growing together.</figcaption>
               </figure>
             </div>
           </div>
@@ -259,15 +259,15 @@ const Home = () => {
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">Meet the materials</p>
-              <h2 id="soil-essentials-heading" className="mt-2 font-heading text-2xl font-semibold tracking-[-0.04em] sm:text-3xl">Good things for your soil.</h2>
+              <h2 id="soil-essentials-heading" className="mt-2 font-heading text-2xl font-semibold tracking-[-0.04em] sm:text-3xl">Find the right soil for your garden.</h2>
             </div>
             <Link href="/products" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Shop all products <ArrowRight className="h-4 w-4" /></Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-3 sm:gap-5">
             {[
-              { name: "Simon’s Gold", type: "Dairy compost", use: "Mix into your garden soil.", image: "compost", href: "/products/simons-gold", alt: "A handful of Simon’s Gold dairy compost" },
-              { name: "Mikey’s Worm Poop", type: "Worm castings", use: "A little extra for your plants.", image: "worm", href: "/products/mikeys-worm-poop", alt: "A close look at our worm castings" },
-              { name: "Nature’s Blanket Premium", type: "Organic mulch", use: "Finish with a protective layer.", image: "mulch", href: "/products/natures-blanket-premium", alt: "Wood fiber mulch held in a hand" },
+              { name: "Simon’s Gold", type: "Dairy compost", use: "Add organic matter to existing soil.", image: "compost", href: "/products/simons-gold", alt: "A handful of Simon’s Gold dairy compost" },
+              { name: "Mikey’s Worm Poop", type: "Worm castings", use: "Top dress plants or add to soil blends.", image: "worm", href: "/products/mikeys-worm-poop", alt: "A close look at our worm castings" },
+              { name: "Nature’s Blanket Premium", type: "Enhanced mulch", use: "Cover the soil to help retain moisture.", image: "mulch", href: "/products/natures-blanket-premium", alt: "Wood fiber mulch held in a hand" },
             ].map((product) => (
               <Link key={product.image} href={product.href} className="group grid grid-cols-[100px_1fr] overflow-hidden rounded-md bg-[#fdfcf8] ring-1 ring-[#264027]/10 transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#264027] sm:block">
                 <img src={`/images/performance/home-product-${product.image}-480.webp`} alt={product.alt} width="480" height="360" loading="lazy" decoding="async" className="h-full min-h-32 w-full object-cover sm:aspect-[2/1] sm:h-auto sm:min-h-0" />
@@ -282,6 +282,30 @@ const Home = () => {
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="soil-health-heading" className="bg-[#263c2a] px-5 py-10 text-[#f6f3e9] sm:px-8 lg:py-12">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-2xl">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#e4c18c]">Rooted in regenerative agriculture</p>
+            <h2 id="soil-health-heading" className="mt-3 font-heading text-2xl font-semibold tracking-[-0.04em] sm:text-3xl">Healthy soil works in three ways.</h2>
+            <p className="mt-3 text-sm leading-7 text-[#d8dfd0]">We compost dairy manure into soil amendments with a purpose: support soil life, return nutrients to the ground, and build a better place for roots to grow.</p>
+          </div>
+          <div className="mt-7 grid gap-6 sm:grid-cols-3 sm:gap-8">
+            {[
+              { title: "Microbiology", benefit: "Feed the life in your soil.", description: "Organic matter feeds soil organisms that break down material and help cycle nutrients." },
+              { title: "Nutrition", benefit: "Give your garden a nourishing start.", description: "Dairy compost and worm castings add organic matter and plant nutrients. Choose the amendment that fits what you’re growing." },
+              { title: "Physical structure", benefit: "Make room for water, air and roots.", description: "Organic matter helps soil hold moisture that roots can draw on, while supporting structure and drainage. A layer of mulch helps reduce evaporation." },
+            ].map((priority) => (
+              <div key={priority.title} className="border-t border-[#6a7b60] pt-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#e4c18c]">{priority.title}</p>
+                <h3 className="mt-2 text-base font-semibold">{priority.benefit}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#d8dfd0]">{priority.description}</p>
+              </div>
+            ))}
+          </div>
+          <a href="#living-compost-heading" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#e4c18c]">See how we make our compost <ArrowRight className="h-4 w-4" /></a>
         </div>
       </section>
 
