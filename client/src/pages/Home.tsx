@@ -312,15 +312,15 @@ const Home = () => {
       <section id="new-garden-package" aria-labelledby="new-garden-heading" className="scroll-mt-24 bg-[#f7f5ef] px-5 py-12 text-[#264027] sm:px-8 lg:py-20">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
-            <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b795b]">The new garden bed package</p><h2 id="new-garden-heading" className="mt-3 font-heading text-3xl font-semibold leading-tight tracking-[-0.04em] lg:text-4xl">A place to grow.<br />A good place to start.</h2></div>
-            <p className="max-w-sm text-sm leading-7 text-[#626b5d]">A locally made raised bed, paired with the materials to fill it. Here’s what comes together in the new package.</p>
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b795b]">Raised garden bed + growing materials</p><h2 id="new-garden-heading" className="mt-3 font-heading text-3xl font-semibold leading-tight tracking-[-0.04em] lg:text-4xl">The heavy-duty raised<br />garden bed bundle is here.</h2></div>
+            <p className="max-w-sm text-sm leading-7 text-[#626b5d]">A large 4 × 8 ft bed, 2 ft deep, with potting soil, mulch, compost and worm castings in one bundle. Get your garden started with less guesswork.</p>
           </div>
           <div className="grid items-start gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-12">
             <div>
               <figure><img src="/garden-bed/bundle.jpg" alt="Illustration of the garden bed package with growing materials, mulch and pea gravel totes" width="1200" height="800" loading="lazy" className="aspect-[3/2] w-full rounded-md object-cover" /><figcaption className="mt-2 text-[10px] leading-4 text-[#626b5d]">Package illustration. Plants, irrigation, shade accessories and assembly are not included.</figcaption></figure>
-              <h3 className="mt-6 text-xl font-semibold">The bed. The materials. The next step.</h3>
+              <h3 className="mt-6 text-xl font-semibold">The bed and growing materials. All together.</h3>
               <p className="mt-3 text-sm leading-7 text-[#626b5d]">Wood panels and heavy-duty metal corners give your garden a sturdy home. Growing materials, setup instructions and an assembly video help you get started.</p>
-              <div className="mt-5 flex flex-wrap items-center gap-4"><a href="/garden-bed-offer.html" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[#264027] px-5 text-sm font-semibold text-white">Explore the full package <ArrowRight className="h-4 w-4" /></a><a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} data-official-support-phone="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Talk it through <ArrowUpRight className="h-4 w-4" /></a></div>
+              <div className="mt-5 flex flex-wrap items-center gap-4"><a href="/garden-bed-offer.html" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[#264027] px-5 text-sm font-semibold text-white">See the bundle &amp; payment options <ArrowRight className="h-4 w-4" /></a><a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} data-official-support-phone="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Talk it through <ArrowUpRight className="h-4 w-4" /></a></div>
               <p className="mt-4 max-w-xl text-[11px] leading-5 text-[#626b5d]">The current full-package offer is for our giveaway community, with free Arizona delivery in November 2026 only. Call for eligibility, pricing and delivery details.</p>
             </div>
             <div className="rounded-md bg-[#eaedde] p-6 sm:p-8">
