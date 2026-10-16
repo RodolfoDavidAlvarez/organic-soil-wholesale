@@ -3698,7 +3698,7 @@ ${cod.notes?`<div class="section" style="margin-top:15px"><div class="section-ti
       '9lb': { unitsPerPallet: 144, weightPerPallet: 1296, config: 'Boxed pallet, 4 units per box, 36 boxes per pallet. Total of 144 units', weightPerUnit: 9 },
       '7.5qt': { unitsPerPallet: 144, weightPerPallet: 1000, config: 'Boxed pallet, 4 units per box, 36 boxes per pallet. Total of 144 units', weightPerUnit: 7 },
       '1cf': { unitsPerPallet: 50, weightPerPallet: 2000, config: 'Without boxes, bags stacked on pallet. 50 (1CF bags) per pallet', weightPerUnit: 40 },
-      '1.5cf': { unitsPerPallet: 50, weightPerPallet: 2000, config: '50 per pallet', weightPerUnit: 40 },
+      '1.5cf': { unitsPerPallet: 30, weightPerPallet: 1500, config: '30 per pallet (1.5 CF bags)', weightPerUnit: 50 },
       '2cf': { unitsPerPallet: 25, weightPerPallet: 2000, config: '25 per pallet', weightPerUnit: 80 },
       'tote': { unitsPerPallet: 1, weightPerPallet: 2000, config: '1 unit per pallet (2.2 cubic yards)', weightPerUnit: 2000 },
       'bulk': { unitsPerPallet: null, weightPerPallet: 2000, config: 'Bulk calculated by tonnage (2000 lbs each). Usually 22-24 tons per truck.', weightPerUnit: null },

@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { HOURS_LABEL } from "@shared/pickupSchedule.js";
+import { attributedPageUrl } from "@/lib/pageAttribution";
 
 // const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e"; // Deprecated - using internal API now
 
@@ -130,7 +131,10 @@ const Contact = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          source_url: attributedPageUrl(),
+        }),
       });
 
       if (!response.ok) {

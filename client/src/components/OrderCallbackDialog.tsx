@@ -26,6 +26,7 @@ import { trackEvent } from "@/lib/analytics";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { attributedPageUrl } from "@/lib/pageAttribution";
 
 type OrderCallbackDialogProps = {
   open: boolean;
@@ -155,7 +156,7 @@ export function OrderCallbackDialog({
       source: "osw_order_callback",
       source_url:
         sourceUrl ||
-        (typeof window !== "undefined" ? window.location.href : undefined),
+        attributedPageUrl(),
       order: {
         line_items: lineItems,
         item_count: orderItems.length,

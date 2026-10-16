@@ -47,6 +47,7 @@ import { handleSurveyCouponQr, handleSurveySubmit } from "./survey.js";
 import { SURVEY_SUBMIT_POST_PATHS } from "../../shared/surveySubmitPaths.js";
 import schedulingRoutes from "./scheduling.js";
 import webhookRoutes from "./webhooks.js";
+import campaignRedirectRoutes from "./campaignRedirect.js";
 // import pricingRoutes from "./pricing.js";
 
 export function registerRoutes(app: Express): Promise<Server> {
@@ -67,6 +68,8 @@ export function registerRoutes(app: Express): Promise<Server> {
     const { getDevSiteConfig } = await import("../../shared/developerMode.js");
     res.json(getDevSiteConfig());
   });
+
+  app.use("/r", campaignRedirectRoutes);
 
   // Register route modules
   app.use("/api/public/products", publicProductRoutes);

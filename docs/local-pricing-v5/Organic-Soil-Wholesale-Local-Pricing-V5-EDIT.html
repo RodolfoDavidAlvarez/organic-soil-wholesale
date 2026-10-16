@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OSW Local Pricing V5</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Playfair+Display:ital,wght@1;700&display=swap" rel="stylesheet" />
+  <style>
+    @page { size: letter; margin: 0.35in; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #1f2937;
+      background: #e8ebe3;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .editor-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: #17361b;
+      color: #f3f7ef;
+      border-bottom: 2px solid #b38a58;
+      font-size: 13px;
+    }
+    .editor-bar strong { margin-right: 6px; }
+    .editor-bar button {
+      border: 1px solid rgba(255,255,255,.25);
+      background: rgba(255,255,255,.08);
+      color: white;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .editor-bar button:hover { background: rgba(255,255,255,.18); }
+    .editor-bar button.primary { background: #b38a58; border-color: #b38a58; color: #17361b; }
+    .editor-bar .hint { margin-left: auto; font-size: 11px; opacity: .85; }
+    body.edit-mode .editable[contenteditable="true"] {
+      outline: 1px dashed #b38a58;
+      outline-offset: 2px;
+      border-radius: 4px;
+      cursor: text;
+    }
+    body.edit-mode .editable[contenteditable="true"]:focus {
+      outline: 2px solid #294d31;
+      background: #fffef8;
+    }
+    .workspace {
+      max-width: 8.8in;
+      margin: 14px auto 24px;
+      padding: 0 10px;
+    }
+    .page {
+      page-break-after: always;
+      min-height: 10in;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border: 1px solid #d9dfd3;
+      border-radius: 16px;
+      padding: 18px 18px 14px;
+      box-shadow: 0 8px 28px rgba(23,54,27,.08);
+    }
+    .page:last-child { page-break-after: auto; }
+    .header {
+      padding-bottom: 10px;
+      border-bottom: 3px solid #294d31;
+      margin-bottom: 12px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand-block {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+    }
+    .brand-primary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.45em 0.55em;
+      line-height: 1.15;
+    }
+    .wordmark {
+      font-family: "Montserrat", Arial, Helvetica, sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #1c2117;
+      letter-spacing: -0.02em;
+    }
+    .wordmark .wm-soil { color: #264027; }
+    .wordmark .wm-wholesale {
+      color: #c9a227;
+      font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+      font-style: italic;
+      font-weight: 700;
+    }
+    .byline {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #6b7280;
+      line-height: 1.2;
+    }
+    .header-sep {
+      color: #c5cdc5;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1;
+    }
+    .doc-title {
+      font-family: "Montserrat", Arial, Helvetica, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #17361b;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+    .ssw-logo {
+      height: 44px;
+      width: auto;
+      flex-shrink: 0;
+      object-fit: contain;
+    }
+    .sub {
+      font-size: 12px;
+      color: #4b5563;
+      margin-top: 6px;
+    }
+    .legend {
+      margin-bottom: 16px;
+    }
+    .legend-title {
+      display: none;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+    .legend-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 4px;
+    }
+    .legend-card img {
+      width: 100%;
+      height: 64px;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+    }
+    .legend-card .label {
+      margin-top: 6px;
+      font-size: 10px;
+      line-height: 1.25;
+      font-weight: 700;
+      color: #243b2a;
+      text-align: center;
+    }
+    .section-title {
+      margin: 12px 0 8px;
+      font-size: 18px;
+      color: #17361b;
+      font-weight: 800;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 12px;
+    }
+    th {
+      background: #294d31;
+      color: white;
+      padding: 9px 7px;
+      font-size: 10px;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      text-align: left;
+    }
+    th .th-sub {
+      display: block;
+      font-weight: 400;
+      font-size: 8px;
+      opacity: 0.85;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-top: 2px;
+    }
+    td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 8px 7px;
+      vertical-align: top;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    tr:nth-child(even) td { background: #fafbf9; }
+    .prod {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .prod-photo {
+      position: relative;
+      width: 72px;
+      height: 88px;
+      flex: 0 0 72px;
+      overflow: visible;
+    }
+    .prod-photo > img.main {
+      width: 72px;
+      height: 88px;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 10px;
+      display: block;
+      border: none;
+      outline: none;
+      background: #fff;
+      box-shadow: 0 0 0 1px #dfe6da;
+    }
+    .prod-photo > img.badge {
+      position: absolute;
+      right: -9px;
+      bottom: -9px;
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 6px;
+      border: 1px solid #d8cbb6;
+      outline: none;
+      box-shadow: none;
+      background: #f5efe4;
+      z-index: 2;
+      padding: 0;
+    }
+    .prod-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: #17361b;
+      margin-bottom: 3px;
+    }
+    .prod-sub {
+      font-size: 10px;
+      color: #4b5563;
+    }
+    .price { font-weight: 800; color: #111827; }
+    .muted { color: #6b7280; font-size: 10px; }
+    .list-price {
+      text-decoration: line-through;
+      text-decoration-thickness: 0.75px;
+      text-decoration-color: #b0b7c0;
+      color: #9ca3af;
+      font-size: 9px;
+    }
+    .sheet-note {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #f4f7ef;
+      border: 1px solid #dfe6da;
+      font-size: 9px;
+      line-height: 1.45;
+      color: #4b5563;
+    }
+    .pallet-tier + .pallet-tier {
+      margin-top: 7px;
+      padding-top: 7px;
+      border-top: 1px solid #e8ece4;
+    }
+    .guide-intro {
+      margin: 2px 0 12px;
+      color: #4b5563;
+      font-size: 10px;
+      line-height: 1.45;
+    }
+    .guide-table th {
+      padding: 8px 7px;
+      font-size: 9px;
+    }
+    .guide-table td {
+      padding: 7px;
+      font-size: 9.2px;
+      line-height: 1.35;
+    }
+    .format-cell {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .format-photo {
+      width: 58px;
+      height: 48px;
+      flex: 0 0 58px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #f8faf7;
+      border: 1px solid #dfe6da;
+    }
+    .format-name {
+      font-weight: 800;
+      color: #17361b;
+      margin-bottom: 2px;
+    }
+    .format-sub {
+      color: #6b7280;
+      font-size: 8.5px;
+      line-height: 1.25;
+    }
+    .tight-list {
+      margin: 0;
+      padding-left: 13px;
+    }
+    .tight-list li { margin: 0 0 3px; }
+    .attention {
+      margin-top: 5px;
+      padding: 5px 7px;
+      border-radius: 7px;
+      border: 1px solid #dcc39f;
+      background: #fff8eb;
+      color: #3f2f1e;
+      font-size: 8.7px;
+      line-height: 1.32;
+    }
+    .ops-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .ops-card {
+      border: 1px solid #dfe6da;
+      background: #fbfcfa;
+      border-radius: 10px;
+      padding: 9px 10px;
+      min-height: 0;
+    }
+    .ops-card h3 {
+      margin: 0 0 5px;
+      font-size: 12px;
+      color: #17361b;
+      line-height: 1.2;
+    }
+    .ops-card p {
+      margin: 0 0 5px;
+      font-size: 9.3px;
+      line-height: 1.4;
+      color: #4b5563;
+    }
+    .ops-card .tight-list {
+      font-size: 9.2px;
+      line-height: 1.35;
+      color: #374151;
+    }
+    .address-line {
+      margin-top: 5px;
+      font-size: 8.8px;
+      line-height: 1.35;
+      color: #4b5563;
+    }
+    .conversion-strip {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1fr;
+      gap: 8px;
+      margin: 8px 0 10px;
+    }
+    .conversion-box {
+      border: 1px solid #dfe6da;
+      background: #f4f7ef;
+      border-radius: 9px;
+      padding: 8px 9px;
+      font-size: 9px;
+      line-height: 1.35;
+      color: #374151;
+    }
+    .conversion-box strong {
+      display: block;
+      color: #17361b;
+      font-size: 10.5px;
+      margin-bottom: 2px;
+    }
+    .page[data-page="size-guide"] .section-title,
+    .page[data-page="operations-notes"] .section-title {
+      font-size: 20px;
+      margin-top: 14px;
+      margin-bottom: 10px;
+    }
+    .page[data-page="size-guide"] .guide-intro {
+      font-size: 11px;
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+    .page[data-page="size-guide"] .guide-table th {
+      padding: 11px 10px;
+      font-size: 10px;
+    }
+    .page[data-page="size-guide"] .guide-table td {
+      padding: 12px 10px;
+      font-size: 10.2px;
+      line-height: 1.5;
+    }
+    .page[data-page="size-guide"] .format-cell {
+      gap: 10px;
+    }
+    .page[data-page="size-guide"] .format-photo {
+      width: 72px;
+      height: 62px;
+      flex-basis: 72px;
+    }
+    .page[data-page="size-guide"] .format-name {
+      font-size: 10.5px;
+      line-height: 1.25;
+    }
+    .page[data-page="size-guide"] .format-sub {
+      font-size: 9.2px;
+      line-height: 1.35;
+    }
+    .page[data-page="size-guide"] .attention {
+      margin-top: 7px;
+      padding: 7px 8px;
+      font-size: 9.3px;
+      line-height: 1.4;
+    }
+    .page[data-page="operations-notes"] .conversion-strip {
+      gap: 10px;
+      margin: 10px 0 12px;
+    }
+    .page[data-page="operations-notes"] .conversion-box {
+      padding: 10px 11px;
+      font-size: 10.2px;
+      line-height: 1.45;
+    }
+    .page[data-page="operations-notes"] .conversion-box strong {
+      font-size: 11.5px;
+    }
+    .page[data-page="operations-notes"] .ops-grid {
+      gap: 12px;
+      margin-top: 10px;
+      flex: 1;
+      grid-template-rows: repeat(3, 1fr);
+    }
+    .page[data-page="operations-notes"] .ops-card {
+      padding: 14px 14px;
+    }
+    .page[data-page="operations-notes"] .ops-card h3 {
+      font-size: 13.5px;
+      margin-bottom: 7px;
+    }
+    .page[data-page="operations-notes"] .ops-card p,
+    .page[data-page="operations-notes"] .address-line,
+    .page[data-page="operations-notes"] .ops-card .tight-list {
+      font-size: 10.2px;
+      line-height: 1.48;
+    }
+    .page[data-page="operations-notes"] .tight-list li {
+      margin-bottom: 4px;
+    }
+    .footer {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid #e5e7eb;
+      text-align: right;
+      font-size: 10px;
+      color: #9ca3af;
+      letter-spacing: 0.3px;
+    }
+    .page > .footer {
+      margin-top: auto;
+      width: 100%;
+    }
+    @media print {
+      .editor-bar { display: none !important; }
+      body { background: white; }
+      .workspace { margin: 0; padding: 0; max-width: none; }
+      .page { border: none; border-radius: 0; box-shadow: none; }
+      body.edit-mode .editable[contenteditable="true"] { outline: none; }
+      .prod-photo img { outline: none !important; border-color: #dfe6da !important; }
+    }
+  </style>
+</head>
+<body class="edit-mode">
+  <div class="editor-bar">
+    <strong>OSW Local Pricing V5</strong>
+    <button type="button" id="toggle-edit">Editing: ON</button>
+    <button type="button" class="primary" id="save-draft">Save draft</button>
+    <button type="button" id="restore-draft">Restore draft</button>
+    <button type="button" id="export-json">Export JSON</button>
+    <button type="button" id="render-pdf-hint">Print / PDF</button>
+    <span class="hint">Click any cell to edit · Save draft before closing</span>
+  </div>
+
+  <div class="workspace" id="print-root">
+    <section class="page" data-page="soils-mulch">
+      <div class="header">
+        <div class="header-top">
+          <div class="brand-block">
+            <div class="brand-primary">
+              <span class="wordmark">Organic <span class="wm-soil">Soil</span> <span class="wm-wholesale">Wholesale</span></span>
+              <span class="header-sep">·</span>
+              <span class="doc-title editable" contenteditable="true">V5 Local Pricing</span>
+            </div>
+            <span class="byline">by Soil Seed &amp; Water Group · V5 Local Pricing · pallet 20% off · full flatbed (22 spots) +10% off</span>
+          </div>
+          <img class="ssw-logo" src="../../../Organic Soil Wholesale Website/client/public/images/soil-seed-and-water-logo.png" alt="Soil Seed &amp; Water" />
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-grid" style="grid-template-columns: repeat(6, 1fr);">
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/1-5cf-single-bag.webp" alt="1 to 2 cubic foot bag" />
+            <div class="label editable" contenteditable="true">1.5 to 2 cu ft<br/>bag format</div>
+          </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/palletized-bags.webp" alt="Palletized bags" />
+            <div class="label editable" contenteditable="true">Pallet<br/>1.5 cu ft · 30 units</div>
+          </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/super-sack.webp" alt="Super sack" />
+            <div class="label editable" contenteditable="true">2.2 cu yd tote<br/>~1,600 lb</div>
+          </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/bulk-yard-pickup.webp" alt="Bulk pickup" />
+            <div class="label editable" contenteditable="true">Pickup<br/>per cu yd</div>
+          </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/mixed-truckload.webp" alt="Flatbed truckload with pallets and totes" />
+            <div class="label editable" contenteditable="true">Truckload<br/>22 pallet spots</div>
+          </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/walking-floor-delivery.webp" alt="Truckload bulk material" />
+            <div class="label editable" contenteditable="true">Truckload<br/>24 tons</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title editable" contenteditable="true">Potting Soils - Raised Garden Bed Soil</div>
+      <table data-table="soils">
+        <colgroup>
+          <col style="width:24%"><col style="width:14%"><col style="width:12%"><col style="width:14%"><col style="width:18%"><col style="width:18%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Bag</th>
+            <th>Pallet<span class="th-sub">1.5 cu ft · 30 bags</span></th>
+            <th>Tote / super sack</th>
+            <th>Pickup<span class="th-sub">per cu yd</span></th>
+            <th>Truckload<span class="th-sub">24 tons</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-product="soil-craft">
+            <td>
+              <div class="prod">
+                <div class="prod-photo">
+                  <img class="main" src="../../../Organic Soil Wholesale Website/client/public/images/optimized/rgg9lbs.jpg" alt="Soil Craft" />
+                  <img class="badge" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/1-5cf-single-bag.webp" alt="1 to 2 cubic foot bag" />
+                </div>
+                <div>
+                  <div class="prod-name editable" contenteditable="true" data-field="name">Soil Craft</div>
+                  <div class="prod-sub editable" contenteditable="true" data-field="subtitle">Garden &amp; Planter Blend<br/>premium organic potting soil</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true" data-field="bag"><span class="price">$15.99</span><br/><span class="muted">1.5 CF bag<br/>~50 lb</span></td>
+            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$383.76</span><br/><span class="muted"><span class="list-price">$479.70</span> · 20% off · 30 bags</span></td>
+            <td class="editable" contenteditable="true" data-field="tote"><span class="price">$359.78</span><br/><span class="muted">2.2 cu yd<br/>~1,600 lb</span></td>
+            <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$120 / cu yd</span><br/><span class="muted">$300 / ton equivalent</span></td>
+            <td class="editable" contenteditable="true" data-field="truckload"><span class="price">$3,600</span><br/><span class="muted">$150 / ton · ~60 cu yd<br/>(~$60 / cu yd)</span></td>
+          </tr>
+          <tr data-product="plantpal">
+            <td>
+              <div class="prod">
+                <div class="prod-photo">
+                  <img class="main" src="../../../Organic Soil Wholesale Website/client/public/images/optimized/plantpal10lbs.jpg" alt="PlantPal" />
+                  <img class="badge" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/1-5cf-single-bag.webp" alt="1 to 2 cubic foot bag" />
+                </div>
+                <div>
+                  <div class="prod-name editable" contenteditable="true" data-field="name">PlantPal</div>
+                  <div class="prod-sub editable" contenteditable="true" data-field="subtitle">all-stage nursery mix · grow food</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true" data-field="bag"><span class="price">$10.99</span><br/><span class="muted">1.5 CF bag<br/>~50 lb</span></td>
+            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$263.76</span><br/><span class="muted"><span class="list-price">$329.70</span> · 20% off · 30 bags</span></td>
+            <td class="editable" contenteditable="true" data-field="tote"><span class="price">$247.28</span><br/><span class="muted">2.2 cu yd<br/>~1,600 lb</span></td>
+            <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$80 / cu yd</span><br/><span class="muted">$200 / ton equivalent</span></td>
+            <td class="editable" contenteditable="true" data-field="truckload"><span class="price">$2,160</span><br/><span class="muted">$90 / ton · ~60 cu yd<br/>(~$36 / cu yd)</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="section-title editable" contenteditable="true">Mulch</div>
+      <table data-table="mulch">
+        <colgroup>
+          <col style="width:24%"><col style="width:14%"><col style="width:12%"><col style="width:14%"><col style="width:18%"><col style="width:18%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Bag</th>
+            <th>Pallet<span class="th-sub">2 cu ft · 25 bags</span></th>
+            <th>Tote / super sack</th>
+            <th>Pickup<span class="th-sub">per cu yd</span></th>
+            <th>Truckload<span class="th-sub">24 tons</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-product="natures-blanket">
+            <td>
+              <div class="prod">
+                <div class="prod-photo">
+                  <img class="main" src="../../../Organic Soil Wholesale Website/client/public/images/optimized/natures-blanket-bag-studio.jpg" alt="Nature's Blanket Premium" />
+                </div>
+                <div>
+                  <div class="prod-name editable" contenteditable="true" data-field="name">Nature's Blanket Premium Mulch</div>
+                  <div class="prod-sub editable" contenteditable="true" data-field="subtitle">Backfill mix - clean wood fiber + dairy compost + worm castings</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true" data-field="bag"><span class="price">$10.99</span><br/><span class="muted">2 CF bag</span></td>
+            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$219.80</span><br/><span class="muted"><span class="list-price">$274.75</span> · 20% off · 25 bags</span></td>
+            <td class="editable" contenteditable="true" data-field="tote"><span class="price">$137.50</span><br/><span class="muted">2.2 cu yd<br/>super sack</span></td>
+            <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$44 / cu yd</span><br/><span class="muted">$110 / ton equivalent</span></td>
+            <td class="editable" contenteditable="true" data-field="truckload"><span class="price">$1,440</span><br/><span class="muted">$60 / ton · ~60 cu yd<br/>(~$24 / cu yd)</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">1</div>
+    </section>
+
+    <section class="page" data-page="amendments">
+      <div class="header">
+        <div class="header-top">
+          <div class="brand-block">
+            <div class="brand-primary">
+              <span class="wordmark">Organic <span class="wm-soil">Soil</span> <span class="wm-wholesale">Wholesale</span></span>
+              <span class="header-sep">·</span>
+              <span class="doc-title editable" contenteditable="true">V5 Local Pricing</span>
+            </div>
+            <span class="byline">by Soil Seed &amp; Water Group · V5 Local Pricing · pallet 20% off · full flatbed (22 spots) +10% off</span>
+          </div>
+          <img class="ssw-logo" src="../../../Organic Soil Wholesale Website/client/public/images/soil-seed-and-water-logo.png" alt="Soil Seed &amp; Water" />
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-grid" style="grid-template-columns: repeat(7, 1fr);">
+        <div class="legend-card">
+          <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/9lb-single-bag.webp" alt="9 lb bag" />
+          <div class="label editable" contenteditable="true">9 lb bag<br/>entry size</div>
+        </div>
+        <div class="legend-card">
+          <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/1-5cf-single-bag.webp" alt="1 cubic foot bag" />
+          <div class="label editable" contenteditable="true">1 CF bag<br/>larger bag format</div>
+        </div>
+        <div class="legend-card">
+          <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/palletized-bags.webp" alt="Palletized bags" />
+          <div class="label editable" contenteditable="true">Pallet<br/>144 · 9 lb bags<br/>50 · 1 CF bags</div>
+        </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/super-sack.webp" alt="Tote" />
+            <div class="label editable" contenteditable="true">Tote<br/>2.2 cu yd total<br/>~2,000 lb</div>
+          </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/bulk-yard-pickup.webp" alt="Bulk pickup" />
+            <div class="label editable" contenteditable="true">Pickup<br/>per cu yd</div>
+          </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/mixed-truckload.webp" alt="Flatbed truckload with pallets and totes" />
+            <div class="label editable" contenteditable="true">Truckload<br/>22 pallet spots</div>
+          </div>
+          <div class="legend-card">
+            <img src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/walking-floor-delivery.webp" alt="Walking floor truckload" />
+            <div class="label editable" contenteditable="true">Truckload<br/>24 tons</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title editable" contenteditable="true">Soil Amendments</div>
+      <table data-table="amendments">
+        <colgroup>
+          <col style="width:24%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:14%"><col style="width:13%"><col style="width:13%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>9 lb bag</th>
+            <th>1 CF bag</th>
+            <th>Pallet<span class="th-sub">144 · 9 lb bags · 50 · 1 CF bags</span></th>
+            <th>Tote</th>
+            <th>Pickup<span class="th-sub">per cu yd</span></th>
+            <th>Truckload<span class="th-sub">24 tons</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-product="simons-gold">
+            <td>
+              <div class="prod">
+                <div class="prod-photo">
+                  <img class="main" src="../../../Organic Soil Wholesale Website/client/public/images/optimized/dansgold9lbs-1.jpg" alt="Simon's Gold" />
+                </div>
+                <div>
+                  <div class="prod-name editable" contenteditable="true" data-field="name">Simon's Gold</div>
+                  <div class="prod-sub editable" contenteditable="true" data-field="subtitle">all natural dairy compost</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true" data-field="bag-9lb"><span class="price">$12.46</span><br/><span class="muted">sealable 9 lb bag</span></td>
+            <td class="editable" contenteditable="true" data-field="bag-1cf"><span class="price">$24.90</span><br/><span class="muted">1 CF bag<br/>~50 lb</span></td>
+            <td class="editable" contenteditable="true" data-field="pallet">
+              <div class="pallet-tier"><span class="price">$1,435.39</span><br/><span class="muted">144 · 9 lb bags · <span class="list-price">$1,794.24</span> · 20% off</span></div>
+              <div class="pallet-tier"><span class="price">$996.00</span><br/><span class="muted">50 · 1 CF bags · <span class="list-price">$1,245.00</span> · 20% off</span></div>
+            </td>
+            <td class="editable" contenteditable="true" data-field="tote"><span class="price">$149.00</span><br/><span class="muted">2.2 cu yd<br/>~2,000 lb</span></td>
+            <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$18 / cu yd</span><br/><span class="muted">$45 / ton equivalent</span></td>
+            <td class="editable" contenteditable="true" data-field="truckload"><span class="price">$720</span><br/><span class="muted">$30 / ton · ~60 cu yd<br/>(~$12 / cu yd)</span></td>
+          </tr>
+          <tr data-product="mikeys-worm-poop">
+            <td>
+              <div class="prod">
+                <div class="prod-photo">
+                  <img class="main" src="../../../Organic Soil Wholesale Website/client/public/images/optimized/mikeys-worm-poop9lbs.jpg" alt="Mikey's Worm Poop" />
+                </div>
+                <div>
+                  <div class="prod-name editable" contenteditable="true" data-field="name">Mikey's Worm Poop</div>
+                  <div class="prod-sub editable" contenteditable="true" data-field="subtitle">all natural worm castings</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true" data-field="bag-9lb"><span class="price">$18.10</span><br/><span class="muted">sealable 9 lb bag</span></td>
+            <td class="editable" contenteditable="true" data-field="bag-1cf"><span class="price">$34.90</span><br/><span class="muted">1 CF bag<br/>~45 lb</span></td>
+            <td class="editable" contenteditable="true" data-field="pallet">
+              <div class="pallet-tier"><span class="price">$2,085.12</span><br/><span class="muted">144 · 9 lb bags · <span class="list-price">$2,606.40</span> · 20% off</span></div>
+              <div class="pallet-tier"><span class="price">$1,396.00</span><br/><span class="muted">50 · 1 CF bags · <span class="list-price">$1,745.00</span> · 20% off</span></div>
+            </td>
+            <td class="editable" contenteditable="true" data-field="tote"><span class="price">$399.00</span><br/><span class="muted">2.2 cu yd<br/>~2,000 lb</span></td>
+            <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$120 / cu yd</span><br/><span class="muted">$300 / ton equivalent</span></td>
+            <td class="editable" contenteditable="true" data-field="truckload"><span class="price">$4,800</span><br/><span class="muted">$200 / ton · ~60 cu yd<br/>(~$80 / cu yd)</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">2</div>
+    </section>
+
+<section class="page" data-page="size-guide">
+      <div class="header">
+        <div class="header-top">
+          <div class="brand-block">
+            <div class="brand-primary">
+              <span class="wordmark">Organic <span class="wm-soil">Soil</span> <span class="wm-wholesale">Wholesale</span></span>
+              <span class="header-sep">·</span>
+              <span class="doc-title editable" contenteditable="true">Size Category Guide</span>
+            </div>
+            <span class="byline">by Soil Seed &amp; Water Group · V5 Local Pricing · format guide</span>
+          </div>
+          <img class="ssw-logo" src="../../../Organic Soil Wholesale Website/client/public/images/soil-seed-and-water-logo.png" alt="Soil Seed &amp; Water" />
+        </div>
+      </div>
+
+      <div class="section-title editable" contenteditable="true">How to Choose the Right Format</div>
+      <div class="guide-intro editable" contenteditable="true">These size categories help customers compare storage, handling, loading, and delivery needs before discounts are applied.</div>
+
+      <table class="guide-table" data-table="size-guide">
+        <colgroup>
+          <col style="width:24%"><col style="width:38%"><col style="width:38%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Best Use</th>
+            <th>Handling Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="format-cell">
+                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/9lb-single-bag.webp" alt="9 lb bag" />
+                <div>
+                  <div class="format-name editable" contenteditable="true">9 lb sealable bag</div>
+                  <div class="format-sub editable" contenteditable="true">Entry size, resealable</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true">Good for retail shelves, samples, small customer jobs, and easy repeat purchases.</td>
+            <td class="editable" contenteditable="true">Easy to count, store, move by hand, and keep closed between uses.</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="format-cell">
+                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/1-5cf-single-bag.webp" alt="1 to 2 cu ft bag" />
+                <div>
+                  <div class="format-name editable" contenteditable="true">1 CF, 1.5 CF, and 2 CF bags</div>
+                  <div class="format-sub editable" contenteditable="true">White bag formats, usually 40-50 lb</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true">Good when the customer needs a movable single unit with more product than the 9 lb bag.</td>
+            <td class="editable" contenteditable="true">Strong for storage. The bag helps hold water and moisture so product still has wetting when opened.</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="format-cell">
+                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/palletized-bags.webp" alt="Palletized bags" />
+                <div>
+                  <div class="format-name editable" contenteditable="true">Pallet</div>
+                  <div class="format-sub editable" contenteditable="true">Same bag format, full pallet volume</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true">Good for retailers, contractors, nurseries, one-off projects, and one-time projects.</td>
+            <td class="editable" contenteditable="true">Easier to count, ship, store, and move with a forklift or pallet jack.</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="format-cell">
+                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/super-sack.webp" alt="Tote super sack" />
+                <div>
+                  <div class="format-name editable" contenteditable="true">Tote / super sack</div>
+                  <div class="format-sub editable" contenteditable="true">2.2 cu yd, movable bulk</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true">Better pricing than bagged pallets while still movable. Better for storage than loose bulk when product must be moved later.</td>
+            <td class="editable" contenteditable="true">Can usually load at least one unit into a heavy-duty pickup or trailer.<div class="attention"><strong>Attention:</strong> customer needs a way to unload. Forklift is best. Manual unloading is possible but not recommended. Product can dry out because the sack breathes and loses moisture within weeks.</div></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="format-cell">
+                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/bulk-yard-pickup.webp" alt="Bulk pickup" />
+                <div>
+                  <div class="format-name editable" contenteditable="true">Pickup by cubic yard</div>
+                  <div class="format-sub editable" contenteditable="true">Local loader pickup</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true">Best for customers who can receive loose material, coordinate pickup, and use the product soon.</td>
+            <td class="editable" contenteditable="true">Requires coordination and loader availability. Confirm location, product, loader, bucket size, and whether pricing is by cubic yard or by ton.</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="format-cell">
+                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/mixed-truckload.webp" alt="Flatbed truckload" />
+                <div>
+                  <div class="format-name editable" contenteditable="true">Truckload flatbed</div>
+                  <div class="format-sub editable" contenteditable="true">Usually around 22 pallet spots</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true">Best for palletized orders, tote orders, mixed loads, equipment, and palletized bulk products.</td>
+            <td class="editable" contenteditable="true">Often comes with a Moffett forklift. The Moffett has big tires and can usually handle dirt yards better than a standard warehouse forklift.</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="format-cell">
+                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/walking-floor-delivery.webp" alt="Walking floor delivery" />
+                <div>
+                  <div class="format-name editable" contenteditable="true">Walking floor loose truckload</div>
+                  <div class="format-sub editable" contenteditable="true">Loose material, usually priced by ton</div>
+                </div>
+              </div>
+            </td>
+            <td class="editable" contenteditable="true">Best for big-volume jobs, farms, yards, landscapers, repeat bulk fills, and customers who can receive a large loose pile.</td>
+            <td class="editable" contenteditable="true">Needs open space for truck access, turning, and unloading. If not used quickly, cover with a tarp or compost tarp to manage rain, drying, and moisture.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">3</div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "osw-pricing-v4-no-discounts-draft-v6";
+    const toggleBtn = document.getElementById("toggle-edit");
+    const saveBtn = document.getElementById("save-draft");
+    const restoreBtn = document.getElementById("restore-draft");
+    const exportBtn = document.getElementById("export-json");
+    const printBtn = document.getElementById("render-pdf-hint");
+
+    function setEditMode(on) {
+      document.body.classList.toggle("edit-mode", on);
+      document.querySelectorAll(".editable").forEach((el) => {
+        if (on) el.setAttribute("contenteditable", "true");
+        else el.removeAttribute("contenteditable");
+      });
+      toggleBtn.textContent = on ? "Editing: ON" : "Editing: OFF";
+    }
+
+    function snapshotHtml() {
+      return document.getElementById("print-root").innerHTML;
+    }
+
+    function collectProducts() {
+      const products = {};
+      document.querySelectorAll("tr[data-product]").forEach((row) => {
+        const id = row.dataset.product;
+        products[id] = {};
+        row.querySelectorAll("[data-field]").forEach((cell) => {
+          products[id][cell.dataset.field] = cell.innerHTML.trim();
+        });
+      });
+      return products;
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      setEditMode(!document.body.classList.contains("edit-mode"));
+    });
+
+    saveBtn.addEventListener("click", () => {
+      localStorage.setItem(STORAGE_KEY, snapshotHtml());
+      saveBtn.textContent = "Saved!";
+      setTimeout(() => { saveBtn.textContent = "Save draft"; }, 1200);
+    });
+
+    restoreBtn.addEventListener("click", () => {
+      const html = localStorage.getItem(STORAGE_KEY);
+      if (!html) {
+        alert("No saved draft in this browser yet.");
+        return;
+      }
+      if (confirm("Replace current content with saved draft?")) {
+        document.getElementById("print-root").innerHTML = html;
+        setEditMode(document.body.classList.contains("edit-mode"));
+      }
+    });
+
+    exportBtn.addEventListener("click", () => {
+      const payload = {
+        exported: new Date().toISOString(),
+        products: collectProducts(),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "osw-pricing-v4-no-discounts.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    printBtn.addEventListener("click", () => window.print());
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && new URLSearchParams(location.search).get("restore") === "1") {
+      document.getElementById("print-root").innerHTML = saved;
+    }
+  </script>
+</body>
+</html>

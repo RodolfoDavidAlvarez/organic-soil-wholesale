@@ -8,7 +8,7 @@ const router = Router();
 // Submit contact form
 router.post('/submit', async (req, res) => {
   try {
-    const { name, email, phone, company, subject, message } = req.body;
+    const { name, email, phone, company, subject, message, source_url } = req.body;
 
     // Validate required fields
     if (!name || !email || !message) {
@@ -22,6 +22,19 @@ router.post('/submit', async (req, res) => {
     }
 
     const submittedAt = new Date().toISOString();
+    const pageUrl = typeof source_url === 'string' && source_url.trim()
+      ? source_url.trim()
+      : 'https://organicsoilwholesale.com/contact';
+    const utm: Record<string, string> = {};
+    try {
+      const u = new URL(pageUrl);
+      for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'campaign_link_code'] as const) {
+        const v = u.searchParams.get(key);
+        if (v) utm[key] = v;
+      }
+    } catch {
+      // ignore bad URLs
+    }
 
     // Save to database
     const { data, error } = await supabase
@@ -68,8 +81,8 @@ router.post('/submit', async (req, res) => {
       company: company || undefined,
       message: subject ? `${subject}\n\n${message}` : message,
       source: 'osw_contact_form',
-      source_url: 'https://organicsoilwholesale.com/contact',
-      source_data: { osw_contact_submission_id: data.id, subject },
+      source_url: pageUrl,
+      source_data: { osw_contact_submission_id: data.id, subject, ...utm },
     });
 
     res.json({ 
