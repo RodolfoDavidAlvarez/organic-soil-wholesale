@@ -1,0 +1,164 @@
+{
+  "created": "2026-10-15",
+  "method": "Resize and WebP compression only. Preserve original content and aspect ratio; no generated labels, AI edits, crop, or retouching.",
+  "widthUnit": "pixels",
+  "assets": [
+    {
+      "key": "plantpal-bag",
+      "source": "client/public/images/optimized/plantpal-bag-context.webp",
+      "kind": "existing product artwork",
+      "sourceWidth": 1800,
+      "sourceHeight": 1800,
+      "sourceBytes": 320370,
+      "note": "Existing artwork is a reference 10 lb bag; bundle quantity and volume must come from shared/promoBundles.js, not the printed artwork.",
+      "outputs": [
+        {
+          "url": "/images/bundles/plantpal-bag-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 19686
+        },
+        {
+          "url": "/images/bundles/plantpal-bag-640.webp",
+          "width": 640,
+          "height": 640,
+          "bytes": 59284
+        }
+      ]
+    },
+    {
+      "key": "simons-gold-bag",
+      "source": "client/public/images/optimized/simons-gold-bag-context.webp",
+      "kind": "existing product artwork",
+      "sourceWidth": 1800,
+      "sourceHeight": 1800,
+      "sourceBytes": 314382,
+      "note": "Existing artwork is a reference 9 lb bag; bundle quantity and volume must come from shared/promoBundles.js, not the printed artwork.",
+      "outputs": [
+        {
+          "url": "/images/bundles/simons-gold-bag-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 20292
+        },
+        {
+          "url": "/images/bundles/simons-gold-bag-640.webp",
+          "width": 640,
+          "height": 640,
+          "bytes": 63166
+        }
+      ]
+    },
+    {
+      "key": "mikeys-worm-poop-bag",
+      "source": "client/public/images/optimized/mikeys-worm-poop-bag-context.webp",
+      "kind": "existing product artwork",
+      "sourceWidth": 1800,
+      "sourceHeight": 1800,
+      "sourceBytes": 359708,
+      "note": "Existing artwork is a reference 9 lb bag; bundle quantity and volume must come from shared/promoBundles.js, not the printed artwork.",
+      "outputs": [
+        {
+          "url": "/images/bundles/mikeys-worm-poop-bag-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 19128
+        },
+        {
+          "url": "/images/bundles/mikeys-worm-poop-bag-640.webp",
+          "width": 640,
+          "height": 640,
+          "bytes": 62438
+        }
+      ]
+    },
+    {
+      "key": "natures-blanket-premium-bag",
+      "source": "Organic Soil Wholesale/Size Categories photos/Mulch Natures Blanket Premium 2 CF Single.png",
+      "kind": "existing premium-designated product bag photo",
+      "sourceWidth": 1082,
+      "sourceHeight": 1454,
+      "sourceBytes": 2187538,
+      "note": "Selected premium-designated 2 cu ft single-bag source rather than regular Nature's Blanket context artwork. No relabeling or retouching.",
+      "outputs": [
+        {
+          "url": "/images/bundles/natures-blanket-premium-bag-320.webp",
+          "width": 320,
+          "height": 430,
+          "bytes": 20688
+        },
+        {
+          "url": "/images/bundles/natures-blanket-premium-bag-640.webp",
+          "width": 640,
+          "height": 860,
+          "bytes": 68618
+        }
+      ]
+    },
+    {
+      "key": "plantpal-texture",
+      "source": "client/public/images/optimized/default-potting-soil-texture.jpg",
+      "kind": "existing potting-soil texture photo",
+      "sourceWidth": 1920,
+      "sourceHeight": 1558,
+      "sourceBytes": 757677,
+      "note": "Existing generic potting-soil texture illustration; not a product-specific laboratory or formulation claim.",
+      "outputs": [
+        {
+          "url": "/images/bundles/plantpal-texture-640.webp",
+          "width": 640,
+          "height": 519,
+          "bytes": 70584
+        }
+      ]
+    },
+    {
+      "key": "simons-gold-texture",
+      "source": "client/public/images/optimized/compost-texture-look.jpg",
+      "kind": "existing compost texture photo",
+      "sourceWidth": 1920,
+      "sourceHeight": 1440,
+      "sourceBytes": 470917,
+      "outputs": [
+        {
+          "url": "/images/bundles/simons-gold-texture-640.webp",
+          "width": 640,
+          "height": 480,
+          "bytes": 40930
+        }
+      ]
+    },
+    {
+      "key": "mikeys-worm-poop-texture",
+      "source": "client/public/images/optimized/worm-castting-product-texture.jpg",
+      "kind": "existing worm-castings texture photo",
+      "sourceWidth": 1920,
+      "sourceHeight": 1920,
+      "sourceBytes": 612144,
+      "outputs": [
+        {
+          "url": "/images/bundles/mikeys-worm-poop-texture-640.webp",
+          "width": 640,
+          "height": 640,
+          "bytes": 42658
+        }
+      ]
+    },
+    {
+      "key": "natures-blanket-premium-texture",
+      "source": "client/public/images/optimized/mulch-texture-hand.jpg",
+      "kind": "existing mulch texture photo",
+      "sourceWidth": 1200,
+      "sourceHeight": 900,
+      "sourceBytes": 231889,
+      "outputs": [
+        {
+          "url": "/images/bundles/natures-blanket-premium-texture-640.webp",
+          "width": 640,
+          "height": 480,
+          "bytes": 43504
+        }
+      ]
+    }
+  ]
+}

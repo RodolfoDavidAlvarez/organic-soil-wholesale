@@ -118,6 +118,43 @@ assert.equal(getPromoBundleBySlug("raised-bed-refresh")?.salePrice, 99);
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.salePrice, 149);
 assert.equal(getPromoBundleBySlug("garden-bed-builder")?.salePrice, 399);
 
+// The flyer totals must agree with the physical packs customers receive.
+// In particular, 30 PlantPal bags are 45 cu ft, not a three-yard tote.
+const bundlePackCuFt = new Map([
+  ["/products/plantpal", 1.5],
+  ["/products/simons-gold", 1],
+  ["/products/mikeys-worm-poop", 1],
+  ["/products/natures-blanket-premium", 2],
+]);
+const expectedBundleContents = new Map([
+  [4100, { bags: 10, cuFt: 15 }],
+  [4101, { bags: 16, cuFt: 24 }],
+  [4102, { bags: 40, cuFt: 58 }],
+]);
+for (const bundle of PROMO_BUNDLES) {
+  let bagCount = 0;
+  let cuFt = 0;
+  for (const item of bundle.items) {
+    const pack = item.amount.match(/^(\d+) bags · (\d+(?:\.\d+)?) cu ft/);
+    assert.ok(pack, `${bundle.title}: ${item.name} declares bag count and volume`);
+    const itemBags = Number(pack[1]);
+    const itemCuFt = Number(pack[2]);
+    assert.equal(itemCuFt, itemBags * bundlePackCuFt.get(item.href), `${bundle.title}: ${item.name} uses the sold bag size`);
+    bagCount += itemBags;
+    cuFt += itemCuFt;
+  }
+  assert.deepEqual({ bags: bagCount, cuFt }, expectedBundleContents.get(bundle.productId), `${bundle.title} physical contents`);
+  assert.equal(Number.parseInt(bundle.bagLabel), bagCount, `${bundle.title} displayed bag count`);
+  assert.equal(Number.parseFloat(bundle.volumeLabel), cuFt, `${bundle.title} displayed volume`);
+  assert.equal(bundle.listPrice - bundle.salePrice, bundle.savings, `${bundle.title} displayed savings`);
+  for (const alias of bundle.aliases) {
+    assert.equal(getPromoBundleBySlug(alias), bundle, `${alias} keeps its canonical SKU and contents`);
+  }
+}
+const largeBundleVolume = getPromoBundleBySlug("big-garden-setup").volumeLabel;
+assert.match(largeBundleVolume, /58 cu ft/);
+assert.equal(Number(largeBundleVolume.match(/([\d.]+) cu yd/)[1]), Math.round((58 / 27) * 100) / 100, "Big Garden yard conversion matches its bags");
+
 const tamperedBundle = normalizeV5CheckoutItems([
   line(4100, "Garden Refresh", "whatever", 1, 1),
   line(4101, "Garden Refresh Plus", "16 bags", 2, 9),
@@ -185,17 +222,20 @@ assert.match(checkoutSource, /getPromoBundleByProductId/);
 
 const bundleOffersSource = readFileSync(new URL("../client/src/pages/BundleOffers.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
-assert.match(bundleOffersSource, /Add to order/);
+assert.match(bundleOffersSource, /Add bundle to order/);
 assert.doesNotMatch(bundleOffersSource, /coupon/i);
-assert.match(bundleOffersSource, /<title>Deals \| Organic Soil Wholesale<\/title>/);
-assert.match(bundleOffersSource, /offer\.phoenixYardPickup/);
-assert.match(bundleOffersSource, /Add to order/);
-assert.match(bundleOffersSource, /Tue–Sat 8–1 and 2–4/);
+assert.match(bundleOffersSource, /<title>\s*Soil &amp; Raised Garden Bed Deals\s*\|\s*Organic Soil Wholesale\s*<\/title>/);
+assert.match(bundleOffersSource, /PROMO_BUNDLES\.map/);
+assert.match(bundleOffersSource, /fmtDealPrice\(offer\.salePrice\)/);
+assert.match(bundleOffersSource, /Tue–Sat · 8 am–1 pm &amp; 2–4 pm/);
 assert.doesNotMatch(bundleOffersSource, /Three setups\. Tap one\./);
 assert.doesNotMatch(bundleOffersSource, /Need a truckload, not a bundle/);
-assert.match(bundleOffersSource, /Garden Refresh \$99/);
-assert.match(bundleOffersSource, /Big Garden Setup \$399/);
-assert.match(bundleOffersSource, /href=\{item\.href\}/);
+assert.match(bundleOffersSource, /href=\{product\.href\}/);
+assert.match(bundleOffersSource, /id="bundle-contents-heading"/);
+assert.match(bundleOffersSource, /id="bundle-use-heading"/);
+assert.match(bundleOffersSource, /id="bundle-faq-heading"/);
+assert.match(bundleOffersSource, /href="\/garden-bed-offer\.html"/);
+assert.match(bundleOffersSource, /useRoute\("\/deals\/:slug"\)/);
 assert.doesNotMatch(bundleOffersSource, /\$69/);
 assert.doesNotMatch(bundleOffersSource, /\$459/);
 
@@ -215,11 +255,10 @@ assert.doesNotMatch(headerSource, /Garden bundles/);
 const dealListSource = readFileSync(new URL("../client/src/components/DealList.tsx", import.meta.url), "utf8");
 assert.match(dealListSource, /deal\.listCaption/);
 assert.match(dealListSource, /href=\{`\/offers\/\$\{deal\.slug\}`\}/);
-assert.match(dealListSource, /deal\.bannerImage/);
+assert.doesNotMatch(dealListSource, /deal\.bannerImage|\/images\/offers\/banners\//, "bundle cards do not republish outdated flyer artwork");
 assert.match(dealListSource, /fmtDealPrice\(deal\.salePrice\)/);
 assert.match(dealListSource, /Shop offer/);
 assert.doesNotMatch(dealListSource, /Buy Now/);
-assert.doesNotMatch(dealListSource, /object-cover/);
 
 assert.equal(getPromoBundleBySlug("garden-refresh")?.listCaption, "Perfect for an existing garden. Quick soil feed and replenishment.");
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.listCaption, "A little soil with worm castings and mulch. Fill and feed one bed.");
@@ -283,12 +322,10 @@ assert.match(payPickupGridSource, /plantpal-with-veggies/);
 assert.match(payPickupGridSource, /mikeys-worm-poop-bag-context/);
 
 for (const slug of ["garden-refresh", "garden-refresh-plus", "big-garden-setup"]) {
-  const flyer = statSync(new URL(`../client/public/images/offers/flyers/${slug}.webp`, import.meta.url));
-  const banner = statSync(new URL(`../client/public/images/offers/banners/${slug}.webp`, import.meta.url));
-  assert.ok(flyer.size < 350_000, `${slug} flyer webp too large: ${flyer.size}`);
-  assert.ok(banner.size < 150_000, `${slug} banner webp too large: ${banner.size}`);
-  assert.match(getPromoBundleBySlug(slug)?.heroImage || "", new RegExp(`/images/offers/flyers/${slug}\\.webp`));
-  assert.match(getPromoBundleBySlug(slug)?.bannerImage || "", new RegExp(`/images/offers/banners/${slug}\\.webp`));
+  const heroPath = getPromoBundleBySlug(slug)?.heroImage || "";
+  assert.match(heroPath, /^\/images\/bundles\/.+\.webp$/, `${slug} uses current product imagery`);
+  const hero = statSync(new URL(`../client/public${heroPath}`, import.meta.url));
+  assert.ok(hero.size < 100_000, `${slug} active product image too large: ${hero.size}`);
 }
 
 const footerSource = readFileSync(new URL("../client/src/components/layout/Footer.tsx", import.meta.url), "utf8");

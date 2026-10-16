@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { PROMO_BUNDLES } from "../../shared/promoBundles.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientRoot = path.resolve(__dirname, "..");
@@ -23,6 +24,11 @@ const absoluteUrl = (pathname = "") => {
   if (pathname.startsWith("http://") || pathname.startsWith("https://")) return pathname;
   return `${SITE_URL}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
 };
+
+// Use product imagery: the retired flyer graphics contain stale volume text.
+const bundlePreview = (bundle) => bundle.slug === "garden-refresh"
+  ? { path: "/images/bundles/natures-blanket-premium-texture-640.webp", width: "640", height: "480" }
+  : { path: "/images/bundles/plantpal-texture-640.webp", width: "640", height: "519" };
 
 const openingHours = [
   {
@@ -121,6 +127,66 @@ const routes = [
     canonical: absoluteUrl("/products"),
     schemas: [localBusinessSchema, itemListSchema],
   },
+  {
+    path: "/offers",
+    title: "Soil & Raised Garden Bed Deals | Organic Soil Wholesale",
+    description: `Compare Phoenix pickup bundles: ${PROMO_BUNDLES.map((bundle) => `${bundle.title} $${bundle.salePrice}`).join(", ")}. Explore the raised garden bed package, too.`,
+    canonical: absoluteUrl("/offers"),
+    image: absoluteUrl("/garden-bed/bundle-960.webp"),
+    imageType: "image/webp",
+    imageWidth: "960",
+    imageHeight: "640",
+    schemas: [
+      localBusinessSchema,
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Phoenix pickup garden bundles",
+        itemListElement: PROMO_BUNDLES.map((bundle, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: bundle.title,
+          url: absoluteUrl(`/offers/${bundle.slug}`),
+        })),
+      },
+    ],
+  },
+  ...PROMO_BUNDLES.map((bundle) => ({
+    path: `/offers/${bundle.slug}`,
+    title: `${bundle.title} | Organic Soil Wholesale`,
+    description: `${bundle.title}: ${bundle.lpLine} ${bundle.phoenixYardPickup ? "Phoenix yard pickup" : "Congress pickup or delivery"} for $${bundle.salePrice} plus tax. Raised bed not included.`,
+    canonical: absoluteUrl(`/offers/${bundle.slug}`),
+    image: absoluteUrl(bundlePreview(bundle).path),
+    imageType: "image/webp",
+    imageWidth: bundlePreview(bundle).width,
+    imageHeight: bundlePreview(bundle).height,
+    schemas: [
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: bundle.title,
+        description: bundle.description,
+        sku: String(bundle.productId),
+        image: absoluteUrl(bundlePreview(bundle).path),
+        brand: { "@type": "Brand", name: "Soil Seed & Water" },
+        url: absoluteUrl(`/offers/${bundle.slug}`),
+        offers: {
+          "@type": "Offer",
+          price: bundle.salePrice,
+          priceCurrency: "USD",
+          url: absoluteUrl(`/offers/${bundle.slug}`),
+        },
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Deals", item: absoluteUrl("/offers") },
+          { "@type": "ListItem", position: 2, name: bundle.title, item: absoluteUrl(`/offers/${bundle.slug}`) },
+        ],
+      },
+    ],
+  })),
   {
     path: "/pickup",
     title: "Organic Soil Pickup in Phoenix | Organic Soil Wholesale",
