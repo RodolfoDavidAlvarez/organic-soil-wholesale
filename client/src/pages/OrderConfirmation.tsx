@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import SEO from '@/components/layout/SEO';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,8 +46,13 @@ const PURCHASE_TRACKED_PREFIX = 'osw-purchase-tracked:';
 const OrderConfirmation: React.FC = () => {
   const [, navigate] = useLocation();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const [confirmationStatus, setConfirmationStatus] = useState<'checking' | 'confirmed' | 'pending' | 'error' | 'missing'>('checking');
+  const [confirmationAttempt, setConfirmationAttempt] = useState(0);
+  const trackedPurchases = useRef(new Set<string>());
 
   useEffect(() => {
+    let active = true;
+    setConfirmationStatus('checking');
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('order_id');
     const sessionId = params.get('session_id');
@@ -56,8 +61,12 @@ const OrderConfirmation: React.FC = () => {
       if (!details.orderId) return;
       if (!details.value || details.value <= 0) return;
       const storageKey = `${PURCHASE_TRACKED_PREFIX}${details.orderId}`;
-      if (sessionStorage.getItem(storageKey)) return;
-      sessionStorage.setItem(storageKey, '1');
+      if (trackedPurchases.current.has(storageKey)) return;
+      try {
+        if (sessionStorage.getItem(storageKey)) return;
+        sessionStorage.setItem(storageKey, '1');
+      } catch { /* Storage restrictions must not block a paid confirmation. */ }
+      trackedPurchases.current.add(storageKey);
 
       trackEcommerceEvent('purchase', {
         transaction_id: details.orderId,
@@ -90,8 +99,10 @@ const OrderConfirmation: React.FC = () => {
         ...fallback,
         orderId: String(order?.id || fallback.orderId),
         confirmationCode: order?.confirmation_code || fallback.confirmationCode,
+        items: Array.isArray(payload?.items) ? payload.items.length : fallback.items,
         fulfillment: order?.fulfillment_type || fallback.fulfillment,
         pickupSiteId: confirmedSite?.id || fallback.pickupSiteId,
+        pickupTime: order?.pickup_scheduled_at || fallback.pickupTime,
         deliveryZip: order?.delivery_zip || fallback.deliveryZip,
         value: Number(payload?.value ?? order?.total_amount ?? fallback.value ?? 0),
         orderItems,
@@ -99,18 +110,16 @@ const OrderConfirmation: React.FC = () => {
       };
     };
 
-    const savedOrder = localStorage.getItem('lastOrder');
     let fallbackOrder: OrderDetails | null = null;
-    if (savedOrder) {
-      try {
-        fallbackOrder = JSON.parse(savedOrder);
-      } catch {
-        fallbackOrder = null;
-      }
-    }
+    try {
+      const savedOrder = localStorage.getItem('lastOrder');
+      if (savedOrder) fallbackOrder = JSON.parse(savedOrder);
+      if (orderId && String(fallbackOrder?.orderId) !== orderId) fallbackOrder = null;
+    } catch { /* A verified Stripe return works without browser storage. */ }
     if (!fallbackOrder && orderId) {
       fallbackOrder = { orderId, items: 0 };
     }
+    setOrderDetails(fallbackOrder);
 
     if (orderId) {
       fetch('/api/checkout/confirm-paid', {
@@ -123,37 +132,76 @@ const OrderConfirmation: React.FC = () => {
       })
         .then((response) => (response.ok ? response.json() : null))
         .then((payload) => {
-          if (!fallbackOrder) return;
+          if (!active || !fallbackOrder) return;
           const confirmed = payload?.ok ? mergeConfirmedOrder(payload, fallbackOrder) : fallbackOrder;
           setOrderDetails(confirmed);
-          if (payload?.ok || confirmed.paymentConfirmed || confirmed.freeOrder) {
+          if (payload?.ok || confirmed.freeOrder) {
+            setConfirmationStatus('confirmed');
             trackPurchaseOnce(confirmed);
-            recordCheckoutMonitorEvent('payment_completed', {
-              orderId: Number(confirmed.orderId),
-              fulfillment: confirmed.fulfillment,
-              itemCount: confirmed.items,
-              cartValue: confirmed.value,
-              stripeSessionId: sessionId || undefined,
-            });
+            try {
+              recordCheckoutMonitorEvent('payment_completed', {
+                orderId: Number(confirmed.orderId),
+                fulfillment: confirmed.fulfillment,
+                itemCount: confirmed.items,
+                cartValue: confirmed.value,
+                stripeSessionId: sessionId || undefined,
+              });
+            } catch { /* Monitoring must not hide a successful payment. */ }
+          } else {
+            setConfirmationStatus(payload?.pending ? 'pending' : 'error');
           }
         })
         .catch(() => {
-          if (fallbackOrder) {
-            setOrderDetails(fallbackOrder);
-            if (fallbackOrder.paymentConfirmed || fallbackOrder.freeOrder) {
-              trackPurchaseOnce(fallbackOrder);
-            }
-          }
+          if (!active) return;
+          setConfirmationStatus(fallbackOrder?.freeOrder ? 'confirmed' : 'error');
         });
+    } else {
+      setConfirmationStatus(fallbackOrder?.freeOrder ? 'confirmed' : fallbackOrder ? 'error' : 'missing');
     }
 
-    if (fallbackOrder) {
-      setOrderDetails(fallbackOrder);
-      // NOTE: do NOT remove from localStorage — keep it so a page refresh after
-      // checkout still shows the confirmation instead of "No order found".
-      return;
-    }
-  }, []);
+    return () => { active = false; };
+  }, [confirmationAttempt]);
+
+  if (confirmationStatus !== 'confirmed') {
+    const checking = confirmationStatus === 'checking';
+    const missing = confirmationStatus === 'missing';
+    const heading = checking ? 'Checking your payment'
+      : missing ? 'No order found'
+      : confirmationStatus === 'pending' ? 'Payment confirmation is pending'
+      : 'We couldn’t confirm your payment';
+    return (
+      <>
+        <SEO title="Order Confirmation" canonical="https://organicsoilwholesale.com/order-confirmation" robots="noindex, nofollow" />
+        <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full">
+            <CardContent className="text-center py-10 space-y-5">
+              <div role="status" aria-live="polite">
+                <h1 className="text-2xl font-bold mb-3">{heading}</h1>
+                <p className="text-stone-600">
+                  {checking ? 'Please wait while we check the payment status for your order.'
+                    : missing ? 'Open the confirmation link from your receipt, or call us for help.'
+                    : 'If you already paid, don’t place another order. Check again or call us for help.'}
+                </p>
+                {orderDetails?.orderId && <p className="mt-3 text-sm text-stone-600">Order #{orderDetails.orderId}</p>}
+              </div>
+              {!missing && (
+                <Button size="lg" className="w-full min-h-[48px]" disabled={checking}
+                  onClick={() => setConfirmationAttempt((attempt) => attempt + 1)}>
+                  {checking ? 'Checking…' : 'Check payment status again'}
+                </Button>
+              )}
+              <Button asChild size="lg" variant="outline" className="w-full min-h-[48px]">
+                <a href={PHOENIX_YARD_PHONE_TEL}><Phone className="w-5 h-5 mr-2" />Call {PHOENIX_YARD_PHONE_DISPLAY}</a>
+              </Button>
+              <Button variant="ghost" size="lg" className="w-full min-h-[48px]" onClick={() => navigate('/')}>
+                Return to Home
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
 
   if (!orderDetails) {
     return (

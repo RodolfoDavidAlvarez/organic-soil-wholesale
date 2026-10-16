@@ -36,6 +36,7 @@ import {
   normalizeV5ProductRecord,
 } from '../shared/oswPricing.js';
 import { nonBundleProductSubtotal, resolvePromoBundle } from '../shared/promoBundles.js';
+import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import {
   JOB_APPLICATION_BUCKET,
   JobApplicationError,
@@ -6851,40 +6852,34 @@ ${pages}
     if (path === '/api/checkout/confirm-paid' && req.method === 'POST') {
       try {
         const { orderId, sessionId } = req.body || {};
-        const id = parseInt(String(orderId || ''), 10);
-        if (!id) return res.status(400).json({ error: 'orderId required' });
-
-        const { data: order } = await db.from('orders').select('*').eq('id', id).single();
-        if (!order) return res.status(404).json({ error: 'Order not found' });
-        if (order.payment_status === 'paid') {
-          return res.json({ ok: true, alreadyPaid: true });
-        }
-
-        const Stripe = (await import('stripe')).default;
-        const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
-          httpClient: Stripe.createFetchHttpClient(),
+        const { payload, session } = await confirmPaidCheckout({
+          db,
+          orderId,
+          sessionId,
+          retrieveSession: async (id) => {
+            const Stripe = (await import('stripe')).default;
+            const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
+              httpClient: Stripe.createFetchHttpClient(),
+            });
+            return stripeClient.checkout.sessions.retrieve(id);
+          },
+          fulfillOrder: fulfillOswCheckoutOrder,
         });
-        const sid = sessionId || order.stripe_checkout_session_id;
-        if (!sid) return res.status(400).json({ error: 'No Stripe session for this order' });
-
-        const session = await stripeClient.checkout.sessions.retrieve(String(sid));
-        if (session.payment_status !== 'paid') {
-          return res.json({ ok: false, pending: true, paymentStatus: session.payment_status });
-        }
-
-        const result = await fulfillOswCheckoutOrder(id, session);
         const monitorId = session?.metadata?.checkout_monitor_id;
-        if (isCheckoutMonitorSessionId(monitorId)) {
+        if (payload.ok && isCheckoutMonitorSessionId(monitorId)) {
           await safeRecordCheckoutEvent(db, {
             sessionId: monitorId,
             event: 'payment_completed',
-            orderId: id,
+            orderId: Number(orderId),
             stripeSessionId: session.id,
             fulfillment: session?.metadata?.fulfillment_type,
           });
         }
-        return res.json(result);
+        return res.json(payload);
       } catch (err) {
+        if (err instanceof CheckoutConfirmationError) {
+          return res.status(err.status).json({ error: err.message });
+        }
         console.error('[checkout confirm-paid] error:', err?.message || err);
         return res.status(500).json({ error: 'Failed to confirm order payment' });
       }

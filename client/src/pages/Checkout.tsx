@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import SEO from "@/components/layout/SEO";
@@ -12,6 +12,7 @@ import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQu
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { FlatbedLoadMeter } from "@/components/FlatbedLoadMeter";
 import { loadDeliveryDraft, saveDeliveryDraft } from "@/lib/deliveryDraft";
+import { currentDeliveryQuote, deliveryQuoteKey } from "@shared/deliveryQuoteBinding.js";
 import {
   FLATBED_CAPACITY,
   cartFlatbedSpots,
@@ -137,6 +138,7 @@ const Checkout: React.FC = () => {
     [payGroups, payItems],
   );
   const monitorSessionId = useMemo(() => getCheckoutMonitorId(), []);
+  const checkoutEntryTracked = useRef(false);
   /** Only loose walking-floor truckloads force delivery — never flatbed pallets/totes. */
   const hasWalkingFloorDelivery = useMemo(
     () => payItems.some((item) => isWalkingFloorDeliveryFormat(item.format)),
@@ -264,9 +266,8 @@ const Checkout: React.FC = () => {
       zip: draft?.zip ?? "",
     };
   });
-  const [deliveryQuote, setDeliveryQuote] = useState<TruckingQuote | null>(() =>
-    typeof window !== "undefined" ? loadDeliveryDraft()?.quote ?? null : null,
-  );
+  // Saved drafts have no load identity. Re-price them before showing a payable total.
+  const [boundDeliveryQuote, setBoundDeliveryQuote] = useState<{ key: string; quote: TruckingQuote } | null>(null);
   const [availabilityPreset, setAvailabilityPreset] = useState<AvailabilityPreset>("1-3");
   const [deliveryFrom, setDeliveryFrom] = useState(() => rangeForPreset("1-3").from);
   const [deliveryTo, setDeliveryTo] = useState(() => rangeForPreset("1-3").to);
@@ -294,6 +295,17 @@ const Checkout: React.FC = () => {
   const [notes, setNotes] = useState("");
   const [activeStep, setActiveStep] = useState<CheckoutStep>(checkoutBoot.step);
   const [devModeLabel, setDevModeLabel] = useState<string | null>(null);
+
+  const quoteItems = useMemo(
+    () => payItems.map((i) => ({ sizeOption: i.format, quantity: i.quantity, unit: i.unit, productName: i.productName })),
+    [payItems],
+  );
+  const quoteCartKey = deliveryQuoteKey({ items: quoteItems });
+  const quoteRequestKey = deliveryQuoteKey({ items: quoteItems, zip: deliveryAddress.zip, roughAccess, semiAccess });
+  const latestQuoteRequest = useRef({ cart: quoteCartKey, request: quoteRequestKey });
+  latestQuoteRequest.current = { cart: quoteCartKey, request: quoteRequestKey };
+  // Derive validity during render: no one-frame window where an old price can be paid.
+  const deliveryQuote: TruckingQuote | null = currentDeliveryQuote(boundDeliveryQuote, quoteRequestKey);
 
   useEffect(() => {
     fetch("/api/site-config")
@@ -377,7 +389,6 @@ const Checkout: React.FC = () => {
           state: draft.state || prev.state || "AZ",
         }));
       }
-      if (draft.quote && !deliveryQuote) setDeliveryQuote(draft.quote);
       setRoughAccess(Boolean(draft.roughAccess));
       setSemiAccess(draft.semiAccess !== false);
     }
@@ -388,15 +399,21 @@ const Checkout: React.FC = () => {
     hasWalkingFloorDelivery,
   ]);
 
-  // Items shaped for the DeliveryQuoteWidget (truck picker)
-  const quoteItems = useMemo(
-    () => payItems.map((i) => ({ sizeOption: i.format, quantity: i.quantity, unit: i.unit, productName: i.productName })),
-    [payItems]
-  );
-
-  // Re-price drafts that still used Phoenix — all deliveries now leave from Congress.
+  // A changed load/ZIP/access needs a newly reviewed delivery price, not the old total.
   useEffect(() => {
-    if (!deliveryQuote || deliveryQuote.originYard === "congress") return;
+    if (!boundDeliveryQuote || deliveryQuote) return;
+    setBoundDeliveryQuote(null);
+    setEditingDeliveryQuote(true);
+    saveDeliveryDraft({ ...deliveryAddress, roughAccess, semiAccess, quote: null });
+    if (fulfillment === "delivery") {
+      setActiveStep("timing");
+      setError("Your order or delivery details changed. Get an updated delivery price before continuing.");
+    }
+  }, [boundDeliveryQuote, quoteRequestKey, deliveryQuote, fulfillment]);
+
+  // Re-price a carried-over PDP quote for the complete checkout load, once on entry.
+  useEffect(() => {
+    if (fulfillment !== "delivery" || !loadDeliveryDraft()?.quote) return;
     const zip = deliveryAddress.zip;
     if (!/^\d{5}$/.test(zip) || quoteItems.length === 0) return;
     let cancelled = false;
@@ -407,8 +424,8 @@ const Checkout: React.FC = () => {
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((q) => {
-        if (cancelled || !q?.costDollars) return;
-        setDeliveryQuote(q);
+        if (cancelled || latestQuoteRequest.current.request !== quoteRequestKey || !Number.isFinite(q?.costDollars)) return;
+        setBoundDeliveryQuote({ key: quoteRequestKey, quote: q });
         saveDeliveryDraft({
           zip,
           roughAccess,
@@ -422,7 +439,7 @@ const Checkout: React.FC = () => {
     return () => {
       cancelled = true;
     };
-    // Intentionally once when a Phoenix-origin draft is present.
+    // Intentionally once. Later changes require the customer to get/review a fresh price.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -440,6 +457,19 @@ const Checkout: React.FC = () => {
       : nonBundleProductSubtotal(payItems) * (appliedDiscount.percent / 100)
     : 0;
   const total = Math.max(0, subtotal - discountAmount);
+
+  useEffect(() => {
+    if (checkoutEntryTracked.current || payItems.length === 0) return;
+    checkoutEntryTracked.current = true;
+    trackEcommerceEvent("begin_checkout", {
+      value: total,
+      items: payItems.map(cartItemToEcommerceItem),
+      fulfillment,
+      product_subtotal: productSubtotal,
+      delivery_fee: deliveryFee,
+      pickup_sales_channel: "osw_yard",
+    });
+  }, [payItems, fulfillment, productSubtotal, deliveryFee, total]);
 
   useEffect(() => {
     if (payItems.length === 0) return;
@@ -497,15 +527,6 @@ const Checkout: React.FC = () => {
       total,
       step: activeStep,
     });
-    trackEcommerceEvent("begin_checkout", {
-      value: total,
-      items: ecommerceItems,
-      fulfillment,
-      product_subtotal: productSubtotal,
-      delivery_fee: deliveryFee,
-      pickup_sales_channel: "osw_yard",
-    });
-
     if (payItems.length === 0) {
       setError("Your order is empty");
       return;
@@ -1206,8 +1227,8 @@ const Checkout: React.FC = () => {
                   )}
                   {!hasBulkItem && selectedPickupSite.id === "phoenix" && (
                     <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm leading-snug text-emerald-950">
-                      <span className="font-bold">Phoenix pickup</span> is Simon’s Gold and Nature’s Blanket right now
-                      (bags, pallets, totes, and compost/mulch bulk by appointment).
+                      <span className="font-bold">Phoenix pickup</span> is available for PlantPal, Mikey’s Worm Poop,
+                      Simon’s Gold, Nature’s Blanket and Sabrina Kills Bugs. Loose bulk is compost and mulch by appointment.
                       {pickupNeedsHeadsUp
                         ? " Pallet or more needs a scheduled slot."
                         : " Bags can be ready in about 30 minutes."}
@@ -1290,7 +1311,11 @@ const Checkout: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => setEditingDeliveryQuote(true)}
+                          onClick={() => {
+                            setBoundDeliveryQuote(null);
+                            setEditingDeliveryQuote(true);
+                            saveDeliveryDraft({ ...deliveryAddress, roughAccess, semiAccess, quote: null });
+                          }}
                           className="shrink-0 text-xs font-semibold text-[#264027] underline-offset-2 hover:underline"
                         >
                           Change ZIP
@@ -1299,6 +1324,7 @@ const Checkout: React.FC = () => {
                     </div>
                   ) : (
                     <DeliveryQuoteWidget
+                      key={quoteCartKey}
                       items={quoteItems}
                       initialZip={deliveryAddress.zip}
                       initialQuote={deliveryQuote}
@@ -1306,7 +1332,9 @@ const Checkout: React.FC = () => {
                       initialSemiAccess={semiAccess}
                       compact
                       onQuote={(q, ctx) => {
-                        setDeliveryQuote(q);
+                        // Ignore a response that started before the cart changed.
+                        if (latestQuoteRequest.current.cart !== quoteCartKey) return;
+                        setBoundDeliveryQuote(q ? { key: deliveryQuoteKey({ items: quoteItems, ...ctx }), quote: q } : null);
                         setRoughAccess(ctx.roughAccess);
                         setSemiAccess(ctx.semiAccess);
                         const cityFromQuote = q?.breakdown.destinationCity?.trim() || "";
@@ -1325,7 +1353,10 @@ const Checkout: React.FC = () => {
                           city: cityFromQuote || null,
                           state: stateFromQuote || null,
                         });
-                        if (q) setEditingDeliveryQuote(false);
+                        if (q) {
+                          setEditingDeliveryQuote(false);
+                          setError(null);
+                        }
                         if (!cityFromQuote && /^\d{5}$/.test(ctx.zip)) {
                           fetch(`/api/address/zip/${ctx.zip}`)
                             .then((r) => (r.ok ? r.json() : null))
@@ -1373,8 +1404,9 @@ const Checkout: React.FC = () => {
                               zip_changed: zipChanged,
                             });
                             if (zipChanged) {
-                              setDeliveryQuote(null);
+                              setBoundDeliveryQuote(null);
                               setEditingDeliveryQuote(true);
+                              saveDeliveryDraft({ zip: nextZip, roughAccess, semiAccess, quote: null, city: address.city, state: address.state });
                             }
                           }}
                         />

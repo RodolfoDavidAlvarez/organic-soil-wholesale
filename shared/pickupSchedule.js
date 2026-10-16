@@ -56,7 +56,7 @@ export const PICKUP_LOCATIONS = [
     pickupLocationLabel: 'Phoenix Yard',
     // Exact customer entrance pin: 33°28'02.4"N 112°06'04.5"W.
     directionsUrl: pickupDirectionsUrl('33.467333,-112.101250'),
-    pickupNote: "Simon's Gold & Nature's Blanket · loose bulk by appointment",
+    pickupNote: "Bags ready in about 30 min · loose compost & mulch by appointment",
     minLeadDays: 0,
     allowAsap: true,
     bulkMinLeadDays: 7,

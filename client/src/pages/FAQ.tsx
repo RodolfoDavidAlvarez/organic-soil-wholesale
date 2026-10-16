@@ -1,4 +1,4 @@
-import { useState } from "react";
+import SEO from "@/components/layout/SEO";
 import {
   Accordion,
   AccordionContent,
@@ -11,6 +11,14 @@ import { Button } from "@/components/ui/button";
 
 const FAQ = () => {
   const faqs = [
+    {
+      question: "Can I buy just a few bags for my garden?",
+      answer: <>Yes. Shop individual bags online, choose your size and quantity, and select an available pickup or delivery option at checkout. You do not need a wholesale account to buy the products available for online payment. <Link href="/products" className="font-semibold text-primary underline">Shop soil and amendments</Link>.</>
+    },
+    {
+      question: "Where can I pick up my order?",
+      answer: "Choose an available yard at checkout. Our Phoenix yard is at 1634 N 19th Ave. Product and format determine pickup availability; loose bulk pickup in Phoenix is limited to compost and mulch. Check your order confirmation before heading over."
+    },
     {
       question: "What are the minimum order quantities for wholesale?",
       answer: "For wholesale, we require a minimum of a pallet of bags (50 units depending on size or quantity). This makes it easy for customers to calculate their orders and qualify for wholesale pricing."
@@ -25,7 +33,7 @@ const FAQ = () => {
     },
     {
       question: "Are your products certified organic?",
-      answer: "Yes, all of our products at Soil Seed and Water are certified organic with OMRI, the U.S. Compost Council, and tested with certified labs. We maintain the highest standards for organic certification across our entire product line."
+      answer: "Listings and test information vary by product. Check the individual product page and its available documents, or ask us for the current listing and test information for the product you plan to use."
     },
     {
       question: "Can I get custom blends for my specific growing needs?",
@@ -45,7 +53,7 @@ const FAQ = () => {
     },
     {
       question: "What is your return policy?",
-      answer: "We stand by the quality of our products. If you receive damaged or defective products, please contact the owner at the email provided in our footer. We're committed to resolving any quality issues promptly."
+      answer: <>If your order arrives damaged or you have a product concern, call <a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} className="font-semibold text-primary underline">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</a> with your order number. Our team can review the issue and explain the available options before you return any material.</>
     },
     {
       question: "Do you ship internationally?",
@@ -55,13 +63,18 @@ const FAQ = () => {
 
   return (
     <section id="faq" className="py-16 bg-white">
+      <SEO
+        title="Soil Shopping, Pickup & Delivery FAQs"
+        description="Answers about buying soil by the bag, Phoenix pickup, Arizona delivery, product information and wholesale orders."
+        canonical="https://www.organicsoilwholesale.com/faq"
+      />
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h1 className="text-3xl font-heading font-bold text-primary mb-4">
             Frequently Asked Questions
           </h1>
           <p className="text-lg text-neutral-800 max-w-3xl mx-auto">
-            Find answers to common questions about our products and wholesale program.
+            From a few bags for your garden to a bulk order: get help with shopping, pickup and delivery.
           </p>
         </div>
 
@@ -83,11 +96,9 @@ const FAQ = () => {
             <p className="text-neutral-800">
               Didn't find an answer to your question?
             </p>
-            <Link href="/contact">
-              <Button className="bg-primary hover:bg-primary-light text-white">
-                Contact Our Support Team
-              </Button>
-            </Link>
+            <Button asChild className="min-h-11 bg-primary hover:bg-primary-light text-white">
+              <Link href="/contact">Contact Our Support Team</Link>
+            </Button>
             <p className="text-sm text-neutral-700">
               Fastest: call{" "}
               <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="font-semibold text-primary hover:underline">
@@ -129,11 +140,7 @@ const FAQ = () => {
               <p className="text-neutral-700 mb-4">
                 Learn more about our wholesale program, benefits, and how to qualify.
               </p>
-              <Link href="/wholesale">
-                <a className="text-primary hover:underline font-medium">
-                  Wholesale Program →
-                </a>
-              </Link>
+              <Link href="/wholesale" className="inline-flex min-h-11 items-center text-primary hover:underline font-medium">Wholesale Program →</Link>
             </div>
           </div>
         </div>

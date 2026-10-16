@@ -14,7 +14,7 @@ import {
   type FeaturedProductSlot,
 } from "@/data/featuredProducts";
 import { PayPickupGrid } from "@/components/PayPickupGrid";
-import { buildLocalBusinessSchema, buildProductsItemListSchema } from "@/config/seo";
+import { CATALOG_SEO, buildLocalBusinessSchema, buildProductsItemListSchema } from "@/config/seo";
 import { trackEvent } from "@/lib/analytics";
 import TrustStrip from "@/components/TrustStrip";
 import { AlertCircle, CheckCircle2, ChevronRight, FileText, Loader2, MapPin, Truck } from "lucide-react";
@@ -342,6 +342,7 @@ function FeaturedRowCard({ slot, onOpen, ctaLabel = "Request a Quote" }: { slot:
             <OptimizedImage
               src={slot.bagImage}
               alt={`${slot.displayTitle} bag`}
+              width={128}
               className="h-full w-full object-contain"
             />
           </div>
@@ -355,7 +356,7 @@ function FeaturedRowCard({ slot, onOpen, ctaLabel = "Request a Quote" }: { slot:
           <div className="mt-3 flex gap-2">
             {slot.altImages.slice(0, 3).map((img) => (
               <div key={img.src} className="h-12 w-12 overflow-hidden rounded-lg ring-1 ring-stone-200">
-                <OptimizedImage src={img.src} alt={img.label} className="h-full w-full object-cover" />
+                <OptimizedImage src={img.src} alt={img.label} width={96} className="h-full w-full object-cover" />
               </div>
             ))}
           </div>
@@ -415,9 +416,9 @@ const Products = () => {
   return (
     <>
       <SEO
-        title="Wholesale Organic Soil Products"
-        description="Bulk soil products from Soil Seed & Water — dairy compost, worm castings, premium potting blends, amendments, mulch. Pallets, supersacks, truckloads."
-        keywords="soil seed and water products, organic soil catalog, wholesale compost, organic mulch, potting soil supplier, dairy compost arizona, worm castings wholesale"
+        title={CATALOG_SEO.title}
+        description={CATALOG_SEO.description}
+        keywords={CATALOG_SEO.keywords}
         canonical="https://organicsoilwholesale.com/products"
         structuredData={[buildLocalBusinessSchema(), buildProductsItemListSchema()]}
       />
@@ -431,16 +432,12 @@ const Products = () => {
               <p className="mb-1 hidden items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#264027] md:inline-flex">
                 <CheckCircle2 className="h-3 w-3" /> Pickup &amp; delivery across Arizona
               </p>
-              <h2 className="font-heading text-xl font-bold leading-tight text-stone-900 md:hidden">
-                Order organic soil products.
-              </h2>
-              <h2 className="hidden font-heading text-3xl font-bold leading-tight text-stone-900 md:block">
-                Wholesale compost, soil amendments &amp; mulch for Arizona jobs.
-              </h2>
+              <h1 className="font-heading text-xl font-bold leading-tight text-stone-900 md:text-3xl">
+                Soil, compost &amp; mulch for your next project.
+              </h1>
               <p className="mt-1 hidden max-w-xl text-sm leading-relaxed text-stone-600 md:mt-2 md:block">
-                Buy online. Phoenix pickup covers bagged PlantPal, worm castings, compost, and mulch.
-                Loose bulk at the yard stays compost and mulch. Pallets, super sacks, mixed loads,
-                and truckloads can still be quoted or delivered.
+                Choose your size and order online for Phoenix pickup. Need pallets, super sacks
+                or a bigger load? We’ll help you plan delivery or a bulk order.
               </p>
             </div>
           </div>
@@ -455,19 +452,19 @@ const Products = () => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackEvent("Pickup Pill Clicked", { location: "congress" })}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1f3320]"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1f3320]"
               aria-label="Open Congress plant location in Google Maps"
             >
               <MapPin className="h-3.5 w-3.5" />
-              Congress bulk · ready in ~30 min
+              Congress bulk pickup
             </a>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[#264027]/30 bg-white px-3 py-1.5 text-xs font-bold text-[#264027] shadow-sm">
               <MapPin className="h-3.5 w-3.5" />
-              Phoenix: Simon’s Gold & Nature’s Blanket
+              Phoenix: bags · loose compost & mulch
             </span>
             <Link
               href="/pickup"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-stone-600 underline-offset-2 hover:text-stone-900 hover:underline"
+              className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-stone-600 underline-offset-2 hover:text-stone-900 hover:underline"
             >
               Pickup details →
             </Link>

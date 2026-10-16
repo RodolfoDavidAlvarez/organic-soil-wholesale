@@ -39,81 +39,10 @@ const openingHours = [
   },
 ];
 
-const products = [
-  {
-    name: "Simon's Gold",
-    category: "Dairy Compost",
-    slug: "simons-gold",
-    title: "Simon's Gold Dairy Compost",
-    description: "Slow-release dairy compost for feeding, rebuilding, and conserving soil in beds, trees, planted areas, and Arizona landscape projects.",
-    image: "/images/optimized/dansgold9lbs-1.jpg",
-    keywords: "dairy compost, organic compost Phoenix, Arizona compost, soil amendment, bulk compost, compost for gardens, compost for trees",
-    offers: [
-      ["9 lb Bag", 12.46],
-      ["40 lb Bag (1 cu ft)", 24.9],
-      ["Super Sack (~2,000 lb)", 150],
-      ["Truckload (~24 tons)", 720],
-    ],
-  },
-  {
-    name: "Mikey's Worm Poop",
-    category: "Worm Castings",
-    slug: "mikeys-worm-poop",
-    title: "Mikey's Worm Poop Worm Castings",
-    description: "Nutrient-rich worm castings for root zones, top dressing, seed starts, garden beds, and soil biology support.",
-    image: "/images/optimized/mikeys-worm-poop9lbs.jpg",
-    keywords: "worm castings, vermicompost, worm poop fertilizer, root zone amendment, soil biology, worm castings Phoenix",
-    offers: [
-      ["9 lb Bag", 18.1],
-      ["40 lb Bag (1 cu ft)", 34.9],
-      ["Super Sack (~2,000 lb)", 399],
-    ],
-  },
-  {
-    name: "PlantPal",
-    category: "All-Stage Nursery Mix",
-    slug: "plantpal",
-    title: "PlantPal All-Stage Nursery Mix",
-    description: "All-stage nursery potting mix for seed starts, propagation, containers, nurseries, and patio planters.",
-    image: "/images/optimized/plantpal10lbs.jpg",
-    keywords: "nursery potting mix, all stage potting soil, PlantPal, container soil, seed starter mix, propagation soil, Phoenix potting soil",
-    offers: [
-      ["1 cu ft Bag", 10.99],
-      ["Super Sack (2.2 cu yd)", 247.28],
-      ["Truckload (22 pallets)", 4896.05],
-    ],
-  },
-  {
-    name: "Nature's Blanket Premium",
-    category: "Premium Dark Mulch",
-    slug: "natures-blanket-premium",
-    title: "Nature's Blanket Premium Dark Mulch",
-    description: "Dark premium mulch for landscape finish, moisture retention, weed suppression, gardens, farms, and commercial properties.",
-    image: "/images/optimized/natures-blanket-bag-studio.jpg",
-    keywords: "premium mulch, dark mulch, organic mulch Phoenix, landscape mulch, mulch delivery, Nature's Blanket Premium",
-    offers: [
-      ["2 cu ft Bag", 10.99],
-      ["Super Sack (2.2 cu yd)", 137.5],
-      ["Truckload (~90 cu yd)", 2700],
-    ],
-  },
-  {
-    name: "Sabrina Kills Bugs",
-    category: "All-Organic Insecticide",
-    slug: "sabrina-kills-bugs",
-    title: "Sabrina Kills Bugs",
-    description: "32 oz plant-based insecticide spray. 3-in-1 fungicide, insecticide, and miticide. No neem oil or soap.",
-    image: "/images/products/sabrina-kills-bugs-share.jpg",
-    imageType: "image/jpeg",
-    imageWidth: "1200",
-    imageHeight: "1200",
-    keywords: "Sabrina Kills Bugs, organic insecticide, plant based insecticide Phoenix, garden spray",
-    offers: [
-      ["32 oz Bottle", 18.99],
-      ["1 Gallon", 89.99],
-    ],
-  },
-];
+// Shared with the rendered catalog. Prices and availability come from the live
+// product API, so static SEO metadata must not publish a separate price list.
+const catalogSeo = JSON.parse(await readFile(path.join(clientRoot, "src/data/catalogSeo.json"), "utf8"));
+const products = catalogSeo.products;
 
 const localBusinessSchema = {
   "@context": "https://schema.org",
@@ -152,18 +81,6 @@ const productSchema = (product) => ({
   brand: { "@type": "Brand", name: "Soil Seed & Water" },
   category: product.category,
   url: absoluteUrl(`/products/${product.slug}`),
-  offers: product.offers.map(([name, price]) => ({
-    "@type": "Offer",
-    name: `${product.name} - ${name}`,
-    price,
-    priceCurrency: "USD",
-    availability: "https://schema.org/InStock",
-    url: absoluteUrl(`/products/${product.slug}`),
-    seller: {
-      "@type": "LocalBusiness",
-      name: BUSINESS_NAME,
-    },
-  })),
 });
 
 const itemListSchema = {
@@ -198,9 +115,9 @@ const routes = [
   },
   {
     path: "/products",
-    title: "Wholesale Organic Soil Products | Organic Soil Wholesale",
-    description: "Buy the four fastest pickup products online: dairy compost, worm castings, PlantPal nursery mix, and Nature's Blanket Premium mulch.",
-    keywords: "wholesale compost, organic soil catalog, worm castings wholesale, premium potting soil, organic mulch Phoenix",
+    title: `${catalogSeo.title} | Organic Soil Wholesale`,
+    description: catalogSeo.description,
+    keywords: catalogSeo.keywords,
     canonical: absoluteUrl("/products"),
     schemas: [localBusinessSchema, itemListSchema],
   },

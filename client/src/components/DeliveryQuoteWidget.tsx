@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, Truck, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { deliveryQuoteKey } from "@shared/deliveryQuoteBinding.js";
 
 /** Server response from POST /api/quote/trucking */
 export interface TruckingQuote {
@@ -78,6 +79,19 @@ export function DeliveryQuoteWidget({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quote, setQuote] = useState<TruckingQuote | null>(initialQuote);
+  const requestVersion = useRef(0);
+  const itemsKey = deliveryQuoteKey({ items });
+  const latestItemsKey = useRef(itemsKey);
+  latestItemsKey.current = itemsKey;
+  useEffect(() => () => { requestVersion.current += 1; }, []);
+
+  const invalidateQuote = (currentZip: string, currentRough: boolean, currentSemi: boolean) => {
+    requestVersion.current += 1;
+    setLoading(false);
+    setQuote(null);
+    setError(null);
+    onQuote(null, { zip: currentZip, roughAccess: currentRough, semiAccess: currentSemi });
+  };
 
   const fetchQuote = useCallback(
     async (
@@ -85,6 +99,8 @@ export function DeliveryQuoteWidget({
       currentRough: boolean,
       currentSemi: boolean,
     ): Promise<TruckingQuote | null> => {
+      const version = ++requestVersion.current;
+      const isCurrent = () => version === requestVersion.current && itemsKey === latestItemsKey.current;
       const cleanZip = (currentZip || "").trim();
       if (!/^\d{5}$/.test(cleanZip)) {
         setError("Enter a 5-digit ZIP");
@@ -117,6 +133,7 @@ export function DeliveryQuoteWidget({
           body: JSON.stringify({ items, zip: cleanZip, roughAccess: currentRough }),
         });
         const data = await res.json();
+        if (!isCurrent()) return null;
         if (!res.ok) throw new Error(data?.error || "Could not price delivery");
         setQuote(data);
         onQuote(data, { zip: cleanZip, roughAccess: currentRough, semiAccess: currentSemi });
@@ -131,6 +148,7 @@ export function DeliveryQuoteWidget({
         });
         return data as TruckingQuote;
       } catch (err) {
+        if (!isCurrent()) return null;
         const msg = err instanceof Error ? err.message : "Could not price delivery";
         setError(msg);
         setQuote(null);
@@ -143,10 +161,10 @@ export function DeliveryQuoteWidget({
         });
         return null;
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
-    [items, onQuote]
+    [items, itemsKey, onQuote]
   );
 
   const handleGetPrice = async () => {
@@ -158,15 +176,15 @@ export function DeliveryQuoteWidget({
 
   const handleRoughToggle = (checked: boolean) => {
     setRoughAccess(checked);
+    invalidateQuote(zip, checked, semiAccess);
     // If we already have a quote for this ZIP, re-fetch with the new modifier
     if (quote) fetchQuote(zip, checked, semiAccess);
   };
 
   const handleSemiToggle = (checked: boolean) => {
     setSemiAccess(checked);
-    // Semi access doesn't change pricing — only re-notifies parent so the
-    // flag flows into the order notes for the ops team.
-    if (quote) onQuote(quote, { zip, roughAccess, semiAccess: checked });
+    invalidateQuote(zip, roughAccess, checked);
+    if (quote) fetchQuote(zip, roughAccess, checked);
   };
 
   // Allow Enter in the ZIP field to fetch a quote without bubbling up to the
@@ -193,7 +211,11 @@ export function DeliveryQuoteWidget({
               pattern="[0-9]*"
               maxLength={5}
               value={zip}
-              onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+              onChange={(e) => {
+                const nextZip = e.target.value.replace(/\D/g, "").slice(0, 5);
+                setZip(nextZip);
+                invalidateQuote(nextZip, roughAccess, semiAccess);
+              }}
               onKeyDown={handleZipKeyDown}
               placeholder="85308"
               className="flex-1 h-11 text-base"

@@ -123,6 +123,8 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
     window.location.assign(`/products/${slug}#buy`);
   };
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    // Nested buttons handle their own keys; do not intercept Choose Size.
+    if (event.target !== event.currentTarget) return;
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       goToDetail();
@@ -265,12 +267,13 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
         </div>
 
         <Button
+          aria-label={`Choose a size for ${product.name}`}
           onClick={(event) => {
             event.stopPropagation();
             goToBuy();
           }}
           className={cn(
-            "mt-3 h-9 w-full rounded-lg text-sm font-bold text-white md:mt-auto md:h-10",
+            "mt-3 h-11 min-h-11 w-full rounded-lg text-sm font-bold text-white md:mt-auto",
             buyButtonVariant === "minimal"
               ? "bg-stone-900 hover:bg-stone-800"
               : "bg-[#264027] hover:bg-[#1f3320]",

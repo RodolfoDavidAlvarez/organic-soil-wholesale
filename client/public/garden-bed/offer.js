@@ -24,7 +24,7 @@ const dateLabel = step => step.due_at
   ? new Date(step.due_at).toLocaleString('en-US', { timeZone: 'America/Phoenix', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' Arizona time'
   : new Date(step.due_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 const form = $('#customer-form'), review = $('#review'), formError = $('#form-error')
-const choiceIntro = [...$('#choose').children].slice(0, [...$('#choose').children].indexOf(form))
+const choiceIntro = [...$('#choose').children].slice(0, [...$('#choose').children].indexOf(form)).filter(element => element.id !== 'access-note')
 if (staffMode) document.body.classList.add('staff-mode')
 // Payment errors must remain visible after the address form is hidden.
 $('#choose').append(formError)
@@ -58,7 +58,7 @@ function clearAuthorizations() {
 }
 function invalidate() {
   if (busy) return
-  quote = null; form.hidden = false; review.hidden = true; formError.hidden = true
+  quote = null; form.hidden = !token; review.hidden = true; formError.hidden = true
   choiceIntro.forEach(element => { element.hidden = false }); $('#choose').classList.remove('is-review')
   document.querySelectorAll('[name=plan]').forEach(element => { element.disabled = false })
   clearAuthorizations()
@@ -94,7 +94,11 @@ document.querySelectorAll('[name=plan]').forEach(element => element.addEventList
 }))
 $('a[href="#choose"]').addEventListener('click', event => { event.preventDefault(); $('#choose').scrollIntoView({ behavior: 'smooth' }) })
 if (token) $('#access-note').hidden = true
-else $('#review-button').disabled = true
+else {
+  $('#review-button').disabled = true
+  form.hidden = true
+  $('a[href="#choose"]').textContent = 'View pricing & get your offer link'
+}
 if (staffMode) {
   const field = document.createElement('label'); field.id = 'test-schedule-field'; field.className = 'field notice'; field.hidden = true
   field.innerHTML = 'Staff test timing<select name="test_schedule"><option value="monthly">Normal monthly dates</option><option value="accelerated">Accelerated $1 staff test</option></select><span class="muted">Card tests only: the next charges are about 1 and 2 hours after this quote. Review the exact Arizona times before authorizing. Bank payments use normal monthly dates and can take several business days to process.</span>'

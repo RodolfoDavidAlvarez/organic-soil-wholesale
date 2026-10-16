@@ -2629,7 +2629,7 @@ const ProductDetail = () => {
                                 size="lg"
                                 className="min-h-[48px] w-full rounded-xl font-semibold shadow-md touch-manipulation"
                                 disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
-                                onClick={() => navigate("/order")}
+                                onClick={() => addSelectionToCart("checkout")}
                               >
                                 <FileText className="mr-2 h-4 w-4" />
                                 Request a Quote

@@ -1,0 +1,60 @@
+{
+  "title": "Buy Soil, Compost & Mulch in Phoenix",
+  "description": "Shop soil, compost, worm castings, mulch and garden bundles. Choose your size, order online for Phoenix pickup, or get help with delivery and bulk orders.",
+  "keywords": "buy soil Phoenix, compost pickup Phoenix, worm castings, potting soil, mulch, garden bundles, Arizona soil delivery",
+  "products": [
+    {
+      "name": "PlantPal",
+      "category": "All-Stage Nursery Mix",
+      "slug": "plantpal",
+      "title": "PlantPal All-Stage Nursery Mix",
+      "description": "All-stage nursery potting mix for seed starts, propagation, containers, nurseries, and patio planters.",
+      "image": "/images/optimized/plantpal10lbs.jpg",
+      "keywords": "nursery potting mix, all stage potting soil, PlantPal, container soil, seed starter mix, propagation soil, Phoenix potting soil",
+      "id": 111
+    },
+    {
+      "name": "Mikey's Worm Poop",
+      "category": "Worm Castings",
+      "slug": "mikeys-worm-poop",
+      "title": "Mikey's Worm Poop Worm Castings",
+      "description": "Nutrient-rich worm castings for root zones, top dressing, seed starts, garden beds, and soil biology support.",
+      "image": "/images/optimized/mikeys-worm-poop9lbs.jpg",
+      "keywords": "worm castings, vermicompost, worm poop fertilizer, root zone amendment, soil biology, worm castings Phoenix",
+      "id": 1001
+    },
+    {
+      "name": "Simon's Gold",
+      "category": "Dairy Compost",
+      "slug": "simons-gold",
+      "title": "Simon's Gold Dairy Compost",
+      "description": "Slow-release dairy compost for feeding, rebuilding, and conserving soil in beds, trees, planted areas, and Arizona landscape projects.",
+      "image": "/images/optimized/dansgold9lbs-1.jpg",
+      "keywords": "dairy compost, organic compost Phoenix, Arizona compost, soil amendment, bulk compost, compost for gardens, compost for trees",
+      "id": 1000
+    },
+    {
+      "name": "Nature's Blanket Premium",
+      "category": "Premium Dark Mulch",
+      "slug": "natures-blanket-premium",
+      "title": "Nature's Blanket Premium Dark Mulch",
+      "description": "Dark premium mulch for landscape finish, moisture retention, weed suppression, gardens, farms, and commercial properties.",
+      "image": "/images/optimized/natures-blanket-bag-studio.jpg",
+      "keywords": "premium mulch, dark mulch, organic mulch Phoenix, landscape mulch, mulch delivery, Nature's Blanket Premium",
+      "id": 3000
+    },
+    {
+      "name": "Sabrina Kills Bugs",
+      "category": "All-Organic Insecticide",
+      "slug": "sabrina-kills-bugs",
+      "title": "Sabrina Kills Bugs",
+      "description": "32 oz plant-based insecticide spray. 3-in-1 fungicide, insecticide, and miticide. No neem oil or soap.",
+      "image": "/images/products/sabrina-kills-bugs-share.jpg",
+      "imageType": "image/jpeg",
+      "imageWidth": "1200",
+      "imageHeight": "1200",
+      "keywords": "Sabrina Kills Bugs, organic insecticide, plant based insecticide Phoenix, garden spray",
+      "id": 1034
+    }
+  ]
+}
