@@ -215,12 +215,12 @@ const Home = () => {
       <section className="bg-[#f7f5ef] text-[#264027]">
         <div className="mx-auto grid max-w-7xl items-center gap-6 px-5 py-6 sm:px-8 md:grid-cols-[.85fr_1.15fr] md:gap-8 lg:gap-12 lg:py-12">
           <div className="order-2 md:order-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">Arizona soil. A growing community.</p>
-            <h1 className="mt-4 font-heading text-[38px] font-semibold leading-[1.08] tracking-[-0.05em] sm:text-5xl lg:text-[60px]">Good soil.<br />Good people.<br /><span className="text-[#748259]">Let’s grow.</span></h1>
+            <p className="inline-flex rounded-full bg-[#f0dfc7] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#79512b]">Arizona soil. A growing community.</p>
+            <h1 className="mt-4 font-heading text-[38px] font-semibold leading-[1.08] tracking-[-0.05em] sm:text-5xl lg:text-[60px]">Good soil.<br />Good people.<br /><span className="text-[#a44f35]">Let’s grow.</span></h1>
             <p className="mt-5 max-w-lg text-[15px] leading-7 text-[#626b5d] sm:text-base">A few bags, a fresh garden bed, or a bigger project. Find your soil, meet our team, and get growing with a little local help.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/products" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[#264027] px-5 text-sm font-semibold text-white hover:bg-[#3c5233]" onClick={() => trackEvent("Hero CTA Clicked", { cta: "shop_products" })}>Shop soil &amp; bundles <ArrowRight className="h-4 w-4" /></Link>
-              <a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY} for delivery`} data-official-support-phone="true" data-hero-phone-cta="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-12 items-center gap-2 rounded-md border border-[#a8b29e] px-5 text-sm font-semibold"><Phone className="h-4 w-4" />Call for delivery</a>
+              <a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY} for delivery`} data-official-support-phone="true" data-hero-phone-cta="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-12 items-center gap-2 rounded-md border border-[#ddc18f] bg-[#f3e4c9] px-5 text-sm font-semibold hover:bg-[#ecd7b1]"><Phone className="h-4 w-4" />Call for delivery</a>
             </div>
             <p className="mt-5 text-xs text-[#626b5d]">Bags from <strong>$10.99</strong> <span className="mx-2">·</span> Garden bundles from <strong>$99</strong></p>
             <a href={PHOENIX_YARD_DIRECTIONS_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-2 text-[11px] text-[#626b5d]"><MapPin className="h-4 w-4" />Phoenix pickup · 1634 N 19th Ave <ArrowUpRight className="h-3.5 w-3.5" /></a>
@@ -252,13 +252,44 @@ const Home = () => {
             </div>
           </div>
         </div>
-        <nav aria-label="Choose your project" className="mx-auto grid max-w-7xl border-y border-[#d9dece] px-5 sm:px-8 md:grid-cols-3">
+        <nav aria-label="Choose your project" className="mx-auto grid max-w-7xl border-y border-[#d9dece] bg-[#e7ecdc] px-5 sm:px-8 md:grid-cols-3">
           {[
             ["01", "Start a garden bed", "Explore the bed and growing materials.", "#new-garden-package"],
             ["02", "Refresh what’s growing", "Find a soil and amendment bundle.", "#garden-bundles-heading"],
             ["03", "Plan a bigger project", "Pallets, super sacks and bulk loads.", "#home-delivery"],
-          ].map(([number, title, description, href]) => <a key={number} href={href} className="flex min-h-24 items-center gap-4 border-b border-[#d9dece] py-5 last:border-b-0 md:border-b-0 md:px-5"><span className="text-xs text-[#8a9676]">{number}</span><span className="flex-1"><strong className="block text-sm font-semibold">{title}</strong><span className="mt-1 block text-[11px] text-[#626b5d]">{description}</span></span><ArrowUpRight className="h-4 w-4" /></a>)}
+          ].map(([number, title, description, href]) => <a key={number} href={href} className="flex min-h-24 items-center gap-4 border-b border-[#d9dece] py-5 last:border-b-0 md:border-b-0 md:px-5"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f0dfc7] text-xs font-semibold text-[#895335]">{number}</span><span className="flex-1"><strong className="block text-sm font-semibold">{title}</strong><span className="mt-1 block text-[11px] text-[#626b5d]">{description}</span></span><ArrowUpRight className="h-4 w-4" /></a>)}
         </nav>
+      </section>
+
+      <section aria-labelledby="soil-essentials-heading" className="bg-[#efeee5] px-5 py-8 text-[#264027] sm:px-8 lg:py-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">Meet the materials</p>
+              <h2 id="soil-essentials-heading" className="mt-2 font-heading text-2xl font-semibold tracking-[-0.04em] sm:text-3xl">Good things for your soil.</h2>
+            </div>
+            <Link href="/products" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Shop all products <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3 sm:gap-5">
+            {[
+              { name: "Simon’s Gold", type: "Dairy compost", use: "Mix into your garden soil.", image: "compost", href: "/products/simons-gold", alt: "A handful of Simon’s Gold dairy compost" },
+              { name: "Mikey’s Worm Poop", type: "Worm castings", use: "A little extra for your plants.", image: "worm", href: "/products/mikeys-worm-poop", alt: "A close look at our worm castings" },
+              { name: "Nature’s Blanket Premium", type: "Organic mulch", use: "Finish with a protective layer.", image: "mulch", href: "/products/natures-blanket-premium", alt: "Wood fiber mulch held in a hand" },
+            ].map((product) => (
+              <Link key={product.image} href={product.href} className="group grid grid-cols-[100px_1fr] overflow-hidden rounded-md bg-[#fdfcf8] ring-1 ring-[#264027]/10 transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#264027] sm:block">
+                <img src={`/images/performance/home-product-${product.image}-480.webp`} alt={product.alt} width="480" height="360" loading="lazy" decoding="async" className="h-full min-h-32 w-full object-cover sm:aspect-[2/1] sm:h-auto sm:min-h-0" />
+                <div className="flex items-center gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6b795b]">{product.type}</p>
+                    <h3 className="mt-1 text-sm font-semibold">{product.name}</h3>
+                    <p className="mt-1 text-xs leading-5 text-[#626b5d]">{product.use}</p>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section id="new-garden-package" aria-labelledby="new-garden-heading" className="scroll-mt-24 bg-[#f7f5ef] px-5 py-12 text-[#264027] sm:px-8 lg:py-20">
@@ -273,7 +304,7 @@ const Home = () => {
               <h3 className="mt-6 text-xl font-semibold">The bed. The materials. The next step.</h3>
               <p className="mt-3 text-sm leading-7 text-[#626b5d]">Wood panels and heavy-duty metal corners give your garden a sturdy home. Growing materials, setup instructions and an assembly video help you get started.</p>
               <div className="mt-5 flex flex-wrap items-center gap-4"><a href="/garden-bed-offer.html" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[#264027] px-5 text-sm font-semibold text-white">Explore the full package <ArrowRight className="h-4 w-4" /></a><a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} data-official-support-phone="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Talk it through <ArrowUpRight className="h-4 w-4" /></a></div>
-              <p className="mt-4 max-w-xl text-[11px] leading-5 text-[#626b5d]">The current full-package offer is for our giveaway community, with Arizona delivery starting in November. Call for eligibility, pricing and delivery details.</p>
+              <p className="mt-4 max-w-xl text-[11px] leading-5 text-[#626b5d]">The current full-package offer is for our giveaway community, with free Arizona delivery in November 2026 only. Call for eligibility, pricing and delivery details.</p>
             </div>
             <div className="rounded-md bg-[#eaedde] p-6 sm:p-8">
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b795b]">What’s included</p><h3 className="mt-3 text-xl font-semibold">One bed. A solid start.</h3>
