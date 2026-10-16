@@ -92,7 +92,18 @@ document.querySelectorAll('[name=plan]').forEach(element => element.addEventList
   invalidate()
   updateTestTiming()
 }))
-$('a[href="#choose"]').addEventListener('click', event => { event.preventDefault(); $('#choose').scrollIntoView({ behavior: 'smooth' }) })
+// Every pricing link scrolls without replacing a private offer fragment.
+document.querySelectorAll('a[href="#choose"]').forEach(link => link.addEventListener('click', event => {
+  event.preventDefault()
+  $('#choose').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+}))
+const stickyOffer = $('#offer-sticky')
+if (stickyOffer && !staffMode && 'IntersectionObserver' in window) {
+  const pricingVisibility = new IntersectionObserver(entries => {
+    stickyOffer.hidden = entries[0].isIntersecting
+  }, { rootMargin: '80px 0px 0px' })
+  pricingVisibility.observe($('#choose'))
+}
 if (token) $('#access-note').hidden = true
 else {
   $('#review-button').disabled = true
@@ -239,6 +250,7 @@ async function status() {
   try {
     const data = await api('status')
     customerPilot = data.customer_pilot === true
+    document.body.classList.toggle('customer-pilot', customerPilot)
     staffTest = staffMode && data.is_test === true && !customerPilot
     if (customerPilot) {
       $('[name=plan][value=upfront]').checked = true
