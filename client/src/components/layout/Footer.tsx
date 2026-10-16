@@ -81,6 +81,11 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
+                  <Link href="/operations" className="inline-flex min-h-11 items-center gap-1 text-white/70 transition-colors hover:text-white">
+                    <span aria-hidden="true">›</span> Operations
+                  </Link>
+                </li>
+                <li>
                   <Link href="/contact">
                     <div className="flex items-center gap-1 text-white/70 transition-colors duration-200 hover:text-white">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

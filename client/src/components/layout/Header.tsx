@@ -103,6 +103,7 @@ const Header = () => {
     { name: "Products", path: "/products" },
     { name: "Deals", path: "/offers" },
     { name: "About Us", path: "/about" },
+    { name: "Operations", path: "/operations" },
     { name: "Careers", path: "/careers" },
     { name: "Contact", path: "/contact" },
     { name: "FAQ", path: "/faq" },
@@ -153,7 +154,7 @@ const Header = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden min-w-0 flex-1 items-center lg:flex">
+          <nav className="hidden min-w-0 flex-1 items-center xl:flex">
             <div className="flex items-center">
             {/* Products Dropdown */}
             <div className="relative flex items-center">
@@ -225,13 +226,11 @@ const Header = () => {
 
             {/* Other Navigation Links */}
             {navLinks.slice(1).map((link) => (
-              <Link key={link.path} href={link.path}>
-                <div className={navItemClass(isActive(link.path))}>
+              <Link key={link.path} href={link.path} className={navItemClass(isActive(link.path))} aria-current={isActive(link.path) ? "page" : undefined}>
                   {link.name}
                   {isActive(link.path) ? (
                     <span className="absolute inset-x-3 bottom-1 h-0.5 rounded-full bg-[#b38a58]" />
                   ) : null}
-                </div>
               </Link>
             ))}
             </div>
@@ -317,7 +316,7 @@ const Header = () => {
           </nav>
 
           {/* Mobile + iPad portrait Cart + Menu (desktop nav kicks in at lg/1024px) */}
-          <div className="ml-auto flex items-center gap-1 lg:hidden">
+          <div className="ml-auto flex items-center gap-1 xl:hidden">
             {/* Visible cart icon so customers don't have to dig through the menu */}
             <button
               type="button"
@@ -405,14 +404,12 @@ const Header = () => {
 
                     {/* Other Navigation Links */}
                     {navLinks.slice(1).map((link) => (
-                      <Link key={link.path} href={link.path}>
-                        <div
-                          className={`cursor-pointer rounded-lg px-4 py-3 font-semibold transition-colors ${
-                            isActive(link.path) ? "bg-[#183a23] text-white" : "text-[#183a23] hover:bg-[#183a23]/[0.06]"
-                          }`}
-                        >
-                          {link.name}
-                        </div>
+                      <Link key={link.path} href={link.path} aria-current={isActive(link.path) ? "page" : undefined}
+                        className={`block min-h-11 rounded-lg px-4 py-3 font-semibold transition-colors ${
+                          isActive(link.path) ? "bg-[#183a23] text-white" : "text-[#183a23] hover:bg-[#183a23]/[0.06]"
+                        }`}
+                      >
+                        {link.name}
                       </Link>
                     ))}
 

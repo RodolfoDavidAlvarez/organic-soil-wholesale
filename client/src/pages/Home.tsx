@@ -459,7 +459,7 @@ const Home = () => {
             <h2 id="living-compost-heading" className="mt-3 scroll-mt-24 font-heading text-3xl font-semibold leading-tight tracking-[-0.04em] lg:text-4xl">Good soil starts<br />long before your garden.</h2>
             <p className="mt-5 text-sm leading-7 text-[#536357]">We add cyanobacteria, also known as blue-green algae, to the water used on our dairy-compost windrows.</p>
             <p className="mt-3 text-sm leading-7 text-[#536357]">Microbiology is part of our process, alongside the organic material and moisture that go into making our compost. Here’s a closer look at that work.</p>
-            <Link href="/products/simons-gold" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Explore our dairy compost <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/operations" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold">See our operations <ArrowRight className="h-4 w-4" /></Link>
           </div>
           <div className="grid grid-cols-2 items-start gap-3 sm:gap-5">
             <figure>

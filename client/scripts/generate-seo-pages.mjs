@@ -180,6 +180,15 @@ const routes = [
     schemas: [localBusinessSchema],
   },
   {
+    path: "/operations",
+    title: "Our Operations: From Compost to Your Garden | Organic Soil Wholesale",
+    description: "See how Soil Seed & Water brings together dairy composting, worm production, soil blending and Phoenix pickup. Explore our process and educational videos.",
+    keywords: "Arizona composting operation, worm compost production, dairy compost, Soil Seed and Water operations, Congress Arizona",
+    canonical: absoluteUrl("/operations"),
+    image: absoluteUrl("/images/operations/compost-windrows-1200.webp"),
+    schemas: [localBusinessSchema],
+  },
+  {
     path: "/contact",
     title: "Contact Organic Soil Wholesale | Soil Seed & Water",
     description: "Call Organic Soil Wholesale at (623) 263-3386 or visit the Phoenix pickup yard at 1634 N 19th Ave.",

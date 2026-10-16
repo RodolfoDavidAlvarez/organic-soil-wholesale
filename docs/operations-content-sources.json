@@ -1,0 +1,86 @@
+{
+  "reviewed": "2026-10-15",
+  "purpose": "Local OSW Operations page requested by Rodolfo. Uses public-facing process descriptions; no private email bodies or internal operating figures are published.",
+  "primary_source": {
+    "email_subject": "Fwd: Drive Videos Edited UFE",
+    "email_date": "2026-10-15",
+    "sender": "Mike McMahon",
+    "folder": "https://drive.google.com/drive/folders/16S3zhvXmTjqbMLeRrbrLhrgaxZ-7Gsah",
+    "user_confirmed_correct_source": true
+  },
+  "process_note": {
+    "subject": "Vermi post",
+    "date": "2026-09-03",
+    "sender": "Mike McMahon",
+    "used_for": [
+      "known regional feedstocks",
+      "wood fiber from tree-care operations",
+      "managed dairy composting before worm production"
+    ]
+  },
+  "videos": [
+    {
+      "id": "1_fu2NbHXrrYXod6YHaXJQXceWuF3ikvf",
+      "file": "VERMICOMPOST october.mp4",
+      "page_title": "How we make worm compost",
+      "script": "1Q5QIxDhDYDvhV7grs279xGCjJh78oBWK",
+      "type": "Animated process walkthrough with footage",
+      "duration": "3:58",
+      "public_access": "Anyone with the link; no sign-in required, observed in Drive viewer"
+    },
+    {
+      "id": "1b7OBJPixgKs0bKzkmPG8tXHDMrET0pGk",
+      "file": "ANIMATION 1 EDITED.mp4",
+      "page_title": "What worms do for soil",
+      "script": "1kCR6GtPHbQB75e9GZ3EbIeu55RLywnFR",
+      "type": "Educational animation"
+    },
+    {
+      "id": "1T2Ip_XkqjhElRJ7UHtZ8CjulzaQt3xE4",
+      "file": "ANIMATION 2 EDITED",
+      "page_title": "Meet the soil food web",
+      "script": "1qU3DF5l4e94mZMwOqFrkQi6Y4Ee6Imy-",
+      "type": "Educational animation"
+    },
+    {
+      "id": "11Eseix7wtLqwT7t4-3mZldW0Lke2D6Go",
+      "file": "ANIMATION 3 EDITED.mp4",
+      "page_title": "Organic matter, water and life",
+      "script": "1bghrTHlCLOINZ-__pjLCSBFtobnxOBad",
+      "type": "Educational animation"
+    }
+  ],
+  "editorial_limits": [
+    "Prepared feed wording reconciles the newer animation script with Mike’s earlier mature-compost process note; no raw-manure feeding claim.",
+    "No universal nutrient ranking, guaranteed contaminant-free statement, blanket OMRI claim, or measured microbial claim.",
+    "Real facility photography is separate from clearly labeled educational animations.",
+    "Production-site visits require confirmation; Phoenix remains the local pickup destination."
+  ],
+  "photos": [
+    {
+      "assets": [
+        "compost-windrows-640.webp",
+        "compost-windrows-1200.webp"
+      ],
+      "source": "SSW Premium content for slide shows/Maturing Phase.jpg",
+      "gallery_id": "local-e9d47e849649"
+    },
+    {
+      "assets": [
+        "compost-processing-480.webp",
+        "compost-processing-800.webp"
+      ],
+      "source": "SSW Premium content for slide shows/homogeneous compost.jpg",
+      "gallery_id": "local-47539bfd4d56"
+    },
+    {
+      "assets": [
+        "worm-facility-640.webp",
+        "worm-facility-1200.webp"
+      ],
+      "source": "SSW Premium content for slide shows/1.5 Acre Worm Facility.jpg",
+      "gallery_id": "local-c12db4a4bee9"
+    }
+  ],
+  "performance": "No Drive iframe or video payload requested until the visitor clicks Play. Local responsive WebP posters and photography."
+}
