@@ -36,7 +36,7 @@ export default function InstagramLinks() {
   const channel = channelFromPath(window.location.pathname);
   const channelName = channelDetails[channel].name;
   const links = {
-    gardenBed: trackedLink(channel, "/products/garden-bed-kit", "garden_bed_launch", "garden_bed_order"),
+    gardenBed: trackedLink(channel, "/garden-bed-offer.html", "garden_bed_bundle_2026", "garden_bed_bundle_offer"),
     community: trackedLink(channel, "/keep-growing", "keep_growing", "community_signup"),
     careers: trackedLink(channel, "/careers/sales", "sales_recruitment_2026", "sales_representative_careers"),
     offers: trackedLink(channel, "/offers", "fall_garden_bundles_2026", "fall_garden_bundles"),
@@ -79,14 +79,18 @@ export default function InstagramLinks() {
         </header>
 
         <section className="mt-7 space-y-3" aria-label="Featured links">
-          <a href={links.gardenBed} onClick={() => recordClick("garden-bed-kit")} className="grid min-h-40 grid-cols-[1fr_112px] overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-[#fff8e8] sm:grid-cols-[1fr_155px]">
-            <span className="flex flex-col justify-center p-5">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#8b6940]">New · Limited-time launch offer</span>
-              <span className="mt-2 font-heading text-2xl font-bold">Your garden bed. $599.</span>
-              <span className="mt-2 text-sm">4 steel posts, lumber, pea gravel &amp; soil cloth. Delivery and growing materials extra.</span>
-              <span className="mt-3 flex items-center gap-2 font-bold">Request your bed <ArrowRight className="h-4 w-4" /></span>
+          <a href={links.gardenBed} onClick={() => recordClick("garden-bed-bundle-offer")} aria-label="View the complete garden bed bundle and payment options" className="group block overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-[#fff8e8] shadow-[0_12px_32px_rgba(87,62,29,0.12)] transition-transform active:scale-[0.99]">
+            <img src="/garden-bed/bundle-480.webp" srcSet="/garden-bed/bundle-480.webp 480w, /garden-bed/bundle-960.webp 960w" sizes="(max-width: 575px) calc(100vw - 2rem), 528px" width={1200} height={800} alt="Illustration of the raised garden bed with soil bags, mulch, pea gravel and amendments" decoding="async" fetchPriority="high" className="aspect-[3/2] w-full object-contain" />
+            <span className="flex flex-col p-5 sm:p-6">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#8b6940]">The complete garden bed bundle</span>
+              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Your garden starts here.</span>
+              <span className="mt-2 text-sm leading-6">A 4 × 8 ft raised bed, 2 ft deep, with soil, mulch, pea gravel, amendments and setup instructions.</span>
+              <span className="mt-3 text-xl font-bold">$945.43 <span className="text-sm font-normal">pay in full, plus tax</span></span>
+              <span className="mt-3 rounded-lg bg-[#f2e2be] px-3 py-2 text-sm font-semibold text-[#75412e]">Free Arizona delivery in November 2026 only.</span>
+              <span className="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[#264027] px-4 py-3 text-sm font-bold text-white">View bundle &amp; payment options <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" /></span>
+              <span className="mt-3 text-xs leading-5 text-[#4f6255]">Giveaway community offer. A personal offer link is required to pay.</span>
+              <span className="mt-2 text-[11px] leading-4 text-[#637166]">Package illustration. Plants, assembly, irrigation and shade accessories are not included.</span>
             </span>
-            <img src="/images/garden-bed/garden-bed-kit.webp" alt="Wood and steel garden bed concept" className="h-full w-full object-cover" />
           </a>
           <a
             href={links.community}
