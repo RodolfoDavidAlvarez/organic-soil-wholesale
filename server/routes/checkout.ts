@@ -1,3 +1,4 @@
+import { deliveryPriceChanged, deliveryRateDescription } from "../../shared/deliveryPricing.js";
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabase } from '../db/supabase.js';
@@ -49,6 +50,7 @@ router.post('/create-session', async (req, res) => {
       discountCode,
       fulfillmentType,
       deliveryAddress,
+      deliveryQuote,
       pickupLocation,
       brand_id,
     } = req.body;
@@ -150,6 +152,9 @@ router.post('/create-session', async (req, res) => {
         return res.status(400).json({
           error: `Could not price delivery: ${error instanceof Error ? error.message : 'Unknown error'}`,
         });
+      }
+      if (deliveryPriceChanged(deliveryQuote, truckingQuote)) {
+        return res.status(409).json({ error: 'Your delivery estimate has changed. Review the updated total before continuing.', repricedDelivery: truckingQuote });
       }
     }
 
@@ -403,7 +408,7 @@ router.post('/create-session', async (req, res) => {
           currency: 'usd',
           product_data: {
             name: 'Delivery',
-            description: `${truckingQuote.truckLabel} - ${truckingQuote.hoursRoundTrip} hr round-trip from ${truckingQuote.originLabel}${deliveryAddress?.roughAccess ? ' - rough-access site' : ''}`,
+            description: deliveryRateDescription(items, truckingQuote.costCents),
           },
           unit_amount: truckingQuote.costCents,
         },

@@ -25,7 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkoutMonitor";
-import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
+import { computeAsapPickup, validatePickupIso, PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
 import { nonBundleProductSubtotal, getPromoBundleByProductId } from "@shared/promoBundles.js";
 import {
   cartAllowsPhoenixYardPickup,
@@ -549,6 +549,29 @@ const Checkout: React.FC = () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+    // Browser background tabs can suspend the minute timer. Refresh ASAP at
+    // payment time instead of sending a stale ready time that the server rejects.
+    let confirmedPickup = pickupReady;
+    if (fulfillment === "pickup" && pickupReady?.pickupMode === "asap") {
+      const fresh = computeAsapPickup();
+      if (!fresh.ok) {
+        setError("Please choose another pickup time.");
+        setActiveStep("timing");
+        return;
+      }
+      confirmedPickup = { ...pickupReady, readyAt: fresh.readyAtIso, readyLabel: fresh.readyLabel, status: fresh.status };
+      setPickupReady(confirmedPickup);
+    }
+    if (fulfillment === "pickup" && pickupReady?.pickupMode === "schedule") {
+      const valid = validatePickupIso(pickupReady.readyAt);
+      if (!valid.ok) {
+        setPickupReady(null);
+        setError("That pickup slot is no longer available. Please choose a new time.");
+        setActiveStep("timing");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+    }
     if (fulfillment === "delivery") {
       if (!deliveryAddress.zip || !/^\d{5}$/.test(deliveryAddress.zip)) {
         setError("Enter a 5-digit delivery ZIP and get a price first");
@@ -609,7 +632,7 @@ const Checkout: React.FC = () => {
           },
           // Pickup-only fields
           pickupMode: fulfillment === "pickup" ? (pickupReady?.pickupMode ?? "asap") : null,
-          pickupTime: fulfillment === "pickup" ? pickupReady?.readyAt : null,
+          pickupTime: fulfillment === "pickup" ? confirmedPickup?.readyAt : null,
           // Delivery-only fields
           fulfillmentType: fulfillment,
           deliveryAddress: fulfillment === "delivery"
@@ -639,6 +662,13 @@ const Checkout: React.FC = () => {
         }),
       });
       const data = await res.json();
+      if (res.status === 409 && data.repricedDelivery) {
+        setBoundDeliveryQuote({ key: quoteRequestKey, quote: data.repricedDelivery });
+        setError(data.error);
+        setActiveStep("timing");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
       if (!res.ok) throw new Error(data?.error || "Checkout failed");
       trackEvent("Checkout Session Created", {
         fulfillment,
@@ -661,8 +691,8 @@ const Checkout: React.FC = () => {
           deliveryFee,
           paymentConfirmed: data.free === true,
           freeOrder: data.free === true,
-          pickupTime: fulfillment === "pickup" ? pickupReady?.readyAt : null,
-          pickupReadyLabel: fulfillment === "pickup" ? pickupReady?.readyLabel : null,
+          pickupTime: fulfillment === "pickup" ? confirmedPickup?.readyAt : null,
+          pickupReadyLabel: fulfillment === "pickup" ? confirmedPickup?.readyLabel : null,
           pickupSiteId: fulfillment === "pickup" ? pickupSiteId : null,
           fulfillment,
           deliveryZip: fulfillment === "delivery" ? deliveryAddress.zip : null,
@@ -1326,6 +1356,7 @@ const Checkout: React.FC = () => {
                     <DeliveryQuoteWidget
                       key={quoteCartKey}
                       items={quoteItems}
+                      productSubtotal={productSubtotal}
                       initialZip={deliveryAddress.zip}
                       initialQuote={deliveryQuote}
                       initialRoughAccess={roughAccess}

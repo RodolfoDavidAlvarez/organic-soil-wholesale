@@ -2431,6 +2431,7 @@ const ProductDetail = () => {
                                 <DeliveryQuoteWidget
                                   key={`${selectedChoice.size}-${quantity}`}
                                   items={deliveryQuoteItems}
+                                  productSubtotal={selectedTotal}
                                   initialZip={deliveryZip}
                                   compact
                                   onQuote={(quote, ctx) => {

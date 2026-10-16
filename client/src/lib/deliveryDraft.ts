@@ -1,3 +1,4 @@
+import { DELIVERY_PRICING_VERSION } from "@shared/deliveryPricing.js";
 import type { TruckingQuote } from "@/components/DeliveryQuoteWidget";
 
 const STORAGE_KEY = "osw-delivery-draft";
@@ -30,6 +31,9 @@ export function loadDeliveryDraft(): DeliveryDraft | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as DeliveryDraft;
     if (!parsed || typeof parsed.zip !== "string") return null;
+    // Keep the customer's ZIP and access preferences, but never reuse a
+    // saved delivery price from an earlier pricing policy.
+    if (parsed.quote?.pricingVersion !== DELIVERY_PRICING_VERSION) parsed.quote = null;
     return parsed;
   } catch {
     return null;

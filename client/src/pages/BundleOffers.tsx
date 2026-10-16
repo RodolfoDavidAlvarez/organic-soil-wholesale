@@ -62,8 +62,8 @@ const amountFor = (offer: PromoBundle, product: BundleProductDetail) =>
   offer.items.find((item) => item.href === product.href)?.amount || "Included";
 
 export default function BundleOffers() {
-  const [, offerParams] = useRoute("/offers/:slug");
-  const [, dealParams] = useRoute("/deals/:slug");
+  const [, offerParams] = useRoute<{ slug: string }>("/offers/:slug");
+  const [, dealParams] = useRoute<{ slug: string }>("/deals/:slug");
   const requestedSlug = (offerParams || dealParams)?.slug;
   const slug = requestedSlug
     ? legacyOfferAliases[requestedSlug] || requestedSlug
@@ -333,7 +333,7 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
   const products = productsFor(offer);
   const addDeal = useAddDeal();
   const [justAdded, setJustAdded] = useState(false);
-  const addedTimer = useRef<ReturnType<typeof window.setTimeout>>();
+  const addedTimer = useRef<number>();
   useEffect(() => {
     trackEvent("Product Detail Viewed", {
       product_id: offer.productId,

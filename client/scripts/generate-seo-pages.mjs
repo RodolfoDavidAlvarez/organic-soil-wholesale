@@ -628,8 +628,29 @@ const writeRlsSeoSite = async (template) => {
   await writeFile(path.join(distRoot, "llms.txt"), `# Regenerative Landscaper Supply\n\n> Landscape materials for professional crews in Phoenix and across Arizona. A Soil Seed &amp; Water brand, with ordering and fulfillment supported by Organic Soil Wholesale.\n\n## Main site\n- https://regenerativelandscapersupply.com/ — Current materials, formats, live catalog pricing, material-list builder, volume calculator, pickup details, and quote requests.\n\n## Material guides\n${rlsGuides.map((guide) => `- https://regenerativelandscapersupply.com/materials/${guide.slug} — ${guide.name}: ${guide.summary}`).join("\n")}\n\n## Ordering and service\n- Eligible products and formats can be purchased online; specialty materials, topsoil, and delivery planning can be requested by quote.\n- Phoenix pickup is fulfilled by Organic Soil Wholesale at 1634 N 19th Ave, Phoenix, AZ 85009. Confirm loose-bulk pickup arrangements before traveling.\n- Jobsite delivery is confirmed by material, load size, destination, truck access, and schedule.\n- Volume estimate: area in square feet × depth in inches ÷ 324 = estimated cubic yards; excludes compaction and waste.\n- Customer support: (623) 263-3386.\n\n## Parent brand and fulfillment\n- Soil Seed &amp; Water: https://soilseedandwater.com/\n- Organic Soil Wholesale: https://organicsoilwholesale.com/\n`);
 };
 
+// Useful visible content is available before JavaScript runs. React replaces
+// this fallback after loading, so crawlers and customers see the same facts.
+const publicRouteBody = (route) => {
+  const bundle = PROMO_BUNDLES.find((item) => route.path === `/offers/${item.slug}`);
+  const product = products.find((item) => route.path === `/products/${item.slug}`);
+  const header = `<header><a href="/">Organic Soil Wholesale</a><nav aria-label="Main navigation"><a href="/products">Shop soil</a> · <a href="/offers">Deals</a> · <a href="/operations">Our operations</a> · <a href="/contact">Contact</a></nav></header>`;
+  let body = '';
+  if (bundle) {
+    body = `<h1>${escapeAttr(bundle.title)}</h1><p>${escapeAttr(bundle.description)}</p><p><strong>$${bundle.salePrice} plus tax</strong> · ${escapeAttr(bundle.bagLabel)} · ${escapeAttr(bundle.volumeLabel)}</p><h2>What is included</h2><ul>${bundle.items.map((item) => `<li>${escapeAttr(item.name)}: ${escapeAttr(item.amount)}</li>`).join('')}</ul><h2>Local pickup</h2><p>Order online for pickup at 1634 N 19th Ave, Phoenix, AZ 85009. Tuesday–Saturday, 8 am–1 pm and 2–4 pm. Delivery is quoted separately. Bed frame, plants, irrigation and tools are not included.</p><p>Coverage depends on bed size, fill depth and existing soil. Keep mulch on the surface.</p>`;
+  } else if (route.path === '/offers') {
+    body = `<h1>Garden bundles &amp; deals</h1><p>Compare bagged materials for Phoenix pickup.</p><ul>${PROMO_BUNDLES.map((item) => `<li><a href="/offers/${item.slug}">${escapeAttr(item.title)}</a> — $${item.salePrice} plus tax, ${escapeAttr(item.bagLabel)}. ${escapeAttr(item.includedLabel)}</li>`).join('')}</ul><h2>Heavy-duty raised garden bed bundle</h2><p>A 4 × 8 ft bed, 2 ft deep, with growing materials. <a href="/garden-bed-offer.html">See the current community offer and eligibility</a>. Assembly and plants are not included.</p>`;
+  } else if (product) {
+    body = `<h1>${escapeAttr(product.title)}</h1><p>${escapeAttr(product.description)}</p><p>Choose your size and quantity on this page for current pricing. Buy eligible formats online for pickup, or estimate delivery using your ZIP code.</p>`;
+  } else if (route.path === '/' || route.path === '/products') {
+    body = `<h1>${route.path === "/products" ? "Shop organic soil, compost and mulch" : "Organic soil. Happy gardens. Better value."}</h1><p>Shop dairy compost, worm castings, potting soil and enhanced mulch for Phoenix pickup and Arizona delivery.</p><ul>${products.map((item) => `<li><a href="/products/${item.slug}">${escapeAttr(item.title)}</a>: ${escapeAttr(item.description)}</li>`).join('')}</ul><h2>Healthy soil works in three ways</h2><p>Our focus is microbiology, plant nutrition and physical soil structure: organic matter, room for roots and air, and moisture retention.</p><p>Pickup at 1634 N 19th Ave, Phoenix, AZ 85009. Tuesday–Saturday, 8 am–1 pm and 2–4 pm. Delivery pricing depends on the material, load, access and destination.</p>`;
+  } else if (route.path === '/operations') {
+    body = `<h1>From raw material to living soil</h1><p>See Soil Seed &amp; Water's dairy composting, worm farming, blending and loading operations. We add cyanobacteria, also known as blue-green algae, to the water used on our dairy-compost windrows.</p><p>Explore real production photos and videos on this page, then <a href="/products">choose soil for your project</a>.</p>`;
+  }
+  return body ? `<div style="max-width:72rem;margin:auto;padding:2rem;font:1rem/1.6 system-ui;color:#264027">${header}<main>${body}<p><a href="tel:+16232633386">Call (623) 263-3386</a> for help choosing materials and delivery.</p><noscript><p>Enable JavaScript to select quantities and check out online, or call us to order.</p></noscript></main></div>` : '';
+};
+
 const writeRoute = async (template, route) => {
-  const html = cleanHead(template).replace("</head>", () => `${headForRoute(route)}\n  </head>`);
+  const html = cleanHead(template).replace("</head>", () => `${headForRoute(route)}\n  </head>`).replace('<div id="root"></div>', () => `<div id="root">${publicRouteBody(route)}</div>`);
   const target =
     route.path === "/"
       ? path.join(distRoot, "index.html")

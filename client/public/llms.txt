@@ -47,3 +47,23 @@ Important public URLs:
 
 Operational pages:
 - /checkout, /qr, /check-in, /pay-and-pickup, and admin or portal pages are operational flows and are not intended as search landing pages.
+
+
+Garden bundles and deals:
+- https://organicsoilwholesale.com/offers — current deals and the raised garden bed community offer.
+- https://organicsoilwholesale.com/offers/garden-refresh — $99 plus tax; 10 bags: 5 premium mulch, 3 dairy compost, 2 worm castings; 15 cu ft total.
+- https://organicsoilwholesale.com/offers/garden-refresh-plus — $149 plus tax; 16 bags: 10 PlantPal, 3 premium mulch, 3 worm castings; 24 cu ft total.
+- https://organicsoilwholesale.com/offers/big-garden-setup — $399 plus tax; 40 bags: 30 PlantPal, 4 dairy compost, 3 worm castings, 3 premium mulch; 58 cu ft total.
+- These bagged-material bundles are Phoenix pickup offers. Raised bed frames, plants, irrigation, tools and delivery are not included. Mulch stays on the surface; coverage depends on fill depth and existing soil.
+- The separate complete raised garden bed community offer has eligibility requirements and requires a personal offer link to pay. Consult its live page for current price and delivery terms; do not imply universal eligibility.
+
+Our production process:
+- https://organicsoilwholesale.com/operations — dairy compost windrows, worm farming, blending and loading, with real photos and videos.
+- Soil health is considered through microbiology, nutrition and physical structure.
+- Cyanobacteria (blue-green algae) are added to water used on dairy-compost windrows.
+
+Delivery pricing:
+- Ask whether the customer wants pickup or delivery before comparing prices.
+- Use the live ZIP estimator and actual material and quantity for a delivered total before tax.
+- Delivery is itemized separately on the receipt. Do not describe a delivery selling price as the carrier's underlying cost.
+- Truck capacity and delivered rates depend on the material, load size, access and destination. Do not apply PlantPal's volume-to-weight relationship to compost or other materials.

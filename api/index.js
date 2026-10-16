@@ -1,3 +1,4 @@
+import { applyDeliveryPriceMinimums, bulkDeliveryPlan, calculateDeliveryCharge, deliveryPriceChanged, deliveryRateDescription, DELIVERY_PRICING_VERSION } from '../shared/deliveryPricing.js';
 import { normalizeGardenBedRequest, enrichMirroredGardenBedLead } from '../shared/gardenBedOrders.js';
 // Vercel Serverless Function with CRM Business Card Capture
 import QRCode from 'qrcode';
@@ -6443,9 +6444,9 @@ ${pages}
     async function getTruckingRates() {
       try {
         const { data } = await db.from('sp_settings').select('value').eq('key', 'trucking_rates').single();
-        if (data?.value) return { ...DEFAULT_TRUCK_RATES, ...data.value };
+        if (data?.value) return applyDeliveryPriceMinimums(DEFAULT_TRUCK_RATES, data.value);
       } catch (_) { /* settings table missing → defaults */ }
-      return DEFAULT_TRUCK_RATES;
+      return applyDeliveryPriceMinimums(DEFAULT_TRUCK_RATES);
     }
 
     // Loose match: caller may pass an item with sizeOption like "Truckload (22 pallets)"
@@ -6486,7 +6487,7 @@ ${pages}
       const palletQty = items.reduce((sum, i) => sum + palletCountFromItem(i), 0);
 
       if (hasBulk && palletQty === 0) {
-        return { truck: 'walking_floor', split: null };
+        return { truck: bulkDeliveryPlan(items).truck, split: null };
       }
       if (hasBulk && palletQty > 0) {
         // Mixed → return the heavier-cost truck (walking_floor) and flag a split.
@@ -6582,20 +6583,20 @@ ${pages}
       if (!truckRate) throw new Error(`No rate configured for truck ${truck}`);
       const palletSpots = (items || []).reduce((sum, item) => sum + palletCountFromItem(item), 0);
       const loadCount =
-        truck === 'walking_floor'
-          ? walkingFloorLoads(items || [])
+        (truck === 'walking_floor' || truck === 'dump_truck')
+          ? bulkDeliveryPlan(items || []).loadCount
           : Math.max(1, Math.ceil(palletSpots / 22));
 
-      const roundTripHours = distance.hours * 2 + (rates.unload_hours || 0.5);
-      const baseCost = roundTripHours * truckRate.hourly_rate;
-      const accessModifier = roughAccess ? 1.2 : 1.0;
-      const subtotal = Math.max(truckRate.min_fee, baseCost) * accessModifier * loadCount;
-      const costCents = Math.round(subtotal * 100);
+      const { roundTripHours, accessModifier, costCents } = calculateDeliveryCharge({
+        truckRate, oneWayHours: distance.hours, unloadHours: rates.unload_hours || 0.5, roughAccess, loadCount,
+      });
 
       return {
+        pricingVersion: DELIVERY_PRICING_VERSION,
         truck,
         truckLabel: ({
           walking_floor: 'Walking-floor (bulk dump)',
+          dump_truck: 'Dump truck (up to 6 tons)',
           flatbed_moffett: 'Flatbed with onboard forklift',
           hot_shot: 'Hot-shot trailer',
         })[truck],
@@ -6611,8 +6612,6 @@ ${pages}
           milesOneWay: distance.miles,
           hoursOneWay: distance.hours,
           unloadHours: rates.unload_hours || 0.5,
-          hourlyRate: truckRate.hourly_rate,
-          minFee: truckRate.min_fee,
           capacityLabel: truckRate.capacity_label,
           loadCount,
           destinationCity: distance.city,
@@ -6764,7 +6763,9 @@ ${pages}
           return res.status(400).json({ error: 'zip query param required (5 digits)' });
         }
         // Simulate one item with a sizeOption that maps to the requested truck
-        const simulatedItem = truck === 'walking_floor'
+        const simulatedItem = truck === 'dump_truck'
+          ? { sizeOption: 'Bulk Pickup', quantity: 6, unit: 'per ton' }
+          : truck === 'walking_floor'
           ? { sizeOption: 'Truckload', quantity: 1 }
           : truck === 'hot_shot'
             ? { sizeOption: 'Pallet of 1CF Bags', quantity: 2 }
@@ -6990,6 +6991,9 @@ ${pages}
             });
           } catch (err) {
             return res.status(400).json({ error: `Could not price delivery: ${err.message}` });
+          }
+          if (deliveryPriceChanged(deliveryQuote, truckingQuote)) {
+            return res.status(409).json({ error: 'Your delivery estimate has changed. Review the updated total before continuing.', repricedDelivery: truckingQuote });
           }
         }
 
@@ -7264,7 +7268,7 @@ ${pages}
               currency: 'usd',
               product_data: {
                 name: 'Delivery',
-                description: `${truckingQuote.truckLabel} • ${truckingQuote.hoursRoundTrip} hr round-trip from ${truckingQuote.originLabel}${deliveryAddress?.roughAccess ? ' • rough-access site' : ''}`,
+                description: deliveryRateDescription(items, truckingQuote.costCents),
               },
               unit_amount: truckingQuote.costCents,
             },

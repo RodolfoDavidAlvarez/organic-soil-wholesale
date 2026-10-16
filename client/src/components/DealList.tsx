@@ -5,7 +5,6 @@ import {
   type PromoBundle,
 } from "@shared/promoBundles.js";
 import { cn } from "@/lib/utils";
-import { BUNDLE_PRODUCT_DETAILS, getBundleDetails } from "@/data/bundleDetails";
 import { useQuoteCart, type CartItem } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -18,7 +17,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { ArrowRight, Pause, Play } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 export const fmtDealPrice = (value: number) => `$${value.toFixed(0)}`;
@@ -137,104 +136,38 @@ export function DealHubCards({
   source?: string;
   layout?: "stack" | "carousel";
 }) {
-  const imageKeys = {
-    plantpal: "plantpal",
-    simons: "simons-gold",
-    mikeys: "mikeys-worm-poop",
-    mulch: "natures-blanket-premium",
-  };
-  const cards = PROMO_BUNDLES.map((deal) => {
-    const products = (getBundleDetails(deal.slug)?.products || []).map(
-      (key) => BUNDLE_PRODUCT_DETAILS[key],
-    );
-    const primary =
-      products.find((product) => product.productKey === "plantpal") ||
-      products[0];
-    return (
-      <Link key={deal.slug} href={`/offers/${deal.slug}`}>
-        <a
-          aria-label={`${deal.title}, ${deal.bagLabel}, ${fmtDealPrice(deal.salePrice)} plus tax. Shop offer.`}
-          onClick={() =>
-            trackEvent(
-              source === "homepage-bundles"
-                ? "Homepage Bundle CTA Clicked"
-                : "Deal Banner Clicked",
-              {
-                bundle: deal.slug,
-                source,
-              },
-            )
-          }
-          className="group grid h-full overflow-hidden rounded-2xl border border-[#d8d9c9] bg-[#fffdf7] text-[#264027] shadow-[0_8px_24px_rgba(24,58,35,0.06)] transition hover:border-[#a4af96] hover:shadow-[0_12px_28px_rgba(24,58,35,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a44f35] focus-visible:ring-offset-4 sm:grid-cols-[0.85fr_1.15fr]"
-        >
-          <div className="min-w-0 bg-[#ecebdc]">
-            {primary ? (
-              <div className="relative">
-                <img
-                  src={`/images/bundles/${imageKeys[primary.productKey]}-texture-640.webp`}
-                  alt={primary.textureAlt}
-                  width={640}
-                  height={480}
-                  loading="lazy"
-                  decoding="async"
-                  className="block h-20 w-full object-cover sm:h-28"
-                />
-                <span className="absolute left-3 top-3 rounded-full bg-[#fffdf7] px-3 py-1.5 text-[10px] font-bold tracking-wide text-[#264027]">
-                  {deal.bagLabel} · Phoenix pickup
-                </span>
-              </div>
-            ) : null}
-            <div className="flex items-end justify-center gap-1 px-3 pb-3 pt-2 sm:gap-2 sm:px-4 sm:pb-4 sm:pt-3">
-              {products.map((product) => (
-                <figure
-                  key={product.productKey}
-                  className="min-w-0 flex-1 text-center"
-                >
-                  <img
-                    src={`/images/bundles/${imageKeys[product.productKey]}-bag-320.webp`}
-                    alt={product.bagAlt}
-                    width={320}
-                    height={product.productKey === "mulch" ? 430 : 320}
-                    loading="lazy"
-                    decoding="async"
-                    className="mx-auto h-[70px] w-full object-contain sm:h-[100px]"
-                  />
-                  <figcaption className="mt-1.5 text-[8px] font-semibold leading-snug text-[#53614f] sm:text-[9px]">
-                    {product.name}
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-          <div className="flex min-w-0 flex-col p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#73805f]">
-              <span>Ready for your garden</span>
-              <span className="rounded-full bg-[#f0dfc7] px-2.5 py-1 text-[#8d492f] normal-case tracking-normal">
-                Save {fmtDealPrice(deal.savings)}
-              </span>
-            </div>
-            <h3 className="mt-3 font-heading text-2xl font-bold leading-tight tracking-[-0.035em] text-[#264027]">
-              {deal.title}
-            </h3>
-            <p className="mt-2 text-xs leading-relaxed text-[#5d695c]">
-              {deal.includedLabel}
-            </p>
-            <div className="mt-4 flex items-baseline gap-2">
-              <strong className="text-[32px] font-bold leading-none tracking-[-0.04em]">
-                {fmtDealPrice(deal.salePrice)}
-              </strong>
-              <span className="text-[11px] text-[#5d695c]">
-                + tax · Bundle value <s>{fmtDealPrice(deal.listPrice)}</s>
-              </span>
-            </div>
-            <span className="mt-4 inline-flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#264027] px-4 py-2.5 text-sm font-bold text-white group-hover:bg-[#17331f]">
-              Shop offer <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </div>
-        </a>
-      </Link>
-    );
-  });
+  const cards = PROMO_BUNDLES.map((deal) => (
+    <Link key={deal.slug} href={`/offers/${deal.slug}`}>
+      <a
+        aria-label={`${deal.title}, ${deal.bagLabel}, ${fmtDealPrice(deal.salePrice)} plus tax. Shop offer.`}
+        onClick={() =>
+          trackEvent(source === "homepage-bundles" ? "Homepage Bundle CTA Clicked" : "Deal Banner Clicked", {
+            bundle: deal.slug,
+            source,
+          })
+        }
+        className="relative block overflow-hidden rounded-[1.25rem] bg-[#153b22] shadow-[0_12px_28px_rgba(21,59,34,0.14)] ring-1 ring-[#183a23]/10 transition hover:shadow-[0_18px_40px_rgba(21,59,34,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a44f35] focus-visible:ring-offset-4"
+      >
+        <img
+          src={deal.bannerImage}
+          alt={`${deal.title}: ${deal.bagLabel}, ${deal.volumeLabel}, ${fmtDealPrice(deal.salePrice)} plus tax.`}
+          width={1600}
+          height={646}
+          loading="lazy"
+          decoding="async"
+          className="pointer-events-none block h-auto w-full"
+        />
+        {deal.slug === "big-garden-setup" && (
+          <span className="absolute left-[5.3%] top-[65%] flex h-[6.8%] w-[11.1%] items-center justify-center bg-[#142315] text-center text-[clamp(5px,0.85vw,12px)] font-bold leading-none tracking-wider text-[#efce79]">
+            58 CU FT TOTAL
+          </span>
+        )}
+        <span className="absolute right-[5.2%] top-[57.4%] z-10 inline-flex h-[11.4%] min-h-8 min-w-[5rem] items-center justify-center rounded-full bg-[#f3ad2c] px-3 text-[clamp(0.5rem,1.55vw,1.05rem)] font-extrabold uppercase tracking-[0.06em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.22)] sm:min-h-11 sm:min-w-[9.75rem] sm:px-5">
+          Shop offer <span aria-hidden="true" className="ml-1.5 text-[1.05em] leading-none">›</span>
+        </span>
+      </a>
+    </Link>
+  ));
 
   if (layout === "carousel") {
     return <DealHubCarousel cards={cards} />;

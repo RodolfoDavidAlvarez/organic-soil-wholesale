@@ -123,7 +123,7 @@ const Home = () => {
     {
       id: "bulk",
       name: "Bulk Delivery",
-      description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
+      description: "Up to 24 tons or about 60 cubic yards per load; capacity depends on the material.",
       image: "/images/performance/home-size-bulk-480.webp",
       icon: <Container className="h-6 w-6" />,
     },

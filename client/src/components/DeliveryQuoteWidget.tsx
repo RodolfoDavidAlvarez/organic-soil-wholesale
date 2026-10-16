@@ -4,11 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, Truck, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { deliveryQuantity } from "@shared/deliveryPricing.js";
 import { deliveryQuoteKey } from "@shared/deliveryQuoteBinding.js";
 
 /** Server response from POST /api/quote/trucking */
 export interface TruckingQuote {
-  truck: "walking_floor" | "flatbed_moffett" | "hot_shot";
+  pricingVersion?: string;
+  truck: "dump_truck" | "walking_floor" | "flatbed_moffett" | "hot_shot";
   truckLabel: string;
   originYard: "phoenix" | "congress";
   originLabel: string;
@@ -21,8 +23,6 @@ export interface TruckingQuote {
   breakdown: {
     milesOneWay: number;
     hoursOneWay: number;
-    hourlyRate: number;
-    minFee: number;
     capacityLabel: string;
     loadCount?: number;
     destinationCity?: string | null;
@@ -33,6 +33,8 @@ export interface TruckingQuote {
 interface DeliveryQuoteWidgetProps {
   /** Cart items used to pick the right truck. Pass [{sizeOption, quantity}] */
   items: Array<{ sizeOption: string; quantity: number; unit?: string; productName?: string }>;
+  /** Merchandise subtotal after product discounts, before tax. */
+  productSubtotal?: number;
   /** Initial ZIP — pre-fill from saved customer profile if available */
   initialZip?: string;
   /** Optional quote carried over from product-page estimate */
@@ -58,10 +60,11 @@ interface DeliveryQuoteWidgetProps {
 }
 
 const fmt$ = (n: number) =>
-  n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
 
 export function DeliveryQuoteWidget({
   items,
+  productSubtotal,
   initialZip = "",
   initialQuote = null,
   initialRoughAccess = false,
@@ -80,6 +83,8 @@ export function DeliveryQuoteWidget({
   const [error, setError] = useState<string | null>(null);
   const [quote, setQuote] = useState<TruckingQuote | null>(initialQuote);
   const requestVersion = useRef(0);
+  const quotedQuantity = deliveryQuantity(items);
+  const deliveredTotal = quote && typeof productSubtotal === "number" ? productSubtotal + quote.costDollars : null;
   const itemsKey = deliveryQuoteKey({ items });
   const latestItemsKey = useRef(itemsKey);
   latestItemsKey.current = itemsKey;
@@ -296,17 +301,23 @@ export function DeliveryQuoteWidget({
               <Truck className="mt-0.5 h-5 w-5 shrink-0 text-[#264027]" />
               <div className="min-w-0">
                 <p className="text-sm font-bold text-stone-900">
-                  Delivery cost{" "}
-                  <span className="text-[#264027]">{fmt$(quote.costDollars)}</span>
+                  {deliveredTotal !== null ? "Your delivered total" : "Delivery estimate"}{" "}
+                  <span className="text-[#264027]">{fmt$(deliveredTotal ?? quote.costDollars)}</span>
+                  <span className="ml-1 text-xs font-normal text-stone-600">+ tax</span>
                 </p>
                 <p className="mt-0.5 text-xs text-stone-600">
                   {quote.truckLabel} · Congress, AZ →{" "}
                   {quote.breakdown.destinationCity ?? `ZIP ${zip}`}
                   {quote.breakdown.destinationState ? `, ${quote.breakdown.destinationState}` : ""}
                 </p>
-                {!compact && (
-                  <p className="text-xs text-stone-600">
-                    ~{quote.milesRoundTrip} mi round-trip · ~{quote.hoursRoundTrip} hr
+                {deliveredTotal !== null && quotedQuantity && (
+                  <p className="mt-1 text-sm font-semibold text-[#264027]">
+                    {(deliveredTotal / quotedQuantity.amount).toLocaleString("en-US", { style: "currency", currency: "USD" })} per {quotedQuantity.unit}, delivered
+                  </p>
+                )}
+                {deliveredTotal !== null && (
+                  <p className="mt-1 text-xs text-stone-600">
+                    Products {fmt$(productSubtotal!)} + delivery {fmt$(quote.costDollars)}. Delivery is itemized on your receipt.
                   </p>
                 )}
                 {quote.breakdown.loadCount && quote.breakdown.loadCount > 1 ? (
@@ -319,7 +330,7 @@ export function DeliveryQuoteWidget({
           </div>
           <p className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-900">
             <Clock className="h-3.5 w-3.5 shrink-0 text-emerald-700" />
-            Usually delivered within 1–3 business days
+            Request delivery in 1–3 business days. We confirm the schedule.
           </p>
           {quote.split === "mixed" && (
             <p className="mt-2 flex items-start gap-1.5 text-[11px] text-stone-600">

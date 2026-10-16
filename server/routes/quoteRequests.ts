@@ -1,3 +1,4 @@
+import { applyDeliveryPriceMinimums, bulkDeliveryPlan, calculateDeliveryCharge, DELIVERY_PRICING_VERSION } from '../../shared/deliveryPricing.js';
 import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
 import { sendAdminQuoteRequestNotification } from '../services/email.js';
@@ -6,7 +7,7 @@ import { forwardToMosLeads } from '../services/forwardToMosLeads.js';
 const router = Router();
 
 type OriginKey = 'phoenix' | 'congress';
-type TruckType = 'walking_floor' | 'flatbed_moffett' | 'hot_shot';
+type TruckType = 'dump_truck' | 'walking_floor' | 'flatbed_moffett' | 'hot_shot';
 
 interface QuoteItem {
   sizeOption?: string;
@@ -31,6 +32,7 @@ interface TruckRate {
 
 interface TruckingRates {
   walking_floor: TruckRate;
+  dump_truck?: TruckRate;
   flatbed_moffett: TruckRate;
   hot_shot: TruckRate;
   avg_speed_mph: number;
@@ -69,13 +71,13 @@ async function getTruckingRates(): Promise<TruckingRates> {
       .single();
 
     if (data?.value && typeof data.value === 'object') {
-      return { ...DEFAULT_TRUCK_RATES, ...data.value };
+      return applyDeliveryPriceMinimums(DEFAULT_TRUCK_RATES, data.value);
     }
   } catch {
     // Settings table may not exist in local/dev yet. Defaults keep checkout usable.
   }
 
-  return DEFAULT_TRUCK_RATES;
+  return applyDeliveryPriceMinimums(DEFAULT_TRUCK_RATES);
 }
 
 function inferFormat(rawKey: string | undefined): 'bulk' | 'pallet' | 'bag' {
@@ -103,7 +105,7 @@ function pickTruck(items: QuoteItem[], milesEstimate = 100): { truck: TruckType;
   const hasBulk = formats.includes('bulk');
   const palletQty = items.reduce((sum, item) => sum + palletCountFromItem(item), 0);
 
-  if (hasBulk && palletQty === 0) return { truck: 'walking_floor', split: null };
+  if (hasBulk && palletQty === 0) return { truck: bulkDeliveryPlan(items).truck, split: null };
   if (hasBulk && palletQty > 0) return { truck: 'walking_floor', split: 'mixed' };
   if (palletQty <= 4 && milesEstimate < 200) return { truck: 'hot_shot', split: null };
   return { truck: 'flatbed_moffett', split: null };
@@ -231,19 +233,19 @@ export async function quoteTrucking({
   const truckRate = rates[truck];
   const palletSpots = (items || []).reduce((sum, item) => sum + palletCountFromItem(item), 0);
   const loadCount =
-    truck === 'walking_floor'
-      ? walkingFloorLoads(items || [])
+    (truck === 'walking_floor' || truck === 'dump_truck')
+      ? bulkDeliveryPlan(items || []).loadCount
       : Math.max(1, Math.ceil(palletSpots / 22));
-  const roundTripHours = distance.hours * 2 + (rates.unload_hours || 0.5);
-  const baseCost = roundTripHours * truckRate.hourly_rate;
-  const accessModifier = roughAccess ? 1.2 : 1.0;
-  const subtotal = Math.max(truckRate.min_fee, baseCost) * accessModifier * loadCount;
-  const costCents = Math.round(subtotal * 100);
+  const { roundTripHours, accessModifier, costCents } = calculateDeliveryCharge({
+    truckRate, oneWayHours: distance.hours, unloadHours: rates.unload_hours || 0.5, roughAccess, loadCount,
+  });
 
   return {
+    pricingVersion: DELIVERY_PRICING_VERSION,
     truck,
     truckLabel: {
       walking_floor: 'Walking-floor (bulk dump)',
+          dump_truck: 'Dump truck (up to 6 tons)',
       flatbed_moffett: 'Flatbed with onboard forklift',
       hot_shot: 'Hot-shot trailer',
     }[truck],
@@ -259,8 +261,6 @@ export async function quoteTrucking({
       milesOneWay: distance.miles,
       hoursOneWay: distance.hours,
       unloadHours: rates.unload_hours || 0.5,
-      hourlyRate: truckRate.hourly_rate,
-      minFee: truckRate.min_fee,
       capacityLabel: truckRate.capacity_label,
       loadCount,
       destinationCity: distance.city,
@@ -312,8 +312,9 @@ router.get('/trucking', async (req, res) => {
       return res.status(400).json({ error: 'zip query param required (5 digits)' });
     }
 
-    const simulatedItem =
-      truck === 'walking_floor'
+    const simulatedItem = truck === 'dump_truck'
+      ? { sizeOption: 'Bulk Pickup', quantity: 6, unit: 'per ton' }
+      : truck === 'walking_floor'
         ? { sizeOption: 'Truckload', quantity: 1 }
         : truck === 'hot_shot'
           ? { sizeOption: 'Pallet of 1CF Bags', quantity: 2 }
