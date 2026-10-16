@@ -335,23 +335,36 @@ const Home = () => {
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">People, pickup days &amp; deliveries</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">Customers, gardens &amp; real results</p>
               <h2 id="growing-community-heading" className="mt-3 font-heading text-3xl font-semibold tracking-[-0.04em] lg:text-4xl">From our yard to your garden.</h2>
             </div>
-            <p className="max-w-sm text-sm leading-7 text-[#626b5d]">Come by for soil, a conversation, or a little inspiration. There’s a whole community growing here.</p>
+            <p className="max-w-sm text-sm leading-7 text-[#626b5d]">Bags heading home. Gardens taking shape. Mulch on the ground. See how our community puts good soil to work.</p>
           </div>
-          <div className="grid grid-cols-2 items-start gap-4 lg:grid-cols-[.8fr_1.4fr_.8fr] lg:gap-6">
+          <div className="grid grid-cols-2 items-start gap-4 lg:grid-cols-3 lg:gap-6">
             <figure>
               <img src="/images/community/pickup-neighbors-640.webp" alt="A customer and team member at the Phoenix yard with a bag of worm castings" width="640" height="853" loading="lazy" className="aspect-[3/4] w-full rounded-md object-cover" />
               <figcaption className="mt-3 text-xs font-medium">Pick up. Say hello.</figcaption>
             </figure>
-            <figure className="order-3 col-span-2 lg:order-none lg:col-span-1 lg:pt-8">
-              <img src="/images/community/growing-garden-1200.webp" srcSet="/images/community/growing-garden-640.webp 640w, /images/community/growing-garden-1200.webp 1200w" sizes="(min-width: 1024px) 46vw, 100vw" alt="Rows of vegetables and flowers at the Ready Go Garden community garden" width="1200" height="900" loading="lazy" className="aspect-[4/3] w-full rounded-md object-cover" />
+            <figure>
+              <img src="/images/community/customer-taking-soil-home-800.webp" srcSet="/images/community/customer-taking-soil-home-480.webp 480w, /images/community/customer-taking-soil-home-800.webp 800w" sizes="(min-width: 1280px) 400px, (min-width: 1024px) 33vw, 50vw" alt="A customer taking home bags of soil beside stacked products at the Phoenix yard" width="800" height="1067" loading="lazy" decoding="async" className="aspect-[3/4] w-full rounded-md object-cover" />
+              <figcaption className="mt-3 text-xs font-medium">Good soil. Ready to take home.</figcaption>
+            </figure>
+            <figure>
+              <img src="/images/community/growing-garden-1200.webp" srcSet="/images/community/growing-garden-640.webp 640w, /images/community/growing-garden-1200.webp 1200w" sizes="(min-width: 1024px) 25vw, 50vw" alt="Rows of vegetables and flowers at the Ready Go Garden community garden" width="1200" height="900" loading="lazy" className="aspect-[3/4] w-full rounded-md object-cover" />
               <figcaption className="mt-3 text-xs font-medium">A little space. Plenty of possibility.</figcaption>
             </figure>
             <figure>
               <img src="/images/community/garden-harvest-800.webp" srcSet="/images/community/garden-harvest-480.webp 480w, /images/community/garden-harvest-800.webp 800w" sizes="(min-width: 1024px) 27vw, 50vw" alt="A hand holding a striped garden vegetable on the vine among green leaves" width="800" height="1067" loading="lazy" decoding="async" className="aspect-[3/4] w-full rounded-md object-cover" />
               <figcaption className="mt-3 text-xs font-medium">Something good is growing.</figcaption>
+            </figure>
+            <figure>
+              <img src="/images/community/customer-garden-result-800.webp" srcSet="/images/community/customer-garden-result-480.webp 480w, /images/community/customer-garden-result-800.webp 800w" sizes="(min-width: 1024px) 33vw, 50vw" alt="Trinity Landscaping customer showing a finished palm and flower planter" width="800" height="1067" loading="lazy" decoding="async" className="aspect-[3/4] w-full rounded-md object-cover object-right" />
+              <figcaption className="mt-3 text-xs font-medium">A finished project. A proud grower.</figcaption>
+            </figure>
+            <figure>
+              <img src="/images/community/mulch-applied-800.webp" srcSet="/images/community/mulch-applied-480.webp 480w, /images/community/mulch-applied-800.webp 800w" sizes="(min-width: 1024px) 33vw, 50vw" alt="Mulch applied around flowering plants beside the Soil Seed and Water yard building" width="800" height="600" loading="lazy" decoding="async" className="aspect-[3/4] w-full rounded-md object-cover object-left" />
+              <figcaption className="mt-3 text-xs font-medium">Mulch at work, right here at our yard.</figcaption>
+              <Link href="/products/natures-blanket-premium" className="mt-1 inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#895335]">Explore enhanced mulch <ArrowRight className="h-3.5 w-3.5" /></Link>
             </figure>
           </div>
           <a href={PHOENIX_YARD_DIRECTIONS_URL} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold"><MapPin className="h-4 w-4" />Visit the Phoenix pickup yard <ArrowUpRight className="h-4 w-4" /></a>
@@ -418,6 +431,28 @@ const Home = () => {
                 </Button>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="living-compost-heading" className="bg-[#e8eee5] px-5 py-12 text-[#264027] sm:px-8 lg:py-16">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-12">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#536e64]">How we make our compost</p>
+            <h2 id="living-compost-heading" className="mt-3 scroll-mt-24 font-heading text-3xl font-semibold leading-tight tracking-[-0.04em] lg:text-4xl">Good soil starts<br />long before your garden.</h2>
+            <p className="mt-5 text-sm leading-7 text-[#536357]">We add cyanobacteria, also known as blue-green algae, to the water used on our dairy-compost windrows.</p>
+            <p className="mt-3 text-sm leading-7 text-[#536357]">Microbiology is part of our process, alongside the organic material and moisture that go into making our compost. Here’s a closer look at that work.</p>
+            <Link href="/products/simons-gold" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Explore our dairy compost <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+          <div className="grid grid-cols-2 items-start gap-3 sm:gap-5">
+            <figure>
+              <img src="/images/community/cyanobacteria-tanks-800.webp" srcSet="/images/community/cyanobacteria-tanks-480.webp 480w, /images/community/cyanobacteria-tanks-800.webp 800w" sizes="(min-width: 1024px) 30vw, 50vw" width="800" height="533" alt="An aerial view of our cyanobacteria tanks and watering equipment" loading="lazy" decoding="async" className="aspect-[3/2] w-full rounded-md object-cover" />
+              <figcaption className="mt-3 text-xs text-[#536357]">Our cyanobacteria tanks, from above.</figcaption>
+            </figure>
+            <figure className="pt-8">
+              <img src="/images/community/cyanobacteria-closeup-800.webp" srcSet="/images/community/cyanobacteria-closeup-480.webp 480w, /images/community/cyanobacteria-closeup-800.webp 800w" sizes="(min-width: 1024px) 30vw, 50vw" width="800" height="533" alt="A close-up of green water and bubbles in a cyanobacteria tank" loading="lazy" decoding="async" className="aspect-[3/2] w-full rounded-md object-cover" />
+              <figcaption className="mt-3 text-xs text-[#536357]">A closer look inside the tanks.</figcaption>
+            </figure>
           </div>
         </div>
       </section>

@@ -54,6 +54,62 @@
       "asset": "client/public/images/community/garden-harvest-800.webp",
       "source": "/Users/rodolfoalvarez/Downloads/36B653FD-8F6B-4F9D-A068-67BAF8A8924B.jpeg",
       "note": "Responsive website copy of user-provided photography."
+    },
+    {
+      "asset": "client/public/images/community/customer-taking-soil-home-480.webp",
+      "source": "outputs/osw-homepage-design-20261014/customer-pickup-20261015/source.jpg",
+      "source_sha256": "1a8ca595ea477804411cfce5c0d79cde285ab2a36a382576ec205ed9c3c168b5",
+      "note": "Customer pickup photo supplied and approved by Rodolfo October 15, 2026. Original saved in Supabase content-review/photo-library/1a8ca595ea47/original.jpg."
+    },
+    {
+      "asset": "client/public/images/community/customer-taking-soil-home-800.webp",
+      "source": "outputs/osw-homepage-design-20261014/customer-pickup-20261015/source.jpg",
+      "source_sha256": "1a8ca595ea477804411cfce5c0d79cde285ab2a36a382576ec205ed9c3c168b5",
+      "note": "Customer pickup photo supplied and approved by Rodolfo October 15, 2026. Original saved in Supabase content-review/photo-library/1a8ca595ea47/original.jpg."
+    },
+    {
+      "asset": "client/public/images/community/customer-garden-result-480.webp",
+      "source": "outputs/osw-homepage-design-20261014/customer-pickup-20261015/planter-source.jpg",
+      "note": "Full portrait supplied by Rodolfo, matching existing Trinity Landscaping testimonial media 20786956-cdcd-4608-b597-bedcad734e5f. Original already stored in Supabase."
+    },
+    {
+      "asset": "client/public/images/community/customer-garden-result-800.webp",
+      "source": "outputs/osw-homepage-design-20261014/customer-pickup-20261015/planter-source.jpg",
+      "note": "Full portrait supplied by Rodolfo, matching existing Trinity Landscaping testimonial media 20786956-cdcd-4608-b597-bedcad734e5f. Original already stored in Supabase."
+    },
+    {
+      "asset": "client/public/images/community/mulch-applied-480.webp",
+      "source": "OSW-Photo-Review/17-Mulch-Applied-Showcase.jpg",
+      "note": "Existing gallery asset local-2f3371e3d16b; mulch application at the SSW yard."
+    },
+    {
+      "asset": "client/public/images/community/mulch-applied-800.webp",
+      "source": "OSW-Photo-Review/17-Mulch-Applied-Showcase.jpg",
+      "note": "Existing gallery asset local-2f3371e3d16b; mulch application at the SSW yard."
+    },
+    {
+      "asset": "client/public/images/community/cyanobacteria-closeup-480.webp",
+      "source": "SSW Premium content for slide shows/Cyanobacteria close up.jpg",
+      "gallery_id": "local-8800e892b9e5",
+      "note": "Already in SSW World gallery; homepage use requested by Rodolfo October 15, 2026."
+    },
+    {
+      "asset": "client/public/images/community/cyanobacteria-closeup-800.webp",
+      "source": "SSW Premium content for slide shows/Cyanobacteria close up.jpg",
+      "gallery_id": "local-8800e892b9e5",
+      "note": "Already in SSW World gallery; homepage use requested by Rodolfo October 15, 2026."
+    },
+    {
+      "asset": "client/public/images/community/cyanobacteria-tanks-480.webp",
+      "source": "SSW Premium content for slide shows/Cyanobacteria tanks arial.jpg",
+      "gallery_id": "local-7487df99a495",
+      "note": "Already in SSW World gallery; homepage use requested by Rodolfo October 15, 2026."
+    },
+    {
+      "asset": "client/public/images/community/cyanobacteria-tanks-800.webp",
+      "source": "SSW Premium content for slide shows/Cyanobacteria tanks arial.jpg",
+      "gallery_id": "local-7487df99a495",
+      "note": "Already in SSW World gallery; homepage use requested by Rodolfo October 15, 2026."
     }
   ],
   "excluded_photos": [
