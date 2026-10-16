@@ -252,13 +252,6 @@ const Home = () => {
             </div>
           </div>
         </div>
-        <nav aria-label="Choose your project" className="mx-auto grid max-w-7xl border-y border-[#d9dece] bg-[#e7ecdc] px-5 sm:px-8 md:grid-cols-3">
-          {[
-            ["01", "Start a garden bed", "Explore the bed and growing materials.", "#new-garden-package"],
-            ["02", "Refresh what’s growing", "Find a soil and amendment bundle.", "#garden-bundles-heading"],
-            ["03", "Plan a bigger project", "Pallets, super sacks and bulk loads.", "#home-delivery"],
-          ].map(([number, title, description, href]) => <a key={number} href={href} className="flex min-h-24 items-center gap-4 border-b border-[#d9dece] py-5 last:border-b-0 md:border-b-0 md:px-5"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f0dfc7] text-xs font-semibold text-[#895335]">{number}</span><span className="flex-1"><strong className="block text-sm font-semibold">{title}</strong><span className="mt-1 block text-[11px] text-[#626b5d]">{description}</span></span><ArrowUpRight className="h-4 w-4" /></a>)}
-        </nav>
       </section>
 
       <section aria-labelledby="soil-essentials-heading" className="bg-[#efeee5] px-5 py-8 text-[#264027] sm:px-8 lg:py-10">
