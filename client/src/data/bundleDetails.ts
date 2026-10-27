@@ -52,7 +52,7 @@ export const BUNDLE_PRODUCT_DETAILS: Record<
 > = {
   plantpal: {
     productKey: "plantpal",
-    name: "PlantPal",
+    name: "PlantPal Plus",
     role: "Your growing mix",
     purpose:
       "A ready-to-use potting mix that gives roots a balance of nutrition, air and moisture.",
@@ -166,7 +166,7 @@ export const BUNDLE_DETAILS: Record<string, BundleDetail> = {
       {
         question: "Can I use this to fill an empty bed?",
         answer:
-          "Garden Refresh is for soil you already have. Choose a bundle with PlantPal if you need growing mix, and measure the fill depth before ordering.",
+          "Garden Refresh is for soil you already have. Choose a bundle with PlantPal Plus if you need growing mix, and measure the fill depth before ordering.",
       },
       {
         question: "Do I mix all the bags together?",
@@ -186,13 +186,13 @@ export const BUNDLE_DETAILS: Record<string, BundleDetail> = {
       "A bed that needs both soil and surface cover",
     ],
     coverageNote:
-      "Includes 15 cu ft of PlantPal, 3 cu ft of castings and 6 cu ft of mulch. Measure the space you need to fill; the mulch is surface cover, not planting depth.",
+      "Includes 15 cu ft of PlantPal Plus, 3 cu ft of castings and 6 cu ft of mulch. Measure the space you need to fill; the mulch is surface cover, not planting depth.",
     packagingNote,
     products: ["plantpal", "mulch", "mikeys"],
     steps: [
       {
         title: "Add the growing mix",
-        text: "Use PlantPal to top up the bed or fill the measured planting space. It is ready to use straight from the bag.",
+        text: "Use PlantPal Plus to top up the bed or fill the measured planting space. It is ready to use straight from the bag.",
       },
       {
         title: "Work in the castings",
@@ -227,13 +227,13 @@ export const BUNDLE_DETAILS: Record<string, BundleDetail> = {
       "Gardeners who need all four growing materials",
     ],
     coverageNote:
-      "For multiple 4×8 beds, depending on depth and existing soil. Measure each bed before ordering. PlantPal, compost and castings belong in the planting area; reserve mulch for the surface.",
+      "For multiple 4×8 beds, depending on depth and existing soil. Measure each bed before ordering. PlantPal Plus, compost and castings belong in the planting area; reserve mulch for the surface.",
     packagingNote,
     products: ["plantpal", "simons", "mikeys", "mulch"],
     steps: [
       {
         title: "Plan and fill the beds",
-        text: "Measure each bed's unfilled depth, then distribute the PlantPal growing mix where it is needed.",
+        text: "Measure each bed's unfilled depth, then distribute the PlantPal Plus growing mix where it is needed.",
       },
       {
         title: "Add compost and castings",

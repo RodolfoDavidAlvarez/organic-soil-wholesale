@@ -15,6 +15,11 @@ export interface PayPickupProductContent {
   includes: string[];
   /** Optional short story for each ingredient (product detail) */
   ingredientDetails?: IngredientDetail[];
+  /** Long ingredient list, collapsed until the shopper opens it */
+  ingredientDisclosure?: {
+    summary: string;
+    items: string[];
+  };
   /** Product-specific benefits or uses — optional, unique per product */
   benefits?: string[];
   startingPriceContext?: string;
@@ -44,46 +49,43 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
   111: {
     displayType: "All-Stage Potting Mix",
     description:
-      "All-stage potting mix for seed starts, propagation, containers, and patio planters.",
+      "All-stage potting mix for seed starts, propagation, containers, and patio planters. Nutrition comes from our Super Booster organic concentrate.",
     includes: [
       "Dairy compost",
       "Worm castings",
       "Clean wood fiber",
-      "Calcium",
-      "Zinc sulfate",
-      "8-3-1 granules",
+      "Super Booster organic concentrate",
     ],
-    ingredientDetails: [
-      {
-        name: "Organic dairy compost",
-        text: "Steady nutrition, better structure, and stronger water holding.",
-      },
-      {
-        name: "Worm castings",
-        text: "Gentle nutrients plus living microbes for healthier roots.",
-      },
-      {
-        name: "Clean wood fiber",
-        text: "Keeps the mix open so roots get air and drainage.",
-      },
-      {
-        name: "Calcium",
-        text: "Supports cell strength and balanced nutrient uptake.",
-      },
-      {
-        name: "Zinc sulfate",
-        text: "Essential zinc for growth, flowering, and shoot development.",
-      },
-      {
-        name: "8-3-1 granules",
-        text: "Balanced organic N-P-K for steady all-stage feeding.",
-      },
-    ],
+    ingredientDisclosure: {
+      summary: "We put our Super Booster organic concentrate in this mix.",
+      items: [
+        "Clean wood fiber",
+        "Worm castings",
+        "Biochar",
+        "Kelp meal",
+        "Zeolite",
+        "Azomite",
+        "Bioblend (Trackaderma, root shield)",
+        "Mycorrhizal granular endo package",
+        "Cyanobacteria",
+        "Volcanic tuff (sulfur and potassium)",
+        "Organic dairy compost",
+        "Manganese",
+        "Iron",
+        "Magnesium",
+        "Boron",
+        "Zinc",
+        "Calcium",
+        "Molybdenum",
+        "Cobalt",
+        "Copper",
+      ],
+    },
     benefits: ["All-stage potting mix", "Balanced organic nutrition", "Ready out of the bag"],
     startingPriceContext: "for a 1.5 cu ft bag (~50 lb)",
     sizeSummaries: ["1.5 cu ft bag (~50 lb)", "super sack (2.2 cu yd)", "truckload (~60 cu yd)"],
     specSheetUrl: "/documents/specsheets/PlantPal-All-Stage-Nursery-Mix-Spec-Sheet.pdf?v=20260924",
-    specSheetLabel: "Download PlantPal spec sheet",
+    specSheetLabel: "Download PlantPal Plus spec sheet",
   },
   3000: {
     description:

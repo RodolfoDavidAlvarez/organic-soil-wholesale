@@ -65,7 +65,7 @@ const SIZE_FORMATS = [
   {
     eyebrow: "Bulk pickup",
     title: "Loose material",
-    description: "Bagged PlantPal, worm castings, compost, and mulch for Phoenix pickup. Loose bulk stays compost and mulch only.",
+    description: "Bagged PlantPal Plus, worm castings, compost, and mulch for Phoenix pickup. Loose bulk stays compost and mulch only.",
     image: "/images/size-formats/bulk-yard-pickup.webp",
   },
   {

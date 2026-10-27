@@ -32,7 +32,7 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
   {
     productId: 111,
     slug: "plantpal",
-    displayTitle: "PlantPal",
+    displayTitle: "PlantPal Plus",
     productName: "All-Stage Potting Mix",
     tagline: "Seed to sale. Out of the bag.",
     heroImage: "/images/optimized/plantpal-bestfor.jpg",

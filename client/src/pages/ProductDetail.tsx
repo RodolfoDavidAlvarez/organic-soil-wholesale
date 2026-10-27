@@ -67,6 +67,7 @@ import {
   MapPin,
   ExternalLink,
   Download,
+  ChevronDown,
   Clock,
   ZoomIn,
   ZoomOut,
@@ -873,8 +874,8 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
   },
   111: {
     usageSteps: [
-      "Use PlantPal directly in pots and containers — no mixing required.",
-      "Fill containers or transplant nursery stock into PlantPal as your all-stage growing medium.",
+      "Use PlantPal Plus directly in pots and containers — no mixing required.",
+      "Fill containers or transplant nursery stock into PlantPal Plus as your all-stage growing medium.",
       "Water thoroughly after planting and maintain regular moisture while roots establish.",
     ],
     bestFor: [
@@ -1099,6 +1100,36 @@ const fetchProduct = async (identifier: string): Promise<Product> => {
 // Component
 // ---------------------------------------------------------------------------
 
+function IngredientDisclosure({ summary, items }: { summary: string; items: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div id="inside-the-mix">
+      <p className="text-sm leading-relaxed text-stone-700">{summary}</p>
+      <button
+        type="button"
+        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#264027]/15 bg-white px-4 text-sm font-bold text-[#264027] shadow-sm transition hover:border-[#264027]/30 hover:bg-[#f4f7f2]"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {open ? "Hide the ingredients" : "See the ingredients"}
+        <ChevronDown className={cn("h-4 w-4 transition", open && "rotate-180")} />
+      </button>
+      {open ? (
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+          {items.map((item) => (
+            <li
+              key={item}
+              className="rounded-xl border border-[#264027]/12 bg-[#f4f7f2] px-3.5 py-2.5 text-sm font-semibold text-[#264027]"
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 const ProductDetail = () => {
   const [, params] = useRoute<{ slug: string }>("/products/:slug");
   const [, navigate] = useLocation();
@@ -1145,7 +1176,7 @@ const ProductDetail = () => {
     // Small cert logos stay beside the title; the certificate document lives in the gallery.
     if (productPhotos[0]) pushImage(productPhotos[0]);
 
-    const omriCert = getOmriCertificate({ slug: product.slug, productId: product.id });
+    const omriCert = product.id === 111 ? undefined : getOmriCertificate({ slug: product.slug, productId: product.id });
     if (omriCert?.image) pushImage(omriCert.image);
 
     (NEW_GRAPHICS_2_GALLERY[product.id] ?? []).forEach(pushImage);
@@ -1966,9 +1997,13 @@ const ProductDetail = () => {
                         )}
                       </div>
                       <ProductCertificationMarks
-                        certifications={product.certifications}
-                        productSlug={product.slug}
-                        productId={product.id}
+                        certifications={
+                          product.id === 111
+                            ? product.certifications.filter((cert) => !/omri/i.test(cert))
+                            : product.certifications
+                        }
+                        productSlug={product.id === 111 ? undefined : product.slug}
+                        productId={product.id === 111 ? undefined : product.id}
                         variant="detail"
                         className="shrink-0 flex-nowrap justify-end"
                       />
@@ -1990,6 +2025,12 @@ const ProductDetail = () => {
                       return (
                         <div className="mt-4 space-y-3 lg:mt-3">
                           <PayPickupProductFacts includes={includes} benefits={benefits} variant="detail" />
+                          {payPickupContent?.ingredientDisclosure ? (
+                            <IngredientDisclosure
+                              summary={payPickupContent.ingredientDisclosure.summary}
+                              items={payPickupContent.ingredientDisclosure.items}
+                            />
+                          ) : null}
                           {specSheetUrl && (
                             <a
                               href={specSheetUrl}
@@ -2662,7 +2703,7 @@ const ProductDetail = () => {
                 const payPickupContent = getPayPickupProductContent(product.id);
                 const ingredientDetails = payPickupContent?.ingredientDetails ?? [];
                 const specSheetUrl = payPickupContent?.specSheetUrl;
-                if (ingredientDetails.length === 0) return null;
+                if (payPickupContent?.ingredientDisclosure || ingredientDetails.length === 0) return null;
                 return (
                   <Card className="overflow-hidden rounded-2xl border border-[#264027]/12 bg-gradient-to-br from-white via-[#fbfaf7] to-[#eef4eb] p-4 shadow-sm sm:p-5">
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

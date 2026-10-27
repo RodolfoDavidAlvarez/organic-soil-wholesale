@@ -1257,7 +1257,7 @@ const Checkout: React.FC = () => {
                   )}
                   {!hasBulkItem && selectedPickupSite.id === "phoenix" && (
                     <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm leading-snug text-emerald-950">
-                      <span className="font-bold">Phoenix pickup</span> is available for PlantPal, Mikey’s Worm Poop,
+                      <span className="font-bold">Phoenix pickup</span> is available for PlantPal Plus, Mikey’s Worm Poop,
                       Simon’s Gold, Nature’s Blanket and Sabrina Kills Bugs. Loose bulk is compost and mulch by appointment.
                       {pickupNeedsHeadsUp
                         ? " Pallet or more needs a scheduled slot."

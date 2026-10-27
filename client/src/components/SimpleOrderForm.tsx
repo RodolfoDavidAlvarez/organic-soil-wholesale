@@ -56,7 +56,7 @@ const PRODUCT_PHOTO_BY_SLUG: Record<string, string> = {
 };
 
 const FALLBACK_PRODUCTS: ProductOption[] = [
-  { id: 111, label: "PlantPal", slug: "plantpal", image: PRODUCT_PHOTO_BY_SLUG.plantpal, formats: ["1.5CF Bag", "Pallet (30 x 1.5CF)", "Tote", "Truckload (~60 cu yd)"].map((label) => ({ key: label, label })) },
+  { id: 111, label: "PlantPal Plus", slug: "plantpal", image: PRODUCT_PHOTO_BY_SLUG.plantpal, formats: ["1.5CF Bag", "Pallet (30 x 1.5CF)", "Tote", "Truckload (~60 cu yd)"].map((label) => ({ key: label, label })) },
   { id: 1000, label: "Simon's Gold", slug: "simons-gold", image: PRODUCT_PHOTO_BY_SLUG["simons-gold"], formats: ["9lb Bag", "Pallet (144 x 9lb)", "1CF Bag", "Pallet (50 x 1CF)", "Tote", "Bulk Pickup", "Truckload (~24 tons)"].map((label) => ({ key: label, label })) },
   { id: 1001, label: "Mikey's Worm Poop", slug: "mikeys-worm-poop", image: PRODUCT_PHOTO_BY_SLUG["mikeys-worm-poop"], formats: ["9lb Bag", "Pallet (144 x 9lb)", "1CF Bag", "Pallet (50 x 1CF)", "Tote", "Truckload (~24 tons)"].map((label) => ({ key: label, label })) },
   { id: 134, label: "Nature's Blanket", slug: "natures-blanket", image: PRODUCT_PHOTO_BY_SLUG["natures-blanket"], formats: ["2CF Bag", "Pallet (25 x 2CF)", "Tote", "Truckload (22 pallets)"].map((label) => ({ key: label, label })) },
