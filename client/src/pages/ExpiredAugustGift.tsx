@@ -57,7 +57,7 @@ export default function ExpiredAugustGift() {
             aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
             data-official-support-phone="true"
             data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL}
-            data-callrail-ignore="true"
+            data-callrail-ignore="true" data-calltrk-noswap="true"
             data-dynamic-number-ignore="true"
             data-call-tracking-ignore="true"
             className="no-call-tracking inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#d8e1d4] bg-[#f6f7f3] px-5 text-base font-bold text-[#214a2c]"

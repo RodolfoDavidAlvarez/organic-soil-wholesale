@@ -20,6 +20,7 @@ import { trackEvent, trackPhoneClick } from "@/lib/analytics";
 import {
   enforceOfficialSupportPhones,
   isCallTrackingExcludedPath,
+  requestCallRailSourceSwap,
   setDocumentCallTrackingExclusion,
   synchronizeTrackedSupportPhones,
 } from "@/lib/callTracking";
@@ -139,6 +140,7 @@ const CallTrackingRouteSync = () => {
       synchronizeTrackedSupportPhones();
     };
     synchronize();
+    if (!excluded) requestCallRailSourceSwap();
     let scheduledFrame: number | null = null;
     const scheduleSynchronization = () => {
       if (scheduledFrame !== null) return;

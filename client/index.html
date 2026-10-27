@@ -224,11 +224,13 @@
           document.documentElement.setAttribute('data-callrail-ignore', 'true');
           document.documentElement.setAttribute('data-dynamic-number-ignore', 'true');
           document.documentElement.setAttribute('data-call-tracking-ignore', 'true');
+          document.documentElement.setAttribute('data-calltrk-noswap', 'true');
           document.documentElement.classList.add('no-call-tracking');
           if (document.body) {
             document.body.setAttribute('data-callrail-ignore', 'true');
             document.body.setAttribute('data-dynamic-number-ignore', 'true');
             document.body.setAttribute('data-call-tracking-ignore', 'true');
+            document.body.setAttribute('data-calltrk-noswap', 'true');
             document.body.classList.add('no-call-tracking');
           }
         }

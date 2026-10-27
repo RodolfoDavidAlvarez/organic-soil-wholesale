@@ -209,6 +209,7 @@ const Footer = () => {
                           "data-callrail-ignore": "true",
                           "data-dynamic-number-ignore": "true",
                           "data-call-tracking-ignore": "true",
+                          "data-calltrk-noswap": "true",
                           className:
                             "no-call-tracking font-medium text-white/70 transition-colors duration-200 hover:text-white",
                         }

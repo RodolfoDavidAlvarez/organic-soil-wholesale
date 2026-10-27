@@ -722,7 +722,7 @@ export default function AdminRepresentatives() {
                               <div className="flex items-center gap-2 text-sm">
                                 <Phone className="h-3 w-3" />
                                 <span
-                                  data-callrail-ignore="true"
+                                  data-callrail-ignore="true" data-calltrk-noswap="true"
                                   data-dynamic-number-ignore="true"
                                   data-call-tracking-ignore="true"
                                   data-phone-number={rep.phone}

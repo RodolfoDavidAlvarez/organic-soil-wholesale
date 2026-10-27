@@ -413,7 +413,7 @@ export default function WormCastingsCampaign({ source }: Props) {
 
           <div className="rounded-[1.5rem] border border-[#d8e1d4] bg-white p-5 text-center shadow-sm">
             <p className="font-semibold text-[#39463c]">Questions before you arrive?</p>
-            <a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} onClick={() => trackCampaignAction("Phone Clicked")} data-official-support-phone="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL} data-callrail-ignore="true" data-dynamic-number-ignore="true" data-call-tracking-ignore="true" className="no-call-tracking mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#214a2c] bg-white px-5 py-3 font-bold text-[#214a2c]">
+            <a href={CUSTOMER_SUPPORT_PHONE_TEL} aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`} onClick={() => trackCampaignAction("Phone Clicked")} data-official-support-phone="true" data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL} data-callrail-ignore="true" data-calltrk-noswap="true" data-dynamic-number-ignore="true" data-call-tracking-ignore="true" className="no-call-tracking mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#214a2c] bg-white px-5 py-3 font-bold text-[#214a2c]">
               <Phone className="h-4 w-4" /> Call <span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
             </a>
           </div>
@@ -543,7 +543,7 @@ function CouponSuccess({ email, status, customerNumber }: { email: string; statu
             aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
             data-official-support-phone="true"
             data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL}
-            data-callrail-ignore="true"
+            data-callrail-ignore="true" data-calltrk-noswap="true"
             data-dynamic-number-ignore="true"
             data-call-tracking-ignore="true"
             className="no-call-tracking mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-[#264027]"

@@ -97,11 +97,13 @@ export default function RepresentativeLanding() {
     document.documentElement.setAttribute('data-callrail-ignore', 'true');
     document.documentElement.setAttribute('data-dynamic-number-ignore', 'true');
     document.documentElement.setAttribute('data-call-tracking-ignore', 'true');
+    document.documentElement.setAttribute('data-calltrk-noswap', 'true');
     
     // Also set on body element
     document.body.setAttribute('data-callrail-ignore', 'true');
     document.body.setAttribute('data-dynamic-number-ignore', 'true');
     document.body.setAttribute('data-call-tracking-ignore', 'true');
+    document.body.setAttribute('data-calltrk-noswap', 'true');
     
     // Set class for additional exclusion methods
     document.documentElement.classList.add('no-call-tracking');
@@ -122,9 +124,11 @@ export default function RepresentativeLanding() {
       document.documentElement.removeAttribute('data-callrail-ignore');
       document.documentElement.removeAttribute('data-dynamic-number-ignore');
       document.documentElement.removeAttribute('data-call-tracking-ignore');
+      document.documentElement.removeAttribute('data-calltrk-noswap');
       document.body.removeAttribute('data-callrail-ignore');
       document.body.removeAttribute('data-dynamic-number-ignore');
       document.body.removeAttribute('data-call-tracking-ignore');
+      document.body.removeAttribute('data-calltrk-noswap');
       document.documentElement.classList.remove('no-call-tracking');
       document.body.classList.remove('no-call-tracking');
       if (style.parentNode) {
@@ -417,7 +421,7 @@ export default function RepresentativeLanding() {
                 {representative.phone && (
                   <div
                     className="flex items-start gap-3 rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm sm:rounded-2xl sm:p-4"
-                    data-callrail-ignore="true"
+                    data-callrail-ignore="true" data-calltrk-noswap="true"
                     data-dynamic-number-ignore="true"
                     data-call-tracking-ignore="true"
                   >
@@ -427,7 +431,7 @@ export default function RepresentativeLanding() {
                       <a
                         href={`tel:${getPhoneNumberForTel(representative.phone)}`}
                         className="mt-0.5 block text-sm font-semibold text-white underline-offset-4 hover:underline no-call-tracking sm:text-base"
-                        data-callrail-ignore="true"
+                        data-callrail-ignore="true" data-calltrk-noswap="true"
                         data-dynamic-number-ignore="true"
                         data-call-tracking-ignore="true"
                         data-phone-number={representative.phone}

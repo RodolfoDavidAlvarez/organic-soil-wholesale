@@ -196,7 +196,7 @@ export default function Classes() {
                 aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
                 data-official-support-phone="true"
                 data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL}
-                data-callrail-ignore="true"
+                data-callrail-ignore="true" data-calltrk-noswap="true"
                 data-dynamic-number-ignore="true"
                 data-call-tracking-ignore="true"
                 className="inline-flex min-h-11 items-center gap-2 font-semibold underline underline-offset-4"
