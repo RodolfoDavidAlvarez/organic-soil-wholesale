@@ -1,5 +1,12 @@
-import { Check, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { Check, CheckCircle2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface IngredientDisclosure {
+  trigger: string;
+  summary: string;
+  items: string[];
+}
 
 interface PayPickupProductFactsProps {
   includes: string[];
@@ -7,6 +14,8 @@ interface PayPickupProductFactsProps {
   /** Compact spacing for grid cards; roomy for product detail hero */
   variant?: "card" | "detail";
   className?: string;
+  /** Detail pages can open a long ingredient list from one includes chip */
+  ingredientDisclosure?: IngredientDisclosure;
 }
 
 export function PayPickupProductFacts({
@@ -14,8 +23,14 @@ export function PayPickupProductFacts({
   benefits = [],
   variant = "card",
   className,
+  ingredientDisclosure,
 }: PayPickupProductFactsProps) {
   const isDetail = variant === "detail";
+  const [ingredientsOpen, setIngredientsOpen] = useState(false);
+  const disclosure =
+    isDetail && ingredientDisclosure && includes.includes(ingredientDisclosure.trigger)
+      ? ingredientDisclosure
+      : undefined;
 
   if (includes.length === 0 && benefits.length === 0) {
     return null;
@@ -34,21 +49,53 @@ export function PayPickupProductFacts({
             Includes
           </p>
           <div className={cn("flex flex-wrap gap-1.5", isDetail && "gap-2 lg:gap-x-4 lg:gap-y-1")}>
-            {includes.map((item) => (
-              <span
-                key={item}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full border border-[#264027]/15 bg-[#264027]/5 font-semibold text-[#264027]",
-                  isDetail
-                    ? "px-3 py-1.5 text-xs lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:text-sm lg:font-medium lg:text-stone-600"
-                    : "px-2 py-0.5 text-[11px]",
-                )}
-              >
-                <CheckCircle2 className={cn("shrink-0", isDetail ? "h-3.5 w-3.5" : "h-3 w-3")} strokeWidth={2.5} />
-                {item}
-              </span>
-            ))}
+            {includes.map((item) => {
+              const opensList = disclosure?.trigger === item;
+              const chipClass = cn(
+                "inline-flex items-center gap-1 rounded-full border border-[#264027]/15 bg-[#264027]/5 font-semibold text-[#264027]",
+                isDetail
+                  ? "px-3 py-1.5 text-xs lg:text-sm"
+                  : "px-2 py-0.5 text-[11px]",
+                opensList && "min-h-11 pr-2.5",
+              );
+              if (!opensList) {
+                return (
+                  <span key={item} className={chipClass}>
+                    <CheckCircle2 className={cn("shrink-0", isDetail ? "h-3.5 w-3.5" : "h-3 w-3")} strokeWidth={2.5} />
+                    {item}
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  className={cn(chipClass, "transition hover:bg-[#264027]/10")}
+                  aria-expanded={ingredientsOpen}
+                  onClick={() => setIngredientsOpen((open) => !open)}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
+                  {item}
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 transition", ingredientsOpen && "rotate-180")} />
+                </button>
+              );
+            })}
           </div>
+          {disclosure && ingredientsOpen ? (
+            <div className="mt-3">
+              <p className="text-sm leading-relaxed text-stone-700">{disclosure.summary}</p>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {disclosure.items.map((item) => (
+                  <li
+                    key={item}
+                    className="rounded-xl border border-[#264027]/12 bg-[#f4f7f2] px-3.5 py-2.5 text-sm font-semibold text-[#264027]"
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       )}
 

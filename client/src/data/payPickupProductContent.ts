@@ -17,6 +17,8 @@ export interface PayPickupProductContent {
   ingredientDetails?: IngredientDetail[];
   /** Long ingredient list, collapsed until the shopper opens it */
   ingredientDisclosure?: {
+    /** Includes chip that opens the list */
+    trigger: string;
     summary: string;
     items: string[];
   };
@@ -57,6 +59,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
       "Super Booster organic concentrate",
     ],
     ingredientDisclosure: {
+      trigger: "Super Booster organic concentrate",
       summary: "We put our Super Booster organic concentrate in this mix.",
       items: [
         "Clean wood fiber",
@@ -84,8 +87,6 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     benefits: ["All-stage potting mix", "Balanced organic nutrition", "Ready out of the bag"],
     startingPriceContext: "for a 1.5 cu ft bag (~50 lb)",
     sizeSummaries: ["1.5 cu ft bag (~50 lb)", "super sack (2.2 cu yd)", "truckload (~60 cu yd)"],
-    specSheetUrl: "/documents/specsheets/PlantPal-All-Stage-Nursery-Mix-Spec-Sheet.pdf?v=20260924",
-    specSheetLabel: "Download PlantPal Plus spec sheet",
   },
   3000: {
     description:

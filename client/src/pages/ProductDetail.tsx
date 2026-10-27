@@ -67,7 +67,6 @@ import {
   MapPin,
   ExternalLink,
   Download,
-  ChevronDown,
   Clock,
   ZoomIn,
   ZoomOut,
@@ -1100,36 +1099,6 @@ const fetchProduct = async (identifier: string): Promise<Product> => {
 // Component
 // ---------------------------------------------------------------------------
 
-function IngredientDisclosure({ summary, items }: { summary: string; items: string[] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div id="inside-the-mix">
-      <p className="text-sm leading-relaxed text-stone-700">{summary}</p>
-      <button
-        type="button"
-        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#264027]/15 bg-white px-4 text-sm font-bold text-[#264027] shadow-sm transition hover:border-[#264027]/30 hover:bg-[#f4f7f2]"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        {open ? "Hide the ingredients" : "See the ingredients"}
-        <ChevronDown className={cn("h-4 w-4 transition", open && "rotate-180")} />
-      </button>
-      {open ? (
-        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-          {items.map((item) => (
-            <li
-              key={item}
-              className="rounded-xl border border-[#264027]/12 bg-[#f4f7f2] px-3.5 py-2.5 text-sm font-semibold text-[#264027]"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
-
 const ProductDetail = () => {
   const [, params] = useRoute<{ slug: string }>("/products/:slug");
   const [, navigate] = useLocation();
@@ -2024,13 +1993,12 @@ const ProductDetail = () => {
                       if (includes.length === 0 && benefits.length === 0 && !specSheetUrl) return null;
                       return (
                         <div className="mt-4 space-y-3 lg:mt-3">
-                          <PayPickupProductFacts includes={includes} benefits={benefits} variant="detail" />
-                          {payPickupContent?.ingredientDisclosure ? (
-                            <IngredientDisclosure
-                              summary={payPickupContent.ingredientDisclosure.summary}
-                              items={payPickupContent.ingredientDisclosure.items}
-                            />
-                          ) : null}
+                          <PayPickupProductFacts
+                            includes={includes}
+                            benefits={benefits}
+                            variant="detail"
+                            ingredientDisclosure={payPickupContent?.ingredientDisclosure}
+                          />
                           {specSheetUrl && (
                             <a
                               href={specSheetUrl}
