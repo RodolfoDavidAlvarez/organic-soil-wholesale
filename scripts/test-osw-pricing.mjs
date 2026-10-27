@@ -38,7 +38,7 @@ const line = (productId, productName, sizeOption, quantity = 1, price = 0.01) =>
 
 assert.deepEqual(resolveV5CartPricing(line(111, "Stage Potting Mix", "Pallet of 1.5 cu ft Bags")), {
   productId: 111,
-  productName: "PlantPal",
+  productName: "PlantPal Plus",
   format: "Pallet (30 x 1.5CF)",
   unitPrice: 263.76,
   listUnitPrice: 329.7,
@@ -78,7 +78,7 @@ const tampered = normalizeV5CheckoutItems([
   line(111, "Stage Potting Mix", "Pallet of 1.5 cu ft Bags", 1, 1),
   line(3000, "Nature's Blanket Premium", "Pallet of 2CF Bags", 1, 9999),
 ]);
-assert.equal(tampered[0].productName, "PlantPal");
+assert.equal(tampered[0].productName, "PlantPal Plus");
 assert.equal(tampered[0].price, 263.76);
 assert.equal(tampered[1].price, 219.8);
 
@@ -104,7 +104,7 @@ for (const quantity of [21, 22, 23]) {
 }
 
 const product = normalizeV5ProductRecord({ id: 111, name: "Stage Potting Mix", size_price_options: [] });
-assert.equal(product.name, "PlantPal");
+assert.equal(product.name, "PlantPal Plus");
 assert.equal(product.sizePriceOptions.find((entry) => entry.label.includes("Pallet")).unitsPerPallet, 30);
 assert.equal(product.sizePriceOptions.find((entry) => entry.label.includes("Pallet")).price, 263.76);
 
@@ -284,8 +284,8 @@ assert.match(getPromoBundleBySlug("garden-refresh")?.items[1].amount || "", /3 b
 assert.match(getPromoBundleBySlug("garden-refresh")?.items[2].amount || "", /2 bags/);
 assert.match(getPromoBundleBySlug("big-garden-setup")?.items.find((item) => item.name.includes("PlantPal"))?.amount || "", /30 bags/);
 assert.equal(getPromoBundleBySlug("garden-refresh")?.includedLabel, "5 Nature's Blanket, 3 Simon's Gold free, 2 Mikey's Worm Poop");
-assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.includedLabel, "10 PlantPal, 3 Nature's Blanket free, 3 Mikey's Worm Poop");
-assert.equal(getPromoBundleBySlug("big-garden-setup")?.includedLabel, "30 PlantPal, 4 Simon's Gold, 3 Mikey's Worm Poop, 3 Nature's Blanket");
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.includedLabel, "10 PlantPal Plus, 3 Nature's Blanket free, 3 Mikey's Worm Poop");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.includedLabel, "30 PlantPal Plus, 4 Simon's Gold, 3 Mikey's Worm Poop, 3 Nature's Blanket");
 assert.equal(getPromoBundleBySlug("garden-refresh")?.phoenixYardPickup, true);
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.phoenixYardPickup, true);
 assert.equal(getPromoBundleBySlug("big-garden-setup")?.phoenixYardPickup, true);

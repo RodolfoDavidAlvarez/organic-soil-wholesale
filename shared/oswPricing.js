@@ -37,8 +37,8 @@ export const V5_PRODUCT_PRICING = Object.freeze({
     ],
   },
   111: {
-    name: "PlantPal",
-    aliases: ["plantpal", "stage potting mix", "all-stage potting mix", "all stage potting mix"],
+    name: "PlantPal Plus",
+    aliases: ["plantpal plus", "plantpal", "stage potting mix", "all-stage potting mix", "all stage potting mix"],
     options: [
       option("1.5CF Bag", "1.5CF Bag", 10.99, "per bag"),
       option("Pallet (30 x 1.5CF)", "Pallet (30 x 1.5CF)", 263.76, "per pallet", { listPrice: 329.7, unitsPerPallet: 30, discountPercent: 20 }),
