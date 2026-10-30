@@ -2336,6 +2336,7 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         unit: typeof s.unit === 'string' ? s.unit : undefined,
         msrp: typeof s.msrp === 'string' ? s.msrp : undefined,
         isActive,
+        ...(typeof s.image === 'string' && s.image.trim() ? { image: s.image.trim() } : {}),
       };
     };
 
