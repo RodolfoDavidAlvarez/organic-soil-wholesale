@@ -4805,7 +4805,7 @@ ${pages}
     // POST /api/survey and /api/survey/submit - CSAT / yard / class feedback.
     // Also accept /api/public/survey and /api/surveys (those 404'd in prod).
     // One table: sp_survey_responses. Never writes newsletter_subscribed.
-    // After a successful save, ping staff internally. Never email the customer here.
+    // After a successful save, ping staff internally and email the customer their bag code.
     if (isSurveySubmitPostPath(path) && req.method === 'POST') {
       try {
         const result = await processSurveySubmission({

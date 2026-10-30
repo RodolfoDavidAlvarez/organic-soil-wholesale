@@ -135,12 +135,12 @@ function createSurveyDb({ customerId = 42 } = {}) {
               return { data: match || null, error: match ? null : { message: "not found" } };
             }
             const row = state.insertRow;
-            if (row.coupon_code && rows.some((existing) => existing.email_normalized === row.email_normalized && existing.coupon_code)) {
+            if (row.coupon_code && rows.some((existing) => existing.email_normalized === row.email_normalized && existing.coupon_code && !existing.coupon_redeemed_at)) {
               return {
                 data: null,
                 error: {
                   code: "23505",
-                  message: 'duplicate key value violates unique constraint "sp_survey_responses_one_coupon_per_email_idx"',
+                  message: 'duplicate key value violates unique constraint "sp_survey_responses_one_open_coupon_per_email_idx"',
                 },
               };
             }
@@ -395,9 +395,9 @@ test("an existing bag code is reused and not replaced", async () => {
       first_name: "Jordan",
       email: "jordan@example.com",
       email_normalized: "jordan@example.com",
-      coupon_code: "SSW30-FIRSTAAA",
-      coupon_issued_at: "2026-08-01T00:00:00.000Z",
-      coupon_expires_at: "2026-08-31T00:00:00.000Z",
+      coupon_code: "SSWBAG-FIRSTAAA",
+      coupon_issued_at: "2026-10-01T00:00:00.000Z",
+      coupon_expires_at: "2026-12-30T00:00:00.000Z",
       coupon_redeemed_at: null,
     },
     {
@@ -408,14 +408,15 @@ test("an existing bag code is reused and not replaced", async () => {
       coupon_code: "SSW30-SECONDBB",
       coupon_issued_at: "2026-08-02T00:00:00.000Z",
       coupon_expires_at: "2026-09-01T00:00:00.000Z",
-      coupon_redeemed_at: null,
+      coupon_redeemed_at: "2026-08-20T00:00:00.000Z",
     },
   );
   const saved = await saveSurveyResponse({
     db,
     response: validateSurveyResponse(validAnswers).response,
+    now: new Date("2026-10-30T19:00:00.000Z"),
   });
-  assert.equal(saved.coupon.code, "SSW30-FIRSTAAA");
+  assert.equal(saved.coupon.code, "SSWBAG-FIRSTAAA");
   assert.equal(saved.coupon.reused, true);
   assert.equal(db.rows.length, 3);
   assert.equal(db.rows[2].coupon_code, null);
@@ -631,7 +632,7 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.doesNotMatch(staff, /INTERNAL_TEST_RECIPIENTS/);
   assert.doesNotMatch(staff, /newsletter\/subscribe/);
   assert.match(staff, /dn@soilseedandwater\.com/);
-  assert.match(api, /Never email the customer here/);
+  assert.match(api, /email the customer their bag code/);
 });
 
 const classAnswers = {
@@ -974,13 +975,13 @@ test("one landing table: class and purchase share sp_survey_responses", async ()
   assert.match(api, /\/api\/admin\/surveys/);
 });
 
-test("yard coupon lookup uses limit(1) and experience_score CHECK is 1-10 in repo", async () => {
+test("yard coupon lookup uses limit and experience_score CHECK is 1-10 in repo", async () => {
   const survey = await readFile(new URL("../shared/surveyResponses.js", import.meta.url), "utf8");
   const lookup = survey.slice(
     survey.indexOf("export async function findSurveyCouponByEmail"),
     survey.indexOf("export async function findSurveyCouponByCode"),
   );
-  assert.match(lookup, /\.limit\(1\)/);
+  assert.match(lookup, /\.limit\(20\)/);
   assert.doesNotMatch(lookup, /maybeSingle/);
   const migration = await readFile(
     new URL("../supabase/migrations/20260828_survey_experience_score_1_to_10.sql", import.meta.url),
@@ -1042,12 +1043,18 @@ test("yard survey submit pings staff, never the customer, never Nowell", async (
   assert.equal(result.status, 201);
   assert.equal(result.json.success, true);
   assert.equal(db.rows.length, 1);
-  assert.equal(resend.sent.length, 2);
-  assert.deepEqual(resend.sent.map((payload) => payload.to), [
+  assert.equal(resend.sent.length, 3);
+  const receipt = resend.sent.find((payload) => payload.subject === "Your free bag");
+  const staffSent = resend.sent.filter((payload) => payload.subject === STAFF_YARD_SURVEY_SUBJECT);
+  assert.equal(receipt.to, "jordan@example.com");
+  assert.match(receipt.html, /SSWBAG-/);
+  assert.match(receipt.html, /Show this at the yard/);
+  assert.doesNotMatch(receipt.html, /30%/);
+  assert.deepEqual(staffSent.map((payload) => payload.to), [
     "ralvarez@soilseedandwater.com",
     "kcooper@soilseedandwater.com",
   ]);
-  for (const payload of resend.sent) {
+  for (const payload of staffSent) {
     assert.equal(payload.subject, STAFF_YARD_SURVEY_SUBJECT);
     assert.doesNotMatch(payload.subject, /Jordan/);
     assert.equal(payload.headers["In-Reply-To"], STAFF_YARD_SURVEY_THREAD_ID);
@@ -1116,6 +1123,7 @@ test("insert failure sends no staff mail", async () => {
         select() { return this; },
         eq() { return this; },
         not() { return this; },
+        order() { return this; },
         limit: async () => ({ data: [], error: null }),
         maybeSingle: async () => ({ data: null, error: null }),
         insert() { return this; },
