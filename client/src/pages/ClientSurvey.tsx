@@ -39,30 +39,6 @@ const IMPROVE_OPTIONS = [
   "Nothing to change",
 ] as const;
 
-type SurveyCoupon = {
-  code: string;
-  label: string;
-  offer: string;
-  restrictions: string;
-  firstName: string;
-  email: string;
-  issuedAt: string;
-  expiresAt: string;
-  qrUrl: string;
-  reused?: boolean;
-};
-
-function phoenixDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("en-US", {
-    timeZone: "America/Phoenix",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function surveySource() {
   if (typeof window === "undefined") return "osw-survey";
   const tag = new URLSearchParams(window.location.search).get("source");
@@ -88,7 +64,6 @@ export default function ClientSurvey() {
   const [website, setWebsite] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [coupon, setCoupon] = useState<SurveyCoupon | null>(null);
   const [error, setError] = useState("");
   const hasPrefill = Boolean(identityPrefill.firstName || identityPrefill.email);
 
@@ -135,7 +110,6 @@ export default function ClientSurvey() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "We could not save your answers.");
       trackEvent("Client Survey Submitted", { source: surveySource() });
-      setCoupon(body.coupon || null);
       setSuccess(true);
     } catch (submitError: unknown) {
       setError(submitError instanceof Error ? submitError.message : "Please try again.");
@@ -187,14 +161,10 @@ export default function ClientSurvey() {
               <p className="mt-3 text-base leading-7 text-neutral-700">
                 Your note lands with the yard team, not a marketing list. If we need a follow-up, we will use the email you left.
               </p>
-              {coupon ? (
-                <p className="mt-3 text-base font-semibold leading-7 text-[#264027]">
-                  Show this at the yard.
-                </p>
-              ) : null}
+              <p className="mt-3 text-base font-semibold leading-7 text-[#264027]">
+                This one is on us. A free 50 pound dairy compost for your next visit. Tell the yard your name.
+              </p>
             </div>
-
-            {coupon ? <SurveyCouponCard coupon={coupon} /> : null}
 
             <p className="text-sm leading-6 text-neutral-600">
               Current Phoenix pickup deals are on the Deals page.
@@ -219,7 +189,7 @@ export default function ClientSurvey() {
                 : "Name and email first so we know who wrote this. Change them if they are not you. Then slide what is true."}
             </p>
             <p className="text-base font-semibold leading-7 text-[#264027]">
-              Finish this and we'll give you 30% off one item at the yard.
+              Finish this and a free 50 pound dairy compost is on us for your next visit.
             </p>
 
             <div className="grid gap-4 rounded-2xl border border-[#e6dcc8] bg-white p-5 shadow-[0_8px_24px_rgba(38,64,39,0.06)]">
@@ -380,69 +350,6 @@ export default function ClientSurvey() {
         </div>
       </footer>
     </main>
-  );
-}
-
-function SurveyCouponCard({ coupon }: { coupon: SurveyCoupon }) {
-  const issued = phoenixDate(coupon.issuedAt);
-  const expires = phoenixDate(coupon.expiresAt);
-  return (
-    <article className="overflow-hidden rounded-2xl border-2 border-[#b38a58] bg-white text-[#264027] shadow-sm print:border print:shadow-none">
-      <div className="bg-[#264027] px-5 py-5 text-center text-white">
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#b38a58]">
-          Soil Seed &amp; Water
-        </p>
-        <p className="mt-1 text-sm font-semibold text-white/85">Organic Soil Wholesale</p>
-        <p className="mt-4 text-xs font-bold uppercase tracking-[0.18em] text-[#b38a58]">
-          {coupon.label}
-        </p>
-        <h3 className="mt-2 font-heading text-3xl font-bold leading-tight">30% off</h3>
-        <p className="mt-2 text-base font-semibold leading-6">{coupon.offer}</p>
-      </div>
-
-      <div className="px-5 py-5 text-center">
-        <img
-          src={coupon.qrUrl}
-          alt={`Yard coupon ${coupon.code}`}
-          className="mx-auto w-full max-w-[220px] rounded-xl border border-[#d7dfd0] bg-white p-3"
-        />
-        <p className="mt-3 break-all font-mono text-lg font-bold tracking-wide">{coupon.code}</p>
-        <dl className="mt-4 space-y-2 rounded-xl bg-[#f6f8f3] px-4 py-4 text-left text-sm leading-6">
-          <div>
-            <dt className="text-xs font-bold uppercase tracking-[0.14em] text-[#b38a58]">Name</dt>
-            <dd className="font-semibold">{coupon.firstName}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-bold uppercase tracking-[0.14em] text-[#b38a58]">Email</dt>
-            <dd className="break-all font-semibold">{coupon.email}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-bold uppercase tracking-[0.14em] text-[#b38a58]">Date</dt>
-            <dd className="font-semibold">{issued}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-bold uppercase tracking-[0.14em] text-[#b38a58]">Valid through</dt>
-            <dd className="font-semibold">{expires}</dd>
-          </div>
-        </dl>
-        <p className="mt-4 text-sm font-semibold leading-6">
-          Phoenix yard pickup · {PHOENIX_YARD_ADDRESS}
-        </p>
-        <p className="mt-2 text-sm leading-6 text-neutral-600">{coupon.restrictions}</p>
-        {coupon.reused ? (
-          <p className="mt-3 text-xs leading-5 text-neutral-500">
-            This is the same yard coupon from your first survey.
-          </p>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[#264027] bg-white px-4 text-sm font-bold text-[#264027] print:hidden"
-        >
-          Print or screenshot this card
-        </button>
-      </div>
-    </article>
   );
 }
 
