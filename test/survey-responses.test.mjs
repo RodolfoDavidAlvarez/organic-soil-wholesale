@@ -574,9 +574,10 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.doesNotMatch(notifications, /nowell/i);
   assert.match(api, /coupon: result\.coupon|processSurveySubmission/);
   assert.match(api, /survey-coupon/);
-  assert.match(page, /Finish this and a free 50 pound dairy compost is on us for your next visit/);
+  assert.match(page, /A fast survey for honest feedback/);
   assert.match(page, /This one is on us/);
-  assert.match(page, /Honest feedback\. Three quick taps/);
+  assert.doesNotMatch(page, /Three quick taps/);
+  assert.doesNotMatch(page, /Finish this and a free 50 pound/);
   assert.match(page, /window\.location\.search/);
   assert.match(slider, /type="range"/);
   assert.match(slider, /garden-score-slider/);
@@ -780,7 +781,8 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.match(ig, /Tell me about the next class/);
   assert.doesNotMatch(ig, /Register for The Garden Reset/);
   assert.doesNotMatch(ig, /Aug 22/);
-  assert.match(yard, /Honest feedback\. Three quick taps/);
+  assert.match(yard, /A fast survey for honest feedback/);
+  assert.match(yard, /continueFromYou\}>\s*Start/);
   assert.match(yard, /free 50 pound dairy compost/);
   assert.doesNotMatch(yard, /30% off/);
   assert.doesNotMatch(yard, /SSW30/);
