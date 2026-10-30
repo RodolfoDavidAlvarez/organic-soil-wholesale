@@ -19,6 +19,7 @@ import {
 } from '../shared/wormCastingsRouting.js';
 import { assignSswNumberForPurchase, ensureSswNumber } from '../shared/sswNumber.js';
 import { buildPurchaseThankYouEmail, PURCHASE_THANK_YOU_FROM } from '../shared/purchaseThankYou.js';
+import { normalizeReceiptRef, receiptQrImageUrl, renderReceiptQrPng } from '../shared/receiptQr.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 import { processPortalSurveyLetters } from '../shared/portalSurveyLetter.js';
 import { processSurveySubmission } from '../shared/surveyStaffAlerts.js';
@@ -916,6 +917,8 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
         pickupLabel,
         location: order?.pickup_location,
         brandName: order?.brand_id === 'regenerative_landscaper_supply' ? 'Regenerative Landscaper Supply' : undefined,
+        orderNumber: order?.order_number,
+        qrImageUrl: order?.order_number ? receiptQrImageUrl(order.order_number) : undefined,
       });
       const custResult = await r.emails.send({
         from: thankYou.from || PURCHASE_THANK_YOU_FROM,
@@ -1331,8 +1334,17 @@ export default async function handler(req, res) {
       return res.json({ ok: true, abandoned: stale.length, alerted: true });
     }
 
-    // Hourly 24h post-purchase survey letter for new SSW Sales Portal buyers.
-    // Customer send is off unless SURVEY_LETTER_SEND_ACTIVE=true.
+    const receiptQrMatch = path.match(/^\/api\/public\/receipt-qr\/(.+)$/);
+    if (receiptQrMatch && req.method === 'GET') {
+      const ref = normalizeReceiptRef(receiptQrMatch[1]);
+      if (!ref) return res.status(400).json({ error: 'Missing order reference' });
+      const png = await renderReceiptQrPng(ref);
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      return res.end(png);
+    }
+
+    // Hourly 3-day post-pickup survey letter. Customer send is off unless SURVEY_LETTER_SEND_ACTIVE=true.
     if (path === '/api/cron/portal-survey-letter' && req.method === 'GET') {
       const cronSecret = process.env.CRON_SECRET;
       if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
