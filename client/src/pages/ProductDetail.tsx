@@ -116,6 +116,7 @@ type ApiProduct = {
 };
 
 type PriceTier = {
+  image?: string;
   size: string;
   price: number;
   msrp: number | null;
@@ -558,7 +559,7 @@ const singleCartLabelForSize = (size: string, productId?: number | string) => {
 };
 
 const imageForChoice = (choice: SizeChoice, fallback: string) => {
-  return SIZE_CATEGORY_PHOTO[choice.size] || fallback;
+  return choice.image || SIZE_CATEGORY_PHOTO[choice.size] || fallback;
 };
 
 /** Flatbed isn't a product SKU — customers pick bag/pallet/tote and fill the load. */
@@ -597,7 +598,7 @@ const parsePriceTiers = (raw: unknown): PriceTier[] => {
       const msrp = parseDollars(opt.msrp);
       const unit = (opt.unit || opt.description || "").toString().trim();
       const qty = extractQty(size);
-      return { size, price, msrp, unit, qty };
+      return { size, price, msrp, unit, qty, image: typeof opt.image === "string" ? opt.image : undefined };
     })
     .filter((t): t is PriceTier => t !== null);
 };
@@ -660,6 +661,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
       priceLabel,
       secondaryPriceLabel,
       image:
+        tier.image ||
         SIZE_CATEGORY_PHOTO[key] ||
         SIZE_CATEGORY_PHOTO[tier.size] ||
         product.imageUrl ||
@@ -1128,7 +1130,7 @@ const ProductDetail = () => {
     // page MUST use the same override or the hero will not match the card the
     // customer just tapped.
     const heroBagOverride = HERO_BAG_PHOTO[product.id];
-    const productPhotos = [heroBagOverride, product.imageUrl, product.texturePhotoUrl, ...product.additionalImages]
+    const productPhotos = [heroBagOverride, product.imageUrl, product.texturePhotoUrl, ...product.additionalImages, ...product.priceTiers.map((tier) => tier.image)]
       .filter((u): u is string => Boolean(u?.trim()))
       .filter((url) => !isBlockedGalleryImage(product.id, url));
 
@@ -1365,6 +1367,13 @@ const ProductDetail = () => {
     [needsChoice, selectedCategory, selectedChoiceSize]
   );
 
+  useEffect(() => {
+    const image = selectedChoice?.image || selectedCategory?.choices.find((choice) => choice.kind === "single")?.image;
+    if (!image) return;
+    const index = galleryItems.findIndex((item) => item.type === "image" && item.url === image);
+    if (index >= 0) setActiveGalleryIndex(index);
+  }, [selectedChoice?.image, selectedCategory, galleryItems]);
+
   const selectedAddsFlatbedSpots = selectedChoice
     ? spotsForFormat(selectedChoice.cartLabel, quantity) > 0
     : isFlatbedCategorySelected;
@@ -1584,7 +1593,7 @@ const ProductDetail = () => {
       unit: selectedChoice.unit || "per unit",
       mode: canPayOnline ? "pay" : "quote",
       imageUrl: HERO_BAG_PHOTO[product.id] || product.imageUrl || product.texturePhotoUrl,
-      sizeImage: SIZE_CATEGORY_PHOTO[selectedChoice.size] || undefined,
+      sizeImage: selectedChoice.image || SIZE_CATEGORY_PHOTO[selectedChoice.size] || undefined,
     };
   }, [canPayOnline, product, quantity, selectedChoice]);
 
