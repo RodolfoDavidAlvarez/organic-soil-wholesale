@@ -40,6 +40,12 @@ const KIND_FILTERS: Array<{ id: SurveyKind; label: string }> = [
   { id: "purchase", label: "Purchase" },
 ];
 
+function scoreLabel(value: string | number, row: SurveyRow) {
+  const scale = Number(row.scores?.scale) === 5 ? 5 : 10;
+  const text = String(value);
+  return /^\d+$/.test(text) ? `${text}/${scale}` : text;
+}
+
 function phoenixStamp(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -127,22 +133,22 @@ export default function AdminSurveys() {
                   <p className="mt-2 break-all text-sm text-gray-700">{row.email_normalized}</p>
                   {row.experience_score != null ? (
                     <p className="mt-1 text-sm text-gray-700">
-                      Experience: <span className="font-medium">{row.experience_score}/10</span>
+                      Experience: <span className="font-medium">{scoreLabel(row.experience_score, row)}</span>
                       {row.finding_us ? (
                         <>
                           {" "}
-                          · Finding us: <span className="font-medium">{row.finding_us}</span>
+                          · Finding us: <span className="font-medium">{scoreLabel(row.finding_us, row)}</span>
                         </>
                       ) : null}
                     </p>
                   ) : row.finding_us ? (
                     <p className="mt-1 text-sm text-gray-700">
-                      Finding us: <span className="font-medium">{row.finding_us}</span>
+                      Finding us: <span className="font-medium">{scoreLabel(row.finding_us, row)}</span>
                     </p>
                   ) : null}
                   {row.would_come_back ? (
                     <p className="mt-1 text-sm text-gray-700">
-                      Would come back: <span className="font-medium">{row.would_come_back}</span>
+                      Would come back: <span className="font-medium">{scoreLabel(row.would_come_back, row)}</span>
                     </p>
                   ) : null}
                   {row.worked_well?.length ? (

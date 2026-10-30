@@ -805,9 +805,35 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.doesNotMatch(yard, /What should we add next/);
   assert.doesNotMatch(yard, /survey-q1/);
   assert.doesNotMatch(yard, /const \[firstName, setFirstName\] = useState\(""\)/);
-  assert.match(yard, /const \[experience, setExperience\] = useState\(5\)/);
-  assert.match(yard, /const \[findingUs, setFindingUs\] = useState\(5\)/);
-  assert.match(yard, /const \[comeBack, setComeBack\] = useState\(5\)/);
+  assert.match(yard, /const \[experience, setExperience\] = useState<number \| null>\(null\)/);
+  assert.match(yard, /const \[findingUs, setFindingUs\] = useState<number \| null>\(null\)/);
+  assert.match(yard, /const \[comeBack, setComeBack\] = useState<number \| null>\(null\)/);
+  assert.match(yard, /scoreScale: 5/);
+  assert.match(yard, /90 days to redeem/);
+});
+
+test("yard survey 1-5 scale is stored as out of 5 and rejects a 10", () => {
+  const saved = validateSurveyResponse({
+    firstName: "Alex",
+    email: "alex@example.com",
+    experienceScore: 5,
+    findingUs: 4,
+    comeBack: 5,
+    scoreScale: 5,
+  });
+  assert.equal(saved.ok, true);
+  assert.equal(saved.response.visitFeedback, "Experience 5/5. Finding us 4/5. Come back 5/5.");
+  assert.equal(saved.response.scores.scale, 5);
+
+  const tooHigh = validateSurveyResponse({
+    firstName: "Alex",
+    email: "alex@example.com",
+    experienceScore: 10,
+    findingUs: 8,
+    comeBack: 9,
+    scoreScale: 5,
+  });
+  assert.equal(tooHigh.ok, false);
 });
 
 test("garden class named scores write saturday, heat, teaching, comeAgain and no coupon", async () => {

@@ -93,9 +93,21 @@ function normalizeStringArray(value, maxItems = 12, maxLen = 80) {
   return out;
 }
 
-function yardScoreSummary(experienceScore, findingUsScore, comeBackScore) {
+function yardScoreScale(input) {
+  const raw = input?.scoreScale ?? input?.score_scale ?? input?.scores?.scale;
+  return Number(raw) === 5 ? 5 : 10;
+}
+
+function fitYardScore(score, scale) {
+  if (score == null) return null;
+  if (scale === 5 && score > 5) return null;
+  return score;
+}
+
+function yardScoreSummary(experienceScore, findingUsScore, comeBackScore, scale = 10) {
   if (experienceScore == null || findingUsScore == null || comeBackScore == null) return '';
-  return `Experience ${experienceScore}/10. Finding us ${findingUsScore}/10. Come back ${comeBackScore}/10.`;
+  const max = scale === 5 ? 5 : 10;
+  return `Experience ${experienceScore}/${max}. Finding us ${findingUsScore}/${max}. Come back ${comeBackScore}/${max}.`;
 }
 
 export function normalizeSurveyResponse(input = {}, extras = {}) {
@@ -114,15 +126,16 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
     input.comeAgain || input.come_again || input.wouldComeBack || input.would_come_back,
     40,
   ).toLowerCase();
+  const yardScale = isClass ? 10 : yardScoreScale(input);
   const experienceScore = isClass
     ? null
-    : pickClassScore(input, ['experienceScore', 'experience_score', 'experience']);
+    : fitYardScore(pickClassScore(input, ['experienceScore', 'experience_score', 'experience']), yardScale);
   const findingUsScore = isClass
     ? null
-    : pickClassScore(input, ['findingUs', 'finding_us']);
+    : fitYardScore(pickClassScore(input, ['findingUs', 'finding_us']), yardScale);
   const comeBackScore = isClass
     ? null
-    : pickClassScore(input, ['comeBack', 'come_back']);
+    : fitYardScore(pickClassScore(input, ['comeBack', 'come_back']), yardScale);
   const workedWell = isClass ? [] : normalizeStringArray(input.workedWell || input.worked_well);
   const improveMost = isClass ? '' : trimText(input.improveMost || input.improve_most, 80);
   const findingUs = findingUsScore != null ? String(findingUsScore) : '';
@@ -134,7 +147,7 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
   const notes = isClass
     ? trimText(input.notes || input.comment || input.visitFeedback || input.visit_feedback, 500)
     : trimText(input.notes || input.comment, 500);
-  const scoreSummary = yardScoreSummary(experienceScore, findingUsScore, comeBackScore);
+  const scoreSummary = yardScoreSummary(experienceScore, findingUsScore, comeBackScore, yardScale);
   const visitFeedback = isClass
     ? notes
     : scoreSummary || trimText(input.visitFeedback || input.visit_feedback || input.q1, 500);
@@ -185,6 +198,7 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
           findingUs: findingUsScore,
           comeBack: comeBackScore,
           improveMost,
+          ...(yardScale === 5 ? { scale: 5 } : {}),
         }),
     surveyKind: surveyKindFromSource(source),
     eventKey,
