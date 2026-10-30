@@ -202,7 +202,7 @@ export default function ClientSurvey() {
           alt="Soil Seed and Water"
           width={1758}
           height={419}
-          className="h-8 w-auto max-w-[200px]"
+          className="h-11 w-auto shrink-0 self-start object-contain"
         />
 
         <section className="mt-5 rounded-[28px] border border-[#d9cdb4] bg-[#fffdf7] px-5 py-6 shadow-[0_18px_40px_rgba(38,64,39,0.08)] sm:px-7 sm:py-8">
@@ -252,10 +252,7 @@ export default function ClientSurvey() {
                 {step === "you" ? (
                   <div>
                     <h1 className="font-heading text-[2rem] font-bold leading-[1.05]">How did we do?</h1>
-                    <p className="mt-3 text-base leading-7 text-[#3d4a38]">Honest feedback. Three quick taps.</p>
-                    <p className="mt-3 text-base font-semibold leading-7">
-                      Finish this and a free 50 pound dairy compost is on us for your next visit.
-                    </p>
+                    <p className="mt-3 text-base leading-7 text-[#3d4a38]">A fast survey for honest feedback.</p>
                     <div className="mt-7 grid gap-4">
                       {hasPrefill ? <p className="text-sm leading-6 text-[#6d6558]">This is you? Change it if not.</p> : null}
                       <div>
@@ -294,7 +291,7 @@ export default function ClientSurvey() {
                     <StepError error={error} />
                     <div className="pt-7">
                       <PrimaryButton type="button" onClick={continueFromYou}>
-                        Continue
+                        Start
                       </PrimaryButton>
                     </div>
                   </div>
