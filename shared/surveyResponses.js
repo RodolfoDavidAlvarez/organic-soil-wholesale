@@ -31,7 +31,7 @@ export const SURVEY_COUPON_LABEL = 'SSW survey thank-you';
 export const SURVEY_COUPON_OFFER = '30% off one item, one time, Phoenix yard pickup.';
 export const SURVEY_COUPON_RESTRICTIONS =
   'Not the whole ticket. Not delivery. Not already-discounted workshop pallets.';
-export const SURVEY_COUPON_VALID_DAYS = 30;
+export const SURVEY_COUPON_VALID_DAYS = 90;
 export const SURVEY_COUPON_PREFIX = 'SSW30-';
 export const SURVEY_COUPON_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const SURVEY_COUPON_CODE_RE = /^SSW30-[A-HJ-NP-Z2-9]{8}$/;
