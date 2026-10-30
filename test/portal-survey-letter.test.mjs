@@ -17,14 +17,16 @@ import {
   skipReasonForPortalSurveyLetter,
 } from '../shared/portalSurveyLetter.js';
 
-const NOW = new Date('2026-08-28T18:00:00.000Z');
-const SINCE = new Date('2026-08-27T07:00:00.000Z'); // 2026-08-27T00:00:00-07:00
-const DUE_PAID_AT = new Date(NOW.getTime() - 25 * 60 * 60 * 1000).toISOString();
+const NOW = new Date('2026-11-02T18:00:00.000Z');
+const SINCE = new Date('2026-10-29T07:00:00.000Z'); // 2026-10-29T00:00:00-07:00
+const DUE_PICKED_UP_AT = new Date(NOW.getTime() - 3.5 * 24 * 60 * 60 * 1000).toISOString();
 
 function dueOrder(overrides = {}) {
   return {
+    status: 'picked_up',
     payment_status: 'paid',
-    paid_at: DUE_PAID_AT,
+    picked_up_at: DUE_PICKED_UP_AT,
+    paid_at: DUE_PICKED_UP_AT,
     customer_email: 'buyer@gmail.com',
     customer_name: 'Haylee Buyer',
     ...overrides,
@@ -107,18 +109,18 @@ test('send flag is off unless the env string is exactly true', () => {
   assert.equal(isSurveyLetterSendActive('true'), true);
 });
 
-test('cutoff defaults to ship day Phoenix midnight and is not a historical backfill', () => {
-  assert.equal(DEFAULT_PORTAL_SURVEY_LETTER_SINCE, '2026-08-27T00:00:00-07:00');
+test('cutoff defaults to the regular-survey start day and is not a historical backfill', () => {
+  assert.equal(DEFAULT_PORTAL_SURVEY_LETTER_SINCE, '2026-10-29T00:00:00-07:00');
   assert.equal(getPortalSurveyLetterSince('').toISOString(), SINCE.toISOString());
 });
 
-test('due-query includes a paid portal order 25h old after cutoff and encodes every skip gate', () => {
+test('due-query includes a picked-up order 3 days old after cutoff and encodes every skip gate', () => {
   const sql = PORTAL_SURVEY_LETTER_DUE_SQL;
-  assert.match(sql, /FROM public\.sp_orders o/);
-  assert.doesNotMatch(sql, /FROM public\.orders\b/);
-  assert.match(sql, /payment_status = 'paid'/);
-  assert.match(sql, /paid_at <= now\(\) - interval '24 hours'/);
-  assert.match(sql, /paid_at >= \$1::timestamptz/);
+  assert.match(sql, /FROM public\.sp_pickup_orders p/);
+  assert.doesNotMatch(sql, /FROM public\.sp_orders o/);
+  assert.match(sql, /p\.status = 'picked_up'/);
+  assert.match(sql, /picked_up_at <= now\(\) - interval '3 days'/);
+  assert.match(sql, /picked_up_at >= \$1::timestamptz/);
   assert.match(sql, /customer_email IS NOT NULL/);
   assert.match(sql, /@soilseedandwater\.com/);
   assert.match(sql, /test@test\.com/);
@@ -126,24 +128,25 @@ test('due-query includes a paid portal order 25h old after cutoff and encodes ev
   assert.match(sql, /newsletter_subscribed IS NOT FALSE/);
   assert.match(sql, /bounced.*complained.*suppressed/s);
   assert.match(sql, /We owe you an apology/);
+  assert.match(sql, /How was pickup\?/);
   assert.match(sql, /portal_survey_letter_outbox/);
-  assert.match(sql, /DISTINCT ON \(lower\(trim\(o\.customer_email\)\)\)/);
+  assert.match(sql, /DISTINCT ON \(lower\(trim\(p\.customer_email\)\)\)/);
 });
 
-test('eligibility helper includes 25h paid email after cutoff and excludes the skip cases', () => {
+test('eligibility helper includes 3-day picked-up email after cutoff and excludes the skip cases', () => {
   const extras = { now: NOW, since: SINCE };
   assert.equal(skipReasonForPortalSurveyLetter(dueOrder(), extras), null);
 
-  assert.equal(skipReasonForPortalSurveyLetter(dueOrder({ payment_status: 'unpaid' }), extras), 'unpaid');
+  assert.equal(skipReasonForPortalSurveyLetter(dueOrder({ status: 'queued' }), extras), 'not_picked_up');
   assert.equal(
     skipReasonForPortalSurveyLetter(dueOrder({
-      paid_at: new Date(NOW.getTime() - 23 * 60 * 60 * 1000).toISOString(),
+      picked_up_at: new Date(NOW.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     }), extras),
     'too_new',
   );
   assert.equal(
     skipReasonForPortalSurveyLetter(dueOrder({
-      paid_at: new Date('2026-08-26T12:00:00-07:00').toISOString(),
+      picked_up_at: new Date('2026-10-20T12:00:00-07:00').toISOString(),
     }), extras),
     'before_cutoff',
   );
@@ -210,35 +213,37 @@ test('unset SURVEY_LETTER_SEND_ACTIVE is a no-op for customer mail', async () =>
   }
 });
 
-test('letter HTML matches the honest-yard apology letter without a yard map', () => {
+test('letter HTML is a regular pickup survey without the apology framing', () => {
   const letter = buildPortalSurveyLetter({
     firstName: 'Haylee',
     email: 'haylee@example.com',
-    now: new Date('2026-08-27T18:00:00.000Z'),
+    now: new Date('2026-10-29T18:00:00.000Z'),
   });
-  assert.equal(letter.subject, 'We owe you an apology.');
+  assert.equal(letter.subject, 'How was pickup?');
   assert.doesNotMatch(letter.subject, /\[TEST\]/);
-  assert.match(letter.html, /We owe you an apology/);
-  assert.match(letter.html, /heads-down being a store/);
+  assert.doesNotMatch(letter.html, /We owe you an apology/);
+  assert.doesNotMatch(letter.html, /heads-down being a store/);
+  assert.doesNotMatch(letter.html, /August gift/);
+  assert.match(letter.html, /How was pickup/);
+  assert.match(letter.html, /tell us how pickup went/);
   assert.match(letter.html, /30% off one item/);
-  assert.match(letter.html, /portal-day-after/);
+  assert.match(letter.html, /pickup-plus-3/);
   assert.match(letter.html, /first_name=Haylee/);
   assert.match(letter.html, /haylee%40example.com/);
   assert.match(letter.html, /ssw-logo-letter\.png/);
   assert.match(letter.html, /unsubscribe\?email=haylee%40example.com/);
   assert.doesNotMatch(letter.html, /phoenix-yard-entrance-map/);
   assert.doesNotMatch(letter.html, /yard-map/);
-  assert.doesNotMatch(letter.html, /We are just getting started/);
   const headers = portalSurveyLetterComplianceHeaders('haylee@example.com');
   assert.match(headers['List-Unsubscribe'], /unsubscribe\?email=haylee%40example.com/);
   assert.equal(headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
   assert.equal(
     portalSurveyLetterUrl({ firstName: 'Haylee', email: 'haylee@example.com' }),
-    'https://www.organicsoilwholesale.com/survey?source=portal-day-after&first_name=Haylee&email=haylee%40example.com',
+    'https://www.organicsoilwholesale.com/survey?source=pickup-plus-3&first_name=Haylee&email=haylee%40example.com',
   );
-  assert.equal(PORTAL_SURVEY_LETTER_SOURCE, 'portal-day-after');
+  assert.equal(PORTAL_SURVEY_LETTER_SOURCE, 'pickup-plus-3');
   assert.equal(PORTAL_SURVEY_LETTER_TEMPLATE, 'portal_survey_letter');
-  assert.equal(PORTAL_SURVEY_LETTER_SUBJECT, 'We owe you an apology.');
+  assert.equal(PORTAL_SURVEY_LETTER_SUBJECT, 'How was pickup?');
 });
 
 test('flag on claims then sends one Resend call per due email', async () => {
@@ -269,7 +274,7 @@ test('cron and payment paths stay isolated', async () => {
   assert.match(vercel, /\/api\/cron\/worm-castings-day3/);
   assert.match(vercel, /\/api\/cron\/checkout-monitor/);
   assert.match(letter, /SURVEY_LETTER_SEND_ACTIVE/);
-  assert.match(letter, /sp_orders/);
+  assert.match(letter, /sp_pickup_orders/);
   assert.doesNotMatch(letter, /payAndPickup/);
   assert.doesNotMatch(letter, /stripe/i);
   assert.doesNotMatch(pay, /portalSurveyLetter/);

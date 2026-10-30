@@ -402,4 +402,17 @@ test('purchase thank-you is short, from info@, and does not use Founder or em da
   assert.doesNotMatch(email.html, /Founder/);
   assert.doesNotMatch(email.html, /—/);
   assert.doesNotMatch(email.subject, /—/);
+  assert.doesNotMatch(email.html, /Show this at pickup/);
+});
+
+test('purchase thank-you includes the unique receipt QR when an order number is present', () => {
+  const email = buildPurchaseThankYouEmail({
+    fullName: 'Rodo',
+    customerNumber: 'SSW-582-194',
+    orderNumber: 'OSW-TEST-ORDER',
+    qrImageUrl: 'https://www.organicsoilwholesale.com/api/public/receipt-qr/OSW-TEST-ORDER.png',
+  });
+  assert.match(email.html, /Show this at pickup/);
+  assert.match(email.html, /OSW-TEST-ORDER\.png/);
+  assert.match(email.html, /Order OSW-TEST-ORDER/);
 });
