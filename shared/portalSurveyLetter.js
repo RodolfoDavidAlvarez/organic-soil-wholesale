@@ -1,10 +1,10 @@
 export const PORTAL_SURVEY_LETTER_TEMPLATE = 'portal_survey_letter';
-export const PORTAL_SURVEY_LETTER_SUBJECT = 'We owe you an apology.';
-export const PORTAL_SURVEY_LETTER_SOURCE = 'portal-day-after';
-export const DEFAULT_PORTAL_SURVEY_LETTER_SINCE = '2026-08-27T00:00:00-07:00';
+export const PORTAL_SURVEY_LETTER_SUBJECT = 'How was pickup?';
+export const PORTAL_SURVEY_LETTER_SOURCE = 'pickup-plus-3';
+export const DEFAULT_PORTAL_SURVEY_LETTER_SINCE = '2026-10-29T00:00:00-07:00';
 export const PORTAL_SURVEY_LETTER_FROM = 'Soil Seed & Water <info@soilseedandwater.com>';
 export const PORTAL_SURVEY_LETTER_REPLY_TO = 'ralvarez@soilseedandwater.com';
-export const SURVEY_LETTER_WAIT_INTERVAL = '24 hours';
+export const SURVEY_LETTER_WAIT_INTERVAL = '3 days';
 
 const APP_URL = 'https://www.organicsoilwholesale.com';
 const ASSET_BASE = `${APP_URL}/email-assets`;
@@ -57,22 +57,23 @@ export function skipReasonForPortalSurveyLetter(order = {}, extras = {}) {
   const email = normalizeEmail(order.customer_email || order.email);
   const now = extras.now instanceof Date ? extras.now : new Date(extras.now || Date.now());
   const since = extras.since instanceof Date ? extras.since : getPortalSurveyLetterSince(extras.since);
-  const waitMs = 24 * 60 * 60 * 1000;
   const name = `${order.customer_name || order.first_name || ''} ${email}`;
 
   if (!email) return 'no_email';
-  if (order.payment_status !== 'paid') return 'unpaid';
-  if (!order.paid_at) return 'unpaid';
+  if (order.status && order.status !== 'picked_up') return 'not_picked_up';
+  const completedAt = order.picked_up_at || order.paid_at;
+  if (!completedAt) return 'not_picked_up';
   if (email.endsWith('@soilseedandwater.com')) return 'internal_ssw';
   if (BLOCKED_LETTER_EMAILS.has(email) || email.endsWith('@example.com') || email.endsWith('@test.com')) {
     return 'test_address';
   }
   if (/nowell/i.test(name) || email === 'dn@soilseedandwater.com') return 'dan_nowell';
 
-  const paidAt = new Date(order.paid_at);
-  if (Number.isNaN(paidAt.getTime())) return 'unpaid';
-  if (paidAt.getTime() > now.getTime() - waitMs) return 'too_new';
-  if (paidAt.getTime() < since.getTime()) return 'before_cutoff';
+  const waitMs = 3 * 24 * 60 * 60 * 1000;
+  const pickedUpAt = new Date(completedAt);
+  if (Number.isNaN(pickedUpAt.getTime())) return 'not_picked_up';
+  if (pickedUpAt.getTime() > now.getTime() - waitMs) return 'too_new';
+  if (pickedUpAt.getTime() < since.getTime()) return 'before_cutoff';
 
   const customer = extras.customer || null;
   if (customer) {
@@ -116,36 +117,38 @@ export function buildPortalSurveyLetter({ firstName = '', email = '', now = new 
   const href = escapeHtml(surveyUrl);
   const unsubscribeUrl = portalSurveyLetterUnsubscribeUrl(email);
   const letterDate = phoenixLetterDate(now);
+  const greetingName = String(firstName || '').trim();
+  const greeting = greetingName ? `Hey ${escapeHtml(greetingName)},` : 'Hey,';
 
   return {
     subject: PORTAL_SURVEY_LETTER_SUBJECT,
-    html: `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>We owe you an apology</title></head><body style="margin:0;padding:0;background:#d6ccb4;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">We opened the yard, got heads-down, and never asked how it felt. 30% off one item after you tell us.</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#d6ccb4;"><tr><td align="center" style="padding:28px 10px;"><table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fffdf7;border:1px solid #cfc6ae;"><tr><td align="center" bgcolor="#fffdf7" style="padding:32px 40px 8px;background-color:#fffdf7;"><img src="${ASSET_BASE}/ssw-logo-letter.png" alt="Soil Seed and Water" width="248" style="display:block;width:248px;max-width:72%;height:auto;border:0;"></td></tr><tr><td align="center" bgcolor="#fffdf7" style="padding:10px 40px 18px;font-family:Georgia,'Times New Roman',serif;font-size:14px;font-style:italic;color:#5a6058;background-color:#fffdf7;">${escapeHtml(letterDate)}</td></tr><tr><td bgcolor="#fffdf7" style="padding:22px 44px 6px;font-family:Georgia,'Times New Roman',serif;color:#1c201a;font-size:17px;line-height:1.7;background-color:#fffdf7;"><p style="margin:0 0 18px;">Hey,</p><p style="margin:0 0 18px;">We owe you an apology. We opened the Phoenix yard, handed out free bags, and got heads-down being a store. We never asked how it felt. That is on us.</p><p style="margin:0 0 22px;">If you have a minute, tell us how we did. After you submit, you get 30% off one item at the yard. Unique code. Show it when you come in.</p><table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;"><tr><td align="center" bgcolor="#264027" style="background-color:#264027;"><a href="${href}" style="display:inline-block;padding:12px 28px;font-family:Georgia,'Times New Roman',serif;font-size:17px;color:#ffffff;text-decoration:none;">Tell us how we did</a></td></tr></table><p style="margin:0 0 18px;">The August gift is still live. A free 9-lb bag of Mikey's Worm Poop. One per email, Tuesday through Saturday, 8 to 4, closed 1 to 2. <a href="${APP_URL}/free-worm-castings" style="color:#264027;">Claim it here</a>.</p><p style="margin:0 0 8px;">With gratitude,</p><p style="margin:6px 0 2px;background-color:#fffdf7;"><img src="${ASSET_BASE}/rodo-signature.jpg" alt="Rodo Alvarez" width="220" style="display:block;width:220px;max-width:60%;height:auto;border:0;background-color:#fffdf7;"></p><p style="margin:4px 0 8px;">Rodo Alvarez<br>Soil Seed and Water</p><p style="margin:0 0 10px;font-size:15px;color:#5a6058;">1634 N 19th Ave, Phoenix &middot; (623) 263-3386<br>Tue through Sat, 8 to 4, closed 1 to 2<br>South entrance from Grand Avenue</p></td></tr><tr><td bgcolor="#fffdf7" style="padding:16px 44px 28px;border-top:1px solid #e4dfd2;font-family:Georgia,'Times New Roman',serif;font-size:12px;line-height:1.55;color:#7a817b;background-color:#fffdf7;">Soil Seed &amp; Water &middot; 1634 N 19th Ave, Phoenix, AZ 85009<br>You received this because you bought from Organic Soil Wholesale.<br><a href="${escapeHtml(unsubscribeUrl)}" style="color:#526055;">Unsubscribe</a></td></tr></table></td></tr></table></body></html>`,
+    html: `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>How was pickup?</title></head><body style="margin:0;padding:0;background:#d6ccb4;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Quick note after pickup. Tell us how it went.</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#d6ccb4;"><tr><td align="center" style="padding:28px 10px;"><table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fffdf7;border:1px solid #cfc6ae;"><tr><td align="center" bgcolor="#fffdf7" style="padding:32px 40px 8px;background-color:#fffdf7;"><img src="${ASSET_BASE}/ssw-logo-letter.png" alt="Soil Seed and Water" width="248" style="display:block;width:248px;max-width:72%;height:auto;border:0;"></td></tr><tr><td align="center" bgcolor="#fffdf7" style="padding:10px 40px 18px;font-family:Georgia,'Times New Roman',serif;font-size:14px;font-style:italic;color:#5a6058;background-color:#fffdf7;">${escapeHtml(letterDate)}</td></tr><tr><td bgcolor="#fffdf7" style="padding:22px 44px 6px;font-family:Georgia,'Times New Roman',serif;color:#1c201a;font-size:17px;line-height:1.7;background-color:#fffdf7;"><p style="margin:0 0 18px;">${greeting}</p><p style="margin:0 0 18px;">Thanks for coming by. If you have a minute, tell us how pickup went. What worked, what we should fix, and whether you would come back.</p><p style="margin:0 0 22px;">After you submit, you get 30% off one item at the yard. Unique code. Show it when you come in.</p><table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;"><tr><td align="center" bgcolor="#264027" style="background-color:#264027;"><a href="${href}" style="display:inline-block;padding:12px 28px;font-family:Georgia,'Times New Roman',serif;font-size:17px;color:#ffffff;text-decoration:none;">Tell us how we did</a></td></tr></table><p style="margin:0 0 8px;">With gratitude,</p><p style="margin:6px 0 2px;background-color:#fffdf7;"><img src="${ASSET_BASE}/rodo-signature.jpg" alt="Rodo Alvarez" width="220" style="display:block;width:220px;max-width:60%;height:auto;border:0;background-color:#fffdf7;"></p><p style="margin:4px 0 8px;">Rodo Alvarez<br>Soil Seed and Water</p><p style="margin:0 0 10px;font-size:15px;color:#5a6058;">1634 N 19th Ave, Phoenix &middot; (623) 263-3386<br>Tue through Sat, 8 to 4, closed 1 to 2<br>South entrance from Grand Avenue</p></td></tr><tr><td bgcolor="#fffdf7" style="padding:16px 44px 28px;border-top:1px solid #e4dfd2;font-family:Georgia,'Times New Roman',serif;font-size:12px;line-height:1.55;color:#7a817b;background-color:#fffdf7;">Soil Seed &amp; Water &middot; 1634 N 19th Ave, Phoenix, AZ 85009<br>You received this because you picked up an order from Organic Soil Wholesale.<br><a href="${escapeHtml(unsubscribeUrl)}" style="color:#526055;">Unsubscribe</a></td></tr></table></td></tr></table></body></html>`,
   };
 }
 
 export const PORTAL_SURVEY_LETTER_DUE_SQL = `/* portal_survey_letter:list_due */
-    SELECT DISTINCT ON (lower(trim(o.customer_email)))
-      o.id AS order_id,
-      o.customer_email,
-      o.customer_name,
-      o.paid_at,
-      o.payment_status
-    FROM public.sp_orders o
+    SELECT DISTINCT ON (lower(trim(p.customer_email)))
+      p.id AS order_id,
+      p.customer_email,
+      p.customer_name,
+      p.picked_up_at AS paid_at,
+      p.payment_status
+    FROM public.sp_pickup_orders p
     LEFT JOIN public.sp_customers customer
-      ON lower(customer.email) = lower(trim(o.customer_email))
+      ON lower(customer.email) = lower(trim(p.customer_email))
     LEFT JOIN public.portal_survey_letter_outbox outbox
-      ON lower(outbox.email_normalized) = lower(trim(o.customer_email))
-    WHERE o.payment_status = 'paid'
-      AND o.paid_at IS NOT NULL
-      AND o.customer_email IS NOT NULL
-      AND btrim(o.customer_email) <> ''
-      AND o.paid_at <= now() - interval '24 hours'
-      AND o.paid_at >= $1::timestamptz
-      AND lower(trim(o.customer_email)) NOT LIKE '%@soilseedandwater.com'
-      AND lower(trim(o.customer_email)) NOT IN ('test@test.com', 'test@example.com')
-      AND lower(trim(o.customer_email)) NOT LIKE '%@example.com'
-      AND lower(trim(o.customer_email)) NOT LIKE '%@test.com'
-      AND lower(trim(o.customer_email)) NOT LIKE '%nowell%'
+      ON lower(outbox.email_normalized) = lower(trim(p.customer_email))
+    WHERE p.status = 'picked_up'
+      AND p.picked_up_at IS NOT NULL
+      AND p.customer_email IS NOT NULL
+      AND btrim(p.customer_email) <> ''
+      AND p.picked_up_at <= now() - interval '3 days'
+      AND p.picked_up_at >= $1::timestamptz
+      AND lower(trim(p.customer_email)) NOT LIKE '%@soilseedandwater.com'
+      AND lower(trim(p.customer_email)) NOT IN ('test@test.com', 'test@example.com')
+      AND lower(trim(p.customer_email)) NOT LIKE '%@example.com'
+      AND lower(trim(p.customer_email)) NOT LIKE '%@test.com'
+      AND lower(trim(p.customer_email)) NOT LIKE '%nowell%'
       AND (customer.id IS NULL OR (
         customer.newsletter_unsubscribed_at IS NULL
         AND customer.newsletter_subscribed IS NOT FALSE
@@ -153,7 +156,7 @@ export const PORTAL_SURVEY_LETTER_DUE_SQL = `/* portal_survey_letter:list_due */
       AND (outbox.id IS NULL OR outbox.status = 'pending')
       AND NOT EXISTS (
         SELECT 1 FROM public.email_events event
-        WHERE lower(event.email) = lower(trim(o.customer_email))
+        WHERE lower(event.email) = lower(trim(p.customer_email))
           AND event.event_type IN ('bounced', 'complained', 'suppressed')
       )
       AND NOT EXISTS (
@@ -161,9 +164,10 @@ export const PORTAL_SURVEY_LETTER_DUE_SQL = `/* portal_survey_letter:list_due */
         FROM public.newsletter_email_sends send
         LEFT JOIN public.newsletter_campaigns campaign
           ON campaign.id = send.campaign_id
-        WHERE lower(send.email) = lower(trim(o.customer_email))
+        WHERE lower(send.email) = lower(trim(p.customer_email))
           AND (
             campaign.subject ILIKE '%We owe you an apology%'
+            OR campaign.subject ILIKE '%How was pickup?%'
             OR send.newsletter_id ILIKE '%apology%'
           )
       )
@@ -172,18 +176,22 @@ export const PORTAL_SURVEY_LETTER_DUE_SQL = `/* portal_survey_letter:list_due */
         FROM public.email_events event
         LEFT JOIN public.newsletter_campaigns campaign
           ON campaign.newsletter_id = event.newsletter_id
-        WHERE lower(event.email) = lower(trim(o.customer_email))
+        WHERE lower(event.email) = lower(trim(p.customer_email))
           AND (
             campaign.subject ILIKE '%We owe you an apology%'
+            OR campaign.subject ILIKE '%How was pickup?%'
             OR event.tags::text ILIKE '%We owe you an apology%'
           )
       )
       AND NOT EXISTS (
         SELECT 1 FROM public.notification_log note
-        WHERE lower(note.recipient) = lower(trim(o.customer_email))
-          AND note.subject ILIKE '%We owe you an apology%'
+        WHERE lower(note.recipient) = lower(trim(p.customer_email))
+          AND (
+            note.subject ILIKE '%We owe you an apology%'
+            OR note.subject ILIKE '%How was pickup?%'
+          )
       )
-    ORDER BY lower(trim(o.customer_email)), o.paid_at ASC
+    ORDER BY lower(trim(p.customer_email)), p.picked_up_at ASC
     LIMIT $2`;
 
 export async function listDuePortalSurveyLetters(client, {
