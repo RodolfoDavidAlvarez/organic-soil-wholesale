@@ -328,15 +328,25 @@ async function findCustomerId(db, email) {
   }
 }
 
-export async function findSurveyCouponByEmail(db, email) {
+export function isOpenBagCoupon(row, now = new Date()) {
+  const code = String(row?.coupon_code || '');
+  if (!code.startsWith(SURVEY_COUPON_PREFIX)) return false;
+  if (row?.coupon_redeemed_at) return false;
+  const expires = row?.coupon_expires_at ? new Date(row.coupon_expires_at) : null;
+  if (!expires || Number.isNaN(expires.getTime())) return false;
+  return expires.getTime() >= now.getTime();
+}
+
+export async function findSurveyCouponByEmail(db, email, now = new Date()) {
   const { data, error } = await db
     .from('sp_survey_responses')
     .select(COUPON_SELECT)
     .eq('email_normalized', email)
     .not('coupon_code', 'is', null)
-    .limit(1);
+    .order('created_at', { ascending: false })
+    .limit(20);
   if (error) throw error;
-  return data?.[0] || null;
+  return (data || []).find((row) => isOpenBagCoupon(row, now)) || null;
 }
 
 export async function findSurveyCouponByCode(db, code) {
@@ -439,7 +449,7 @@ export async function saveSurveyResponse({
     return { response: saved, coupon: null };
   }
 
-  const existingCoupon = await findSurveyCouponByEmail(db, response.email);
+  const existingCoupon = await findSurveyCouponByEmail(db, response.email, now);
   if (existingCoupon?.coupon_code) {
     const { saved, error } = await insertSurveyRow(db, surveyRow(response, customerId));
     if (error) throw error;
@@ -461,13 +471,17 @@ export async function saveSurveyResponse({
         coupon: buildPublicSurveyCoupon(saved, { reused: false }),
       };
     }
-    if (isUniqueViolation(error, 'sp_survey_responses_one_coupon_per_email_idx')) {
+    if (
+      isUniqueViolation(error, 'sp_survey_responses_one_open_coupon_per_email_idx')
+      || isUniqueViolation(error, 'sp_survey_responses_one_coupon_per_email_idx')
+    ) {
+      const issued = await findSurveyCouponByEmail(db, response.email, now);
+      if (!issued?.coupon_code) throw error;
       const { saved: repeat, error: repeatError } = await insertSurveyRow(
         db,
         surveyRow(response, customerId),
       );
       if (repeatError) throw repeatError;
-      const issued = await findSurveyCouponByEmail(db, response.email);
       return {
         response: repeat,
         coupon: buildPublicSurveyCoupon(issued, { reused: true }),

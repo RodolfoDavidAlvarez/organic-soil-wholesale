@@ -16,6 +16,7 @@ import {
 } from './surveyResponses.js';
 
 export const STAFF_YARD_SURVEY_SUBJECT = 'New yard survey';
+export const SURVEY_BAG_RECEIPT_SUBJECT = 'Your free bag';
 export const STAFF_CLASS_SURVEY_SUBJECT = 'New class survey';
 export const STAFF_YARD_SURVEY_THREAD_ID = '<ssw-staff-yard-survey@soilseedandwater.com>';
 export const STAFF_CLASS_SURVEY_THREAD_ID = '<ssw-staff-class-survey@soilseedandwater.com>';
@@ -180,6 +181,38 @@ export function buildSurveyStaffAlert({ saved, coupon = null } = {}) {
   };
 }
 
+export function buildSurveyBagReceipt({ coupon, firstName = '' } = {}) {
+  const code = String(coupon?.code || '').trim().toUpperCase();
+  if (!code.startsWith('SSWBAG-') || !coupon?.qrUrl) return null;
+  const name = String(firstName || coupon.firstName || '').trim();
+  const greeting = name
+    ? `Hey ${escapeHtml(name)}, this code is for your next visit.`
+    : 'This code is for your next visit.';
+  const qrUrl = `https://www.organicsoilwholesale.com${coupon.qrUrl}`;
+  return {
+    subject: SURVEY_BAG_RECEIPT_SUBJECT,
+    html: `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Your free bag</title></head><body style="margin:0;padding:0;background:#d6ccb4;"><div style="display:none;max-height:0;overflow:hidden;">Show this at the yard. 90 days to redeem.</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#d6ccb4;"><tr><td align="center" style="padding:22px 12px;"><table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fffdf7;border:1px solid #cfc6ae;"><tr><td bgcolor="#fffdf7" style="padding:28px 36px 22px;font-family:Georgia,'Times New Roman',serif;color:#1c201a;font-size:16px;line-height:1.55;background-color:#fffdf7;"><p style="margin:0 0 14px;">${greeting}</p><p style="margin:0 0 8px;">One free 50 pound dairy compost.</p><img src="${escapeHtml(qrUrl)}" alt="Yard redemption code" width="220" height="220" style="display:block;width:220px;height:auto;border:0;margin:12px 0;"><p style="margin:0 0 8px;font-family:Consolas,monospace;letter-spacing:1px;">${escapeHtml(code)}</p><p style="margin:0 0 8px;">Show this at the yard.</p><p style="margin:0;font-size:14px;color:#5a6058;">90 days to redeem.</p></td></tr><tr><td bgcolor="#fffdf7" style="padding:14px 36px 22px;border-top:1px solid #e4dfd2;font-family:Georgia,'Times New Roman',serif;font-size:12px;line-height:1.5;color:#7a817b;background-color:#fffdf7;">Soil Seed &amp; Water &middot; 1634 N 19th Ave, Phoenix, AZ 85009<br>(623) 263-3386</td></tr></table></td></tr></table></body></html>`,
+  };
+}
+
+export async function sendSurveyBagReceipt({ resend, coupon, email, firstName } = {}) {
+  const message = buildSurveyBagReceipt({ coupon, firstName });
+  const to = normalizeEmail(email);
+  if (!message || !to || !resend?.emails?.send) return { sent: false };
+  const result = await resend.emails.send({
+    from: STAFF_ALERT_FROM,
+    replyTo: STAFF_ALERT_REPLY_TO,
+    to,
+    subject: message.subject,
+    html: message.html,
+  }, { idempotencyKey: `survey_bag_receipt/${coupon.code}` });
+  if (result?.error || !result?.data?.id) {
+    console.error('[Survey] Bag receipt failed:', result?.error?.message || result?.error || 'not accepted');
+    return { sent: false };
+  }
+  return { sent: true, id: result.data.id };
+}
+
 function staffRecipientsExcludingCustomer(recipients, saved) {
   const customerEmail = normalizeEmail(saved?.email || saved?.email_normalized);
   return (recipients || []).filter((person) => {
@@ -275,6 +308,20 @@ export async function processSurveySubmission({
     }
   } catch (error) {
     console.error('[Survey] Staff alert error:', error?.message || error);
+  }
+
+  try {
+    const client = await resolveResend(resend);
+    if (client && result.coupon?.code) {
+      await sendSurveyBagReceipt({
+        resend: client,
+        coupon: result.coupon,
+        email: result.response?.email || result.response?.email_normalized,
+        firstName: result.response?.first_name,
+      });
+    }
+  } catch (error) {
+    console.error('[Survey] Bag receipt error:', error?.message || error);
   }
 
   return {
