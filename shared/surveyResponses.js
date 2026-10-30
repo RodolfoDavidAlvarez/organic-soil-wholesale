@@ -403,69 +403,12 @@ export async function listSurveyInbox(db, { kind = 'all', limit = 100 } = {}) {
   return { kind: filter, counts, rows: data || [] };
 }
 
-function issueCouponFields({ now, createCouponCode }) {
-  const issuedAt = now instanceof Date ? now : new Date(now || Date.now());
-  return {
-    coupon_code: createCouponCode(),
-    coupon_issued_at: issuedAt.toISOString(),
-    coupon_expires_at: surveyCouponExpiresAt(issuedAt).toISOString(),
-  };
-}
-
 export async function saveSurveyResponse({
   db,
   response,
-  now = new Date(),
-  createCouponCode = generateSurveyCouponCode,
 } = {}) {
   const customerId = await findCustomerId(db, response.email);
-
-  if (isGardenClassSurveySource(response.source)) {
-    const { saved, error } = await insertSurveyRow(db, surveyRow(response, customerId));
-    if (error) throw error;
-    return { response: saved, coupon: null };
-  }
-
-  const existingCoupon = await findSurveyCouponByEmail(db, response.email);
-
-  if (existingCoupon?.coupon_code) {
-    const { saved, error } = await insertSurveyRow(db, surveyRow(response, customerId));
-    if (error) throw error;
-    return {
-      response: saved,
-      coupon: buildPublicSurveyCoupon(existingCoupon, { reused: true }),
-    };
-  }
-
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const couponFields = issueCouponFields({ now, createCouponCode });
-    const { saved, error } = await insertSurveyRow(
-      db,
-      surveyRow(response, customerId, couponFields),
-    );
-    if (!error) {
-      return {
-        response: saved,
-        coupon: buildPublicSurveyCoupon(saved, { reused: false }),
-      };
-    }
-    if (isUniqueViolation(error, 'sp_survey_responses_one_coupon_per_email_idx')) {
-      const { saved: repeat, error: repeatError } = await insertSurveyRow(
-        db,
-        surveyRow(response, customerId),
-      );
-      if (repeatError) throw repeatError;
-      const issued = await findSurveyCouponByEmail(db, response.email);
-      return {
-        response: repeat,
-        coupon: buildPublicSurveyCoupon(issued, { reused: true }),
-      };
-    }
-    if (isUniqueViolation(error, 'sp_survey_responses_coupon_code_idx') && attempt < 3) {
-      continue;
-    }
-    throw error;
-  }
-
-  throw new Error('Could not issue a unique yard coupon.');
+  const { saved, error } = await insertSurveyRow(db, surveyRow(response, customerId));
+  if (error) throw error;
+  return { response: saved, coupon: null };
 }

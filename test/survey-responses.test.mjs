@@ -323,29 +323,17 @@ test("inserts a row with a unique coupon and allows repeat answers without a sec
   assert.equal(db.rows[0].scores.comeBack, 9);
   assert.equal(db.rows[0].visit_feedback, "Experience 8/10. Finding us 7/10. Come back 9/10.");
   assert.equal("newsletter_subscribed" in db.rows[0], false);
-  assert.equal(saved.coupon.code, "SSW30-ABCD2EFG");
-  assert.equal(saved.coupon.reused, false);
-  assert.equal(saved.coupon.label, SURVEY_COUPON_LABEL);
-  assert.equal(saved.coupon.offer, SURVEY_COUPON_OFFER);
-  assert.equal(saved.coupon.restrictions, SURVEY_COUPON_RESTRICTIONS);
-  assert.equal(saved.coupon.firstName, "Jordan");
-  assert.equal(saved.coupon.email, "jordan@example.com");
-  assert.equal(saved.coupon.issuedAt, "2026-08-19T17:00:00.000Z");
-  assert.equal(saved.coupon.expiresAt, "2026-09-18T17:00:00.000Z");
-  assert.equal(saved.coupon.qrUrl, "/api/public/survey-coupon/qr/SSW30-ABCD2EFG.png");
-  assert.equal(db.rows[0].coupon_code, "SSW30-ABCD2EFG");
+  assert.equal(saved.coupon, null);
+  assert.equal(db.rows[0].coupon_code, null);
 
   const second = await saveSurveyResponse({
     db,
     response: first.response,
     now: new Date("2026-08-20T17:00:00.000Z"),
-    createCouponCode: () => "SSW30-ZZZZZZZZ",
   });
   assert.equal(db.rows.length, 2);
   assert.equal(db.rows[1].coupon_code, null);
-  assert.equal(second.coupon.code, "SSW30-ABCD2EFG");
-  assert.equal(second.coupon.reused, true);
-  assert.equal(second.coupon.issuedAt, "2026-08-19T17:00:00.000Z");
+  assert.equal(second.coupon, null);
 });
 
 test("yard survey comment can be blank and still writes finding_us", async () => {
@@ -367,9 +355,8 @@ test("yard survey comment can be blank and still writes finding_us", async () =>
   const saved = await saveSurveyResponse({
     db,
     response: validation.response,
-    createCouponCode: () => "SSW30-FINDING1",
   });
-  assert.equal(saved.coupon.code, "SSW30-FINDING1");
+  assert.equal(saved.coupon, null);
   assert.equal(db.rows[0].experience_score, 4);
   assert.equal(db.rows[0].finding_us, "2");
   assert.deepEqual(db.rows[0].worked_well, ["Finding the yard / entrance"]);
@@ -378,7 +365,7 @@ test("yard survey comment can be blank and still writes finding_us", async () =>
   assert.equal(db.rows[0].notes, null);
   assert.equal(db.rows[0].survey_kind, SURVEY_KIND_PURCHASE);
   assert.equal(db.rows[0].source, "osw-survey:apology-2026-08");
-  assert.match(db.rows[0].coupon_code, /^SSW30-/);
+  assert.equal(db.rows[0].coupon_code, null);
 });
 
 test("yard survey prefill reads first_name and email", () => {
@@ -394,7 +381,7 @@ test("yard survey prefill reads first_name and email", () => {
   assert.equal(readSurveyPrefill("?name=Haylee%20Smith&email=haylee@example.com").firstName, "Haylee");
 });
 
-test("two coupon rows for one email reuse the first code instead of 500ing", async () => {
+test("an existing coupon is not shown or reissued", async () => {
   const db = createSurveyDb();
   db.rows.push(
     {
@@ -421,15 +408,13 @@ test("two coupon rows for one email reuse the first code instead of 500ing", asy
   const saved = await saveSurveyResponse({
     db,
     response: validateSurveyResponse(validAnswers).response,
-    createCouponCode: () => "SSW30-THIRDCXX",
   });
-  assert.equal(saved.coupon.reused, true);
-  assert.equal(saved.coupon.code, "SSW30-FIRSTAAA");
+  assert.equal(saved.coupon, null);
   assert.equal(db.rows.length, 3);
   assert.equal(db.rows[2].coupon_code, null);
 });
 
-test("a second email still earns its own coupon", async () => {
+test("a second email also gets no coupon code", async () => {
   const db = createSurveyDb();
   const jordan = validateSurveyResponse(validAnswers);
   const sam = validateSurveyResponse({
@@ -443,25 +428,21 @@ test("a second email still earns its own coupon", async () => {
   const first = await saveSurveyResponse({
     db,
     response: jordan.response,
-    createCouponCode: () => "SSW30-JORDANXX",
   });
   const second = await saveSurveyResponse({
     db,
     response: sam.response,
-    createCouponCode: () => "SSW30-SAMFRESH",
   });
-  assert.equal(first.coupon.code, "SSW30-JORDANXX");
-  assert.equal(second.coupon.code, "SSW30-SAMFRESH");
-  assert.equal(second.coupon.reused, false);
-  assert.equal(db.rows.filter((row) => row.coupon_code).length, 2);
+  assert.equal(first.coupon, null);
+  assert.equal(second.coupon, null);
+  assert.equal(db.rows.filter((row) => row.coupon_code).length, 0);
 });
 
-test("retries when a generated coupon code already exists", async () => {
+test("survey submit does not generate a coupon code", async () => {
   const db = createSurveyDb();
   await saveSurveyResponse({
     db,
     response: validateSurveyResponse(validAnswers).response,
-    createCouponCode: () => "SSW30-TAKENAAA",
   });
   let calls = 0;
   const other = validateSurveyResponse({
@@ -477,11 +458,12 @@ test("retries when a generated coupon code already exists", async () => {
     response: other.response,
     createCouponCode() {
       calls += 1;
-      return calls === 1 ? "SSW30-TAKENAAA" : "SSW30-FRESHBBB";
+      return "SSW30-SHOULDNT";
     },
   });
-  assert.equal(calls, 2);
-  assert.equal(saved.coupon.code, "SSW30-FRESHBBB");
+  assert.equal(calls, 0);
+  assert.equal(saved.coupon, null);
+  assert.equal(db.rows.every((row) => row.coupon_code == null), true);
 });
 
 test("missing customer rows do not fail the insert", async () => {
@@ -497,10 +479,9 @@ test("missing customer rows do not fail the insert", async () => {
   const saved = await saveSurveyResponse({
     db,
     response: validation.response,
-    createCouponCode: () => "SSW30-NEIGHBOR",
   });
   assert.equal(saved.response.customer_id, null);
-  assert.equal(saved.coupon.code, "SSW30-NEIGHBOR");
+  assert.equal(saved.coupon, null);
 });
 
 test("coupon helpers match the worm-castings QR style and 30-day window", () => {
@@ -593,8 +574,8 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.doesNotMatch(notifications, /nowell/i);
   assert.match(api, /coupon: result\.coupon|processSurveySubmission/);
   assert.match(api, /survey-coupon/);
-  assert.match(page, /Finish this and we'll give you 30% off one item at the yard/);
-  assert.match(page, /Show this at the yard/);
+  assert.match(page, /Finish this and a free 50 pound dairy compost is on us for your next visit/);
+  assert.match(page, /This one is on us/);
   assert.match(page, /Honest feedback\. Three quick taps/);
   assert.match(page, /window\.location\.search/);
   assert.match(slider, /type="range"/);
@@ -614,9 +595,10 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.doesNotMatch(page, /takes under a minute/i);
   assert.doesNotMatch(page, /minute/);
   assert.match(survey, /SSW survey thank-you/);
-  assert.match(page, /coupon\.label/);
-  assert.match(page, /coupon\.qrUrl/);
-  assert.doesNotMatch(page, /SSW30-[A-Z0-9]{8}/);
+  assert.doesNotMatch(page, /coupon\.label/);
+  assert.doesNotMatch(page, /coupon\.qrUrl/);
+  assert.doesNotMatch(page, /SSW30/);
+  assert.doesNotMatch(page, /30%/);
   assert.doesNotMatch(survey, /resend/i);
   assert.match(route, /processSurveySubmission/);
   assert.match(staff, /resend/i);
@@ -799,7 +781,9 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.doesNotMatch(ig, /Register for The Garden Reset/);
   assert.doesNotMatch(ig, /Aug 22/);
   assert.match(yard, /Honest feedback\. Three quick taps/);
-  assert.match(yard, /30% off/);
+  assert.match(yard, /free 50 pound dairy compost/);
+  assert.doesNotMatch(yard, /30% off/);
+  assert.doesNotMatch(yard, /SSW30/);
   assert.match(yard, /Finding the yard \/ entrance/);
   assert.match(yard, /readSurveyPrefill/);
   assert.match(yard, /readYardPrefill/);
@@ -1026,7 +1010,7 @@ test("yard survey submit pings staff, never the customer, never Nowell", async (
     assert.match(payload.html, /Jordan/);
     assert.match(payload.html, /jordan@example.com/);
     assert.match(payload.html, /\/admin\/surveys/);
-    assert.match(payload.html, /SSW30-/);
+    assert.doesNotMatch(payload.html, /SSW30-/);
     assert.notEqual(payload.to, "jordan@example.com");
     assert.notEqual(payload.to, "dn@soilseedandwater.com");
   }
