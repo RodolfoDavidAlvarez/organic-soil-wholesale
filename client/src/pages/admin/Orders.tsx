@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { ShoppingCart, Clock, CheckCircle, XCircle, Package, Truck, MapPin, DollarSign, Link2, Bell } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
@@ -31,6 +32,7 @@ const orderStatuses = ['pending', 'approved', 'in_production', 'ready_for_pickup
 const formatStatus = (s: string) => s ? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Unknown';
 
 export default function AdminOrders() {
+  const [location] = useLocation();
   const [activeTab, setActiveTab] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [statusDialogOrder, setStatusDialogOrder] = useState<any>(null);
@@ -42,6 +44,15 @@ export default function AdminOrders() {
   const { toast } = useToast();
   const token = localStorage.getItem('adminToken');
 
+  // Prefer window search — wouter's location often omits ?query.
+  const deepLinkId = (() => {
+    const fromWindow = typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : '';
+    const fromLocation = location.includes('?') ? location.split('?')[1] : '';
+    const params = new URLSearchParams(fromWindow || fromLocation);
+    const id = Number(params.get('id') || params.get('order'));
+    return Number.isFinite(id) && id > 0 ? id : null;
+  })();
+
   const { data: orders, isLoading } = useQuery({
     queryKey: ['adminOrders', activeTab],
     queryFn: async () => {
@@ -51,6 +62,34 @@ export default function AdminOrders() {
       return res.json();
     },
   });
+
+  const { data: deepLinkOrder } = useQuery({
+    queryKey: ['adminOrderDetail', 'deeplink', deepLinkId],
+    queryFn: async () => {
+      if (!deepLinkId) return null;
+      const res = await fetch(`/api/admin/orders/${deepLinkId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    },
+    enabled: !!deepLinkId && !!token && !selectedOrder,
+  });
+
+  useEffect(() => {
+    if (!deepLinkId || selectedOrder) return;
+    if (deepLinkOrder?.id) {
+      setSelectedOrder(deepLinkOrder);
+      return;
+    }
+    const match = Array.isArray(orders) ? orders.find((order: any) => Number(order.id) === deepLinkId) : null;
+    if (match) setSelectedOrder(match);
+  }, [deepLinkId, deepLinkOrder, orders, selectedOrder]);
+
+  const closeOrderDetail = () => {
+    setSelectedOrder(null);
+    if (typeof window !== 'undefined' && (window.location.search.includes('id=') || window.location.search.includes('order='))) {
+      window.history.replaceState({}, '', '/admin/orders');
+    }
+  };
 
   const { data: orderDetail } = useQuery({
     queryKey: ['adminOrderDetail', selectedOrder?.id],
@@ -203,7 +242,7 @@ export default function AdminOrders() {
         </div>
 
         {/* Order Detail Dialog */}
-        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <Dialog open={!!selectedOrder} onOpenChange={(open) => { if (!open) closeOrderDetail(); }}>
           <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Order #{selectedOrder?.order_number?.slice(0, 8) || selectedOrder?.id}</DialogTitle>
@@ -289,11 +328,11 @@ export default function AdminOrders() {
                 )}
 
                 <div className="flex gap-2">
-                  <Button className="flex-1" onClick={() => { setStatusDialogOrder(selectedOrder); setNewStatus(orderDetail.status); setSelectedOrder(null); }}>
+                  <Button className="flex-1" onClick={() => { setStatusDialogOrder(selectedOrder); setNewStatus(orderDetail.status); closeOrderDetail(); }}>
                     Update Status
                   </Button>
                   {!orderDetail.deposit_paid && orderDetail.total > 0 && (
-                    <Button variant="outline" onClick={() => { setPaymentLinkDialogOrder(selectedOrder); setSelectedOrder(null); }}>
+                    <Button variant="outline" onClick={() => { setPaymentLinkDialogOrder(selectedOrder); closeOrderDetail(); }}>
                       <Link2 className="h-4 w-4 mr-1" /> Send Payment Link
                     </Button>
                   )}
