@@ -212,8 +212,13 @@ export function normalizeV5ProductRecord(product) {
   const productId = resolveV5ProductId(product?.id, product?.name);
   if (!productId) return product;
   const pricing = V5_PRODUCT_PRICING[productId];
+  const savedOptions = product?.sizePriceOptions ?? product?.size_price_options;
+  const sizeImages = new Map((Array.isArray(savedOptions) ? savedOptions : [])
+    .filter((entry) => typeof entry?.image === 'string' && entry.image.trim())
+    .map((entry) => [entry.key || entry.size || entry.label, entry.image.trim()]));
   const options = pricing.options.map((entry) => ({
     ...entry,
+    ...(sizeImages.has(entry.key) ? { image: sizeImages.get(entry.key) } : {}),
     isActive: shouldHidePhoenixYardBulkSize(productId, entry.label) ? false : entry.isActive !== false,
   }));
   return {
