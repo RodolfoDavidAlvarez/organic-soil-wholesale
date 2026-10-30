@@ -484,7 +484,7 @@ test("missing customer rows do not fail the insert", async () => {
   assert.equal(saved.coupon, null);
 });
 
-test("coupon helpers match the worm-castings QR style and 30-day window", () => {
+test("coupon helpers match the worm-castings QR style and 90-day window", () => {
   assert.equal(isSurveyCouponCode("SSW30-ABCD2EFG"), true);
   assert.equal(isSurveyCouponCode("SSW30-ABCD0EFG"), false);
   assert.equal(parseSurveyCouponQrRequest("SSW30-ABCD2EFG.png")?.code, "SSW30-ABCD2EFG");
@@ -492,9 +492,9 @@ test("coupon helpers match the worm-castings QR style and 30-day window", () => 
   assert.equal(surveyCouponQrPath("ssw30-abcd2efg"), "/api/public/survey-coupon/qr/SSW30-ABCD2EFG.png");
   assert.equal(
     surveyCouponExpiresAt(new Date("2026-08-19T17:00:00.000Z")).toISOString(),
-    "2026-09-18T17:00:00.000Z",
+    "2026-11-17T17:00:00.000Z",
   );
-  assert.equal(SURVEY_COUPON_VALID_DAYS, 30);
+  assert.equal(SURVEY_COUPON_VALID_DAYS, 90);
   const publicCoupon = buildPublicSurveyCoupon({
     first_name: "Jordan",
     email: "jordan@example.com",
