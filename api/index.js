@@ -4772,7 +4772,7 @@ ${pages}
       return res.status(200).send(svg);
     }
 
-    const surveyQrMatch = path.match(/^\/api\/public\/survey-coupon\/qr\/(SSW30-[A-HJ-NP-Z2-9]{8})\.(svg|png)$/i);
+    const surveyQrMatch = path.match(/^\/api\/public\/survey-coupon\/qr\/((?:SSWBAG|SSW30)-[A-HJ-NP-Z2-9]{8})\.(svg|png)$/i);
     if (surveyQrMatch && req.method === 'GET') {
       const { buildSurveyCouponQr, sendSurveyCouponQr } = await import('../shared/surveyCouponQr.js');
       const db = await getSupabase();

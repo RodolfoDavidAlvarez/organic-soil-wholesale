@@ -13,6 +13,12 @@ import { usePhoneNumberLock } from "@/hooks/usePhoneNumberLock";
 import { trackEvent } from "@/lib/analytics";
 import { readSurveyPrefill } from "@shared/surveySources.js";
 
+type SurveyBagCode = {
+  code: string;
+  qrUrl: string;
+  redeemedAt?: string | null;
+};
+
 const FIELD_CLASS = "h-14 min-h-14 w-full rounded-2xl border-[#e4d8c0] bg-white px-4 text-base text-[#264027]";
 const TEXTAREA_CLASS = "min-h-[140px] w-full rounded-2xl border-[#e4d8c0] bg-white px-4 py-3 text-base leading-6 text-[#264027]";
 
@@ -95,6 +101,7 @@ export default function ClientSurvey() {
   const advanceTimer = useRef<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [bagCode, setBagCode] = useState<SurveyBagCode | null>(null);
   const [error, setError] = useState("");
   const hasPrefill = Boolean(identityPrefill.firstName || identityPrefill.email);
   const stepIndex = STEPS.indexOf(step);
@@ -176,6 +183,13 @@ export default function ClientSurvey() {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "We could not save your answers.");
       trackEvent("Client Survey Submitted", { source: surveySource() });
+      if (body.coupon?.code && body.coupon?.qrUrl) {
+        setBagCode({
+          code: body.coupon.code,
+          qrUrl: body.coupon.qrUrl,
+          redeemedAt: body.coupon.redeemedAt || null,
+        });
+      }
       setSuccess(true);
     } catch (submitError: unknown) {
       const message = submitError instanceof Error ? submitError.message : "";
@@ -214,7 +228,22 @@ export default function ClientSurvey() {
               <h1 className="mt-6 font-heading text-[2rem] font-bold leading-none">Thank you.</h1>
               <p className="mt-5 text-lg font-semibold leading-7">This one is on us.</p>
               <p className="mt-2 text-base leading-7 text-[#3d4a38]">
-                A free 50 pound dairy compost for your next visit. Tell the yard your name.
+                A free 50 pound dairy compost for your next visit.
+              </p>
+              {bagCode?.qrUrl ? (
+                <img
+                  src={bagCode.qrUrl}
+                  alt="Yard redemption code"
+                  width={220}
+                  height={220}
+                  className="mx-auto mt-6 h-52 w-52 bg-white"
+                />
+              ) : null}
+              {bagCode?.code ? (
+                <p className="mt-3 text-center font-mono text-sm tracking-[0.14em] text-[#264027]">{bagCode.code}</p>
+              ) : null}
+              <p className="mt-4 text-base leading-7 text-[#3d4a38]">
+                {bagCode?.redeemedAt ? "This bag was already handed out." : "Show this at the yard."}
               </p>
               <p className="mt-6 text-sm font-semibold uppercase tracking-[0.16em] text-[#b38a58]">
                 90 days to redeem
