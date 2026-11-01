@@ -299,6 +299,27 @@ footer {
   padding-bottom: 0;
 }
 
+@keyframes survey-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.survey-step {
+  animation: survey-rise 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .survey-step {
+    animation: none;
+  }
+}
+
 .garden-score-slider {
   -webkit-appearance: none;
   appearance: none;

@@ -217,25 +217,18 @@ export function normalizeV5ProductRecord(product) {
   const productId = resolveV5ProductId(product?.id, product?.name);
   if (!productId) return product;
   const pricing = V5_PRODUCT_PRICING[productId];
-  const existingOptions = Array.isArray(product?.size_price_options)
-    ? product.size_price_options
-    : Array.isArray(product?.sizePriceOptions)
-    ? product.sizePriceOptions
-    : [];
-  const existingByKey = new Map(
-    existingOptions
-      .map((entry) => [String(entry?.key || entry?.label || "").trim(), entry])
-      .filter(([key]) => key),
-  );
-  const options = pricing.options.map((entry) => {
-    const existing = existingByKey.get(entry.key) || existingByKey.get(entry.label);
-    const image = existing?.image || existing?.imageUrl || entry.image || undefined;
-    return {
-      ...entry,
-      ...(image ? { image } : {}),
-      isActive: shouldHidePhoenixYardBulkSize(productId, entry.label) ? false : entry.isActive !== false,
-    };
-  });
+  const savedOptions = product?.sizePriceOptions ?? product?.size_price_options;
+  const sizeImages = new Map((Array.isArray(savedOptions) ? savedOptions : [])
+    .filter((entry) => {
+      const image = entry?.image || entry?.imageUrl;
+      return typeof image === "string" && image.trim();
+    })
+    .map((entry) => [entry.key || entry.size || entry.label, String(entry.image || entry.imageUrl).trim()]));
+  const options = pricing.options.map((entry) => ({
+    ...entry,
+    ...(sizeImages.has(entry.key) || sizeImages.has(entry.label) ? { image: sizeImages.get(entry.key) || sizeImages.get(entry.label) } : {}),
+    isActive: shouldHidePhoenixYardBulkSize(productId, entry.label) ? false : entry.isActive !== false,
+  }));
   const publicName = productId === 111
     ? "PlantPal Plus"
     : (product?.displayTitle || product?.display_title || product?.name || pricing.name);

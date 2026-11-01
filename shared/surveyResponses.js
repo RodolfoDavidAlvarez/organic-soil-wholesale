@@ -27,14 +27,13 @@ export {
   surveyKindFromSource,
 };
 
-export const SURVEY_COUPON_LABEL = 'SSW survey thank-you';
-export const SURVEY_COUPON_OFFER = '30% off one item, one time, Phoenix yard pickup.';
-export const SURVEY_COUPON_RESTRICTIONS =
-  'Not the whole ticket. Not delivery. Not already-discounted workshop pallets.';
-export const SURVEY_COUPON_VALID_DAYS = 30;
-export const SURVEY_COUPON_PREFIX = 'SSW30-';
+export const SURVEY_COUPON_LABEL = 'Free 50 pound bag';
+export const SURVEY_COUPON_OFFER = 'One free 50 pound dairy compost for your next Phoenix yard visit.';
+export const SURVEY_COUPON_RESTRICTIONS = 'One bag. One time. Phoenix yard. Not delivery.';
+export const SURVEY_COUPON_VALID_DAYS = 90;
+export const SURVEY_COUPON_PREFIX = 'SSWBAG-';
 export const SURVEY_COUPON_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-export const SURVEY_COUPON_CODE_RE = /^SSW30-[A-HJ-NP-Z2-9]{8}$/;
+export const SURVEY_COUPON_CODE_RE = /^(?:SSWBAG|SSW30)-[A-HJ-NP-Z2-9]{8}$/;
 
 const YES_NO = new Set(['yes', 'no', 'not-sure']);
 export const GARDEN_CLASS_COME_AGAIN = new Set(['yes', 'maybe', 'no']);
@@ -93,9 +92,21 @@ function normalizeStringArray(value, maxItems = 12, maxLen = 80) {
   return out;
 }
 
-function yardScoreSummary(experienceScore, findingUsScore, comeBackScore) {
+function yardScoreScale(input) {
+  const raw = input?.scoreScale ?? input?.score_scale ?? input?.scores?.scale;
+  return Number(raw) === 5 ? 5 : 10;
+}
+
+function fitYardScore(score, scale) {
+  if (score == null) return null;
+  if (scale === 5 && score > 5) return null;
+  return score;
+}
+
+function yardScoreSummary(experienceScore, findingUsScore, comeBackScore, scale = 10) {
   if (experienceScore == null || findingUsScore == null || comeBackScore == null) return '';
-  return `Experience ${experienceScore}/10. Finding us ${findingUsScore}/10. Come back ${comeBackScore}/10.`;
+  const max = scale === 5 ? 5 : 10;
+  return `Experience ${experienceScore}/${max}. Finding us ${findingUsScore}/${max}. Come back ${comeBackScore}/${max}.`;
 }
 
 export function normalizeSurveyResponse(input = {}, extras = {}) {
@@ -114,15 +125,16 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
     input.comeAgain || input.come_again || input.wouldComeBack || input.would_come_back,
     40,
   ).toLowerCase();
+  const yardScale = isClass ? 10 : yardScoreScale(input);
   const experienceScore = isClass
     ? null
-    : pickClassScore(input, ['experienceScore', 'experience_score', 'experience']);
+    : fitYardScore(pickClassScore(input, ['experienceScore', 'experience_score', 'experience']), yardScale);
   const findingUsScore = isClass
     ? null
-    : pickClassScore(input, ['findingUs', 'finding_us']);
+    : fitYardScore(pickClassScore(input, ['findingUs', 'finding_us']), yardScale);
   const comeBackScore = isClass
     ? null
-    : pickClassScore(input, ['comeBack', 'come_back']);
+    : fitYardScore(pickClassScore(input, ['comeBack', 'come_back']), yardScale);
   const workedWell = isClass ? [] : normalizeStringArray(input.workedWell || input.worked_well);
   const improveMost = isClass ? '' : trimText(input.improveMost || input.improve_most, 80);
   const findingUs = findingUsScore != null ? String(findingUsScore) : '';
@@ -134,7 +146,7 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
   const notes = isClass
     ? trimText(input.notes || input.comment || input.visitFeedback || input.visit_feedback, 500)
     : trimText(input.notes || input.comment, 500);
-  const scoreSummary = yardScoreSummary(experienceScore, findingUsScore, comeBackScore);
+  const scoreSummary = yardScoreSummary(experienceScore, findingUsScore, comeBackScore, yardScale);
   const visitFeedback = isClass
     ? notes
     : scoreSummary || trimText(input.visitFeedback || input.visit_feedback || input.q1, 500);
@@ -185,6 +197,7 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
           findingUs: findingUsScore,
           comeBack: comeBackScore,
           improveMost,
+          ...(yardScale === 5 ? { scale: 5 } : {}),
         }),
     surveyKind: surveyKindFromSource(source),
     eventKey,
@@ -269,7 +282,7 @@ export function surveyCouponQrPath(code) {
 }
 
 export function parseSurveyCouponQrRequest(fileName) {
-  const match = String(fileName || '').trim().match(/^(SSW30-[A-HJ-NP-Z2-9]{8})\.(png|svg)$/i);
+  const match = String(fileName || '').trim().match(/^((?:SSWBAG|SSW30)-[A-HJ-NP-Z2-9]{8})\.(png|svg)$/i);
   if (!match) return null;
   return { code: match[1].toUpperCase(), format: match[2].toLowerCase() };
 }
@@ -315,15 +328,25 @@ async function findCustomerId(db, email) {
   }
 }
 
-export async function findSurveyCouponByEmail(db, email) {
+export function isOpenBagCoupon(row, now = new Date()) {
+  const code = String(row?.coupon_code || '');
+  if (!code.startsWith(SURVEY_COUPON_PREFIX)) return false;
+  if (row?.coupon_redeemed_at) return false;
+  const expires = row?.coupon_expires_at ? new Date(row.coupon_expires_at) : null;
+  if (!expires || Number.isNaN(expires.getTime())) return false;
+  return expires.getTime() >= now.getTime();
+}
+
+export async function findSurveyCouponByEmail(db, email, now = new Date()) {
   const { data, error } = await db
     .from('sp_survey_responses')
     .select(COUPON_SELECT)
     .eq('email_normalized', email)
     .not('coupon_code', 'is', null)
-    .limit(1);
+    .order('created_at', { ascending: false })
+    .limit(20);
   if (error) throw error;
-  return data?.[0] || null;
+  return (data || []).find((row) => isOpenBagCoupon(row, now)) || null;
 }
 
 export async function findSurveyCouponByCode(db, code) {
@@ -426,8 +449,7 @@ export async function saveSurveyResponse({
     return { response: saved, coupon: null };
   }
 
-  const existingCoupon = await findSurveyCouponByEmail(db, response.email);
-
+  const existingCoupon = await findSurveyCouponByEmail(db, response.email, now);
   if (existingCoupon?.coupon_code) {
     const { saved, error } = await insertSurveyRow(db, surveyRow(response, customerId));
     if (error) throw error;
@@ -449,13 +471,17 @@ export async function saveSurveyResponse({
         coupon: buildPublicSurveyCoupon(saved, { reused: false }),
       };
     }
-    if (isUniqueViolation(error, 'sp_survey_responses_one_coupon_per_email_idx')) {
+    if (
+      isUniqueViolation(error, 'sp_survey_responses_one_open_coupon_per_email_idx')
+      || isUniqueViolation(error, 'sp_survey_responses_one_coupon_per_email_idx')
+    ) {
+      const issued = await findSurveyCouponByEmail(db, response.email, now);
+      if (!issued?.coupon_code) throw error;
       const { saved: repeat, error: repeatError } = await insertSurveyRow(
         db,
         surveyRow(response, customerId),
       );
       if (repeatError) throw repeatError;
-      const issued = await findSurveyCouponByEmail(db, response.email);
       return {
         response: repeat,
         coupon: buildPublicSurveyCoupon(issued, { reused: true }),
@@ -467,5 +493,5 @@ export async function saveSurveyResponse({
     throw error;
   }
 
-  throw new Error('Could not issue a unique yard coupon.');
+  throw new Error('Could not save the survey');
 }

@@ -2336,6 +2336,7 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         unit: typeof s.unit === 'string' ? s.unit : undefined,
         msrp: typeof s.msrp === 'string' ? s.msrp : undefined,
         isActive,
+        ...(typeof s.image === 'string' && s.image.trim() ? { image: s.image.trim() } : {}),
       };
     };
 
@@ -4771,7 +4772,7 @@ ${pages}
       return res.status(200).send(svg);
     }
 
-    const surveyQrMatch = path.match(/^\/api\/public\/survey-coupon\/qr\/(SSW30-[A-HJ-NP-Z2-9]{8})\.(svg|png)$/i);
+    const surveyQrMatch = path.match(/^\/api\/public\/survey-coupon\/qr\/((?:SSWBAG|SSW30)-[A-HJ-NP-Z2-9]{8})\.(svg|png)$/i);
     if (surveyQrMatch && req.method === 'GET') {
       const { buildSurveyCouponQr, sendSurveyCouponQr } = await import('../shared/surveyCouponQr.js');
       const db = await getSupabase();
@@ -4804,7 +4805,7 @@ ${pages}
     // POST /api/survey and /api/survey/submit - CSAT / yard / class feedback.
     // Also accept /api/public/survey and /api/surveys (those 404'd in prod).
     // One table: sp_survey_responses. Never writes newsletter_subscribed.
-    // After a successful save, ping staff internally. Never email the customer here.
+    // After a successful save, ping staff internally and email the customer their bag code.
     if (isSurveySubmitPostPath(path) && req.method === 'POST') {
       try {
         const result = await processSurveySubmission({
