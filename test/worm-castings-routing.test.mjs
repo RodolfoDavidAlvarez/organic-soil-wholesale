@@ -181,7 +181,8 @@ test('/free-worm-castings is expired: no public signup route, API returns 410', 
   assert.match(expired, /This offer is no longer available/);
   assert.doesNotMatch(expired, /Claim My Free Bag/);
   assert.doesNotMatch(expired, /newsletter\/subscribe/);
-  assert.match(instagram, /\/offers\?source=instagram-bio/);
+  assert.match(instagram, /"\/offers"/);
+  assert.match(instagram, /\$\{channel\}-bio/);
   assert.doesNotMatch(instagram, /Free community gift/);
   assert.match(campaign, /WORM_CASTINGS_PUBLIC_SIGNUP_OPEN = false/);
   assert.match(api, /status\(410\)/);

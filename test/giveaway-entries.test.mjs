@@ -173,6 +173,7 @@ test('old giveaway URLs offer community updates, not new entries', async () => {
   assert.match(form, /api\/newsletter\/subscribe/);
   assert.match(form, /entries are closed/);
   assert.match(form, /Keep Growing With Us/);
-  assert.match(social, /"\/keep-growing"/);
+  assert.match(social, /"\/newsletter"/);
+  assert.doesNotMatch(social, /"\/keep-growing"/);
   assert.doesNotMatch(social, /Enter now|Enter the Big Garden Giveaway|Free entry/);
 });
