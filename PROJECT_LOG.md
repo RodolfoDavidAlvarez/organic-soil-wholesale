@@ -272,3 +272,6 @@ Three test BOLs with different scenarios:
 - Product images: `/uploads/products/{id}/gallery-{n}/`
 - Size category images: `/images/categories/sizes/`
 - Optimized images: `/images/optimized/`
+
+## 2026-10-29 — Simon’s Gold 1 CF studio image
+Owner approved studio render. Stored in shared SSW Supabase email-assets and content_library_assets under One Cubic Foot Bag — Realistic Studio Render, product 1000 / size 1cf. Product size_price_options image saved without pricing changes. Added product-specific presentation for size selection and order entry.

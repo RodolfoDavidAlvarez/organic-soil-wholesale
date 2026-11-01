@@ -117,6 +117,7 @@ type ApiProduct = {
 };
 
 type PriceTier = {
+  image?: string;
   size: string;
   price: number;
   msrp: number | null;
@@ -606,7 +607,7 @@ const STUDIO_CF_BAG: Record<number, string> = {
 const imageForChoice = (choice: SizeChoice, fallback: string, productId?: number) => {
   const studio = productId != null ? STUDIO_CF_BAG[productId] : "";
   if (studio && choice.kind === "single" && isOneOrOneHalfCf(choice.size)) return studio;
-  return SIZE_CATEGORY_PHOTO[choice.size] || fallback;
+  return choice.image || SIZE_CATEGORY_PHOTO[choice.size] || fallback;
 };
 
 /** Flatbed isn't a product SKU — customers pick bag/pallet/tote and fill the load. */
@@ -645,7 +646,7 @@ const parsePriceTiers = (raw: unknown): PriceTier[] => {
       const msrp = parseDollars(opt.msrp);
       const unit = (opt.unit || opt.description || "").toString().trim();
       const qty = extractQty(size);
-      return { size, price, msrp, unit, qty };
+      return { size, price, msrp, unit, qty, image: typeof opt.image === "string" ? opt.image : undefined };
     })
     .filter((t): t is PriceTier => t !== null);
 };
@@ -720,6 +721,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
       secondaryPriceLabel,
       image:
         (STUDIO_CF_BAG[product.id] && isOneOrOneHalfCf(tier.size) ? STUDIO_CF_BAG[product.id] : "") ||
+        tier.image ||
         SIZE_CATEGORY_PHOTO[key] ||
         SIZE_CATEGORY_PHOTO[tier.size] ||
         product.imageUrl ||
@@ -1234,6 +1236,7 @@ const ProductDetail = () => {
       product.imageUrl,
       product.texturePhotoUrl,
       ...product.additionalImages,
+      ...product.priceTiers.map((tier) => tier.image),
     ]
       .filter((u): u is string => Boolean(u?.trim()))
       .filter((url) => !isBlockedGalleryImage(product.id, url));
@@ -1686,6 +1689,7 @@ const ProductDetail = () => {
         isOneOrOneHalfCf(selectedChoice.size)
           ? STUDIO_CF_BAG[product.id]
           : HERO_BAG_PHOTO[product.id]) ||
+        selectedChoice.image ||
         product.imageUrl ||
         product.texturePhotoUrl,
       sizeImage: imageForChoice(selectedChoice, "", product.id) || undefined,

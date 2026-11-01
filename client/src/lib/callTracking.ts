@@ -45,15 +45,36 @@ function applyPhoneLink(link: HTMLAnchorElement, phone: UsPhone, updateText: boo
   else if (!textNode) replaceVisiblePhoneText(link, phone.display);
 }
 
-/** Keep a CallRail replacement's visible number, dial target, and accessible label aligned. */
+const CALL_TRACKING_BLOCK_SELECTOR =
+  "[data-callrail-ignore], [data-dynamic-number-ignore], [data-call-tracking-ignore], [data-calltrk-noswap], .no-call-tracking";
+
+/** True when this link must stay on the official number instead of a CallRail swap. */
+function callTrackingIsBlocked(link: HTMLAnchorElement): boolean {
+  if (
+    typeof window !== "undefined" &&
+    isCallTrackingExcludedPath(window.location.pathname, window.location.search)
+  ) {
+    return true;
+  }
+  return Boolean(link.closest(CALL_TRACKING_BLOCK_SELECTOR));
+}
+
+/**
+ * Keep a CallRail replacement's visible number, dial target, and accessible label aligned.
+ * Marketing pages keep the swapped tracking number. Excluded routes and opted-out links
+ * stay on the official support number.
+ */
 export function synchronizeTrackedSupportPhones(root: ParentNode = document): void {
   const official = { dial: CUSTOMER_SUPPORT_PHONE_DIAL, display: CUSTOMER_SUPPORT_PHONE_DISPLAY };
 
   root.querySelectorAll<HTMLAnchorElement>('a[href^="tel:"]').forEach((link) => {
-    if (link.hasAttribute("data-official-support-phone")) {
+    const blocked = callTrackingIsBlocked(link);
+    if (blocked && link.hasAttribute("data-official-support-phone")) {
       applyPhoneLink(link, official, true);
       return;
     }
+    if (blocked) return;
+
     const textNode = link.querySelector<HTMLElement>("[data-official-support-phone-text]");
     const textPhone = normalizeUsPhone(textNode?.textContent);
     const hrefPhone = normalizeUsPhone(link.getAttribute("href"));
@@ -66,6 +87,19 @@ export function synchronizeTrackedSupportPhones(root: ParentNode = document): vo
 
     applyPhoneLink(link, phone, true);
   });
+}
+
+/** Ask CallRail to scan again after a client-side route change onto a trackable page. */
+export function requestCallRailSourceSwap(): void {
+  if (typeof document === "undefined") return;
+  const swap = (
+    window as Window & { CallTrkSwap?: { startSourceSwap?: (root?: ParentNode) => void } }
+  ).CallTrkSwap;
+  try {
+    swap?.startSourceSwap?.(document.body);
+  } catch {
+    // The official number stays in place until CallRail's own scanner runs.
+  }
 }
 
 /**
@@ -106,11 +140,13 @@ export function setDocumentCallTrackingExclusion(excluded: boolean): void {
       el.setAttribute("data-callrail-ignore", "true");
       el.setAttribute("data-dynamic-number-ignore", "true");
       el.setAttribute("data-call-tracking-ignore", "true");
+      el.setAttribute("data-calltrk-noswap", "true");
       el.classList.add("no-call-tracking");
     } else {
       el.removeAttribute("data-callrail-ignore");
       el.removeAttribute("data-dynamic-number-ignore");
       el.removeAttribute("data-call-tracking-ignore");
+      el.removeAttribute("data-calltrk-noswap");
       el.classList.remove("no-call-tracking");
     }
   }

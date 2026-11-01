@@ -78,15 +78,6 @@ export const OMRI_CERTIFICATES: OmriCertificate[] = [
     image: "/documents/certifications/omri/images/web/ssw-010.webp",
   },
   {
-    sswId: "SSW-011",
-    name: "PlantPal",
-    websiteId: 111,
-    websiteSlug: "plantpal",
-    goodThrough: "2025-06-01",
-    pdf: "/documents/certifications/omri/pdf/ssw-011.pdf",
-    image: "/documents/certifications/omri/images/web/ssw-011.webp",
-  },
-  {
     sswId: "SSW-015",
     name: "Oasis Blend",
     websiteId: 1010,

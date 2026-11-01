@@ -9,6 +9,8 @@ export function buildPurchaseThankYouEmail({
   pickupLabel,
   location,
   brandName,
+  orderNumber,
+  qrImageUrl,
 } = {}) {
   const customerBrand = brandName || 'Soil Seed and Water';
   const isRlsBrand = brandName === 'Regenerative Landscaper Supply';
@@ -27,6 +29,15 @@ export function buildPurchaseThankYouEmail({
   const pickupBlock = `<tr><td style="padding:24px 28px;text-align:center;">
     <p style="margin:0;color:#3f4d40;font-size:15px;line-height:1.65;">Your order is confirmed.${ready ? `<br><strong>Estimated ready:</strong> ${ready}` : ''}<br><strong>Location:</strong> ${yard}</p>
   </td></tr>`;
+  const safeOrderNumber = escapeHtml(String(orderNumber || '').trim());
+  const safeQr = escapeHtml(String(qrImageUrl || '').trim());
+  const qrBlock = safeOrderNumber && safeQr
+    ? `<tr><td style="padding:8px 28px 28px;text-align:center;">
+    <p style="margin:0 0 12px;color:#96703f;font-size:12px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;">Show this at pickup</p>
+    <img src="${safeQr}" alt="Order receipt QR" width="168" height="168" style="display:inline-block;width:168px;height:168px;border:1px solid #ded8ca;border-radius:12px;background:#fff">
+    <p style="margin:12px 0 0;color:#3f4d40;font-size:14px;">Order ${safeOrderNumber}</p>
+  </td></tr>`
+    : '';
 
   return {
     subject: number ? `Thank you. Your ${customerBrand} number is ${number}` : `Thank you for buying from ${customerBrand}`,
@@ -44,6 +55,7 @@ export function buildPurchaseThankYouEmail({
   </td></tr>
   ${numberBlock}
   ${pickupBlock}
+  ${qrBlock}
   <tr><td style="padding:22px 28px;background:#264027;text-align:center;color:#dce8d8;font-size:12px;line-height:1.6;">Questions? (623) 263-3386 &nbsp;·&nbsp; ${isRlsBrand ? 'Fulfilled by Organic Soil Wholesale · Soil Seed &amp; Water' : 'Soil Seed &amp; Water'}</td></tr>
 </table></td></tr></table></body></html>`,
   };

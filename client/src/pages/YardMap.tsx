@@ -52,7 +52,7 @@ const YardMap = () => {
                   <a
                     href={CUSTOMER_SUPPORT_PHONE_TEL}
                     data-official-support-phone="true"
-                    data-callrail-ignore="true"
+                    data-callrail-ignore="true" data-calltrk-noswap="true"
                     data-dynamic-number-ignore="true"
                     data-call-tracking-ignore="true"
                     className="no-call-tracking"

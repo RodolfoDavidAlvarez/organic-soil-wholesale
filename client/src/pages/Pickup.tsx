@@ -362,7 +362,7 @@ export default function Pickup() {
               <div className="mt-5 grid gap-2 text-sm font-semibold text-stone-700">
                 {[
                   "Order online before arriving",
-                  "Phoenix: bags of PlantPal, castings, compost & mulch",
+                  "Phoenix: bags of PlantPal Plus, castings, compost & mulch",
                   "Loose bulk: Simon's Gold & Nature's Blanket",
                 ].map((line) => (
                   <div key={line} className="flex items-center gap-2">

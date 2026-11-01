@@ -244,6 +244,7 @@ const Header = () => {
                       "data-callrail-ignore": "true",
                       "data-dynamic-number-ignore": "true",
                       "data-call-tracking-ignore": "true",
+                      "data-calltrk-noswap": "true",
                       className: phoneLinkClass,
                     }
                   : {
@@ -464,6 +465,7 @@ const Header = () => {
                             "data-callrail-ignore": "true",
                             "data-dynamic-number-ignore": "true",
                             "data-call-tracking-ignore": "true",
+                            "data-calltrk-noswap": "true",
                             className:
                               "no-call-tracking mb-3 flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-white text-[15px] font-semibold text-[#183a23] shadow-sm",
                           }
