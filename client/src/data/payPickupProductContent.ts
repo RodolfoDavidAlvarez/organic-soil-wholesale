@@ -38,7 +38,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     includes: ["Composted dairy manure"],
     benefits: ["Slow-release organic matter", "Improves soil structure", "Supports water conservation"],
     startingPriceContext: "for a 9 lb bag",
-    sizeSummaries: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)", "bulk pickup (per ton)", "truckload (~24 tons)"],
+    sizeSummaries: ["9 lb bag", "1 cu ft bag (~50 lb)", "super sack (~2,000 lb)", "bulk pickup (per ton)", "dump truck (6 tons)", "truckload (24 tons)"],
   },
   1001: {
     description:
