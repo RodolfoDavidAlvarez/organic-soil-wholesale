@@ -16,7 +16,21 @@ test('every social bio destination carries standard campaign attribution', async
   assert.match(page, /utm_campaign/);
   assert.match(page, /utm_content/);
   assert.match(page, /organic_social/);
-  assert.match(page, /garden_bed_bundle_2026/);
+  assert.match(page, /https:\/\/www\.organicsoilwholesale\.com\//);
+  assert.match(page, /https:\/\/soilseedandwater\.com\//);
+  assert.match(page, /"\/offers"/);
+  assert.match(page, /"\/newsletter"/);
+  assert.match(page, /"\/careers"/);
+  assert.doesNotMatch(page, /"\/careers\/sales"/);
+  assert.doesNotMatch(page, /garden-bed-offer/);
+  assert.doesNotMatch(page, /keep-growing/);
+  assert.doesNotMatch(page, /Fall garden bundles/);
+  assert.doesNotMatch(page, /garden_bed_bundle_2026/);
+  const buyLocal = page.indexOf('Buy Local');
+  const deals = page.indexOf('See Current Deals');
+  const newsletter = page.indexOf('Join our newsletter');
+  const hired = page.indexOf('Get hired');
+  assert.ok(buyLocal >= 0 && deals > buyLocal && newsletter > deals && hired > newsletter);
   for (const channel of ['instagram', 'facebook', 'tiktok', 'youtube']) {
     assert.match(page, new RegExp(`${channel}:`));
   }
