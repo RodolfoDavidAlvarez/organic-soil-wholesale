@@ -11,7 +11,7 @@ const MAIN_PRODUCT_IDS = PHOENIX_YARD_PICKUP_GRID_IDS;
 
 /** Graphic 3 / bag-in-context heroes — bag with soil & produce, white background. */
 const HERO_OVERRIDES: Record<number, string> = {
-  111: "/images/optimized/plantpal-with-veggies.jpg",
+  111: "/images/bundles/plantpal-15cf-illustration-640.webp",
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
   1000: "/images/optimized/simons-gold-bag-context.jpg",
   134: "/images/optimized/natures-blanket-bag-context.jpg",

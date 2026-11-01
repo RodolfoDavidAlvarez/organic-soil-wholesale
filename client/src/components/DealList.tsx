@@ -17,7 +17,9 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Pause, Play } from "lucide-react";
+import { ArrowRight, Pause, Play } from "lucide-react";
+import { bundleComparison, bundleGroupImages, comparisonPrice } from "@/data/bundlePresentation";
+import { getBundleDetails } from "@/data/bundleDetails";
 import { useEffect, useState, type ReactNode } from "react";
 
 export const fmtDealPrice = (value: number) => `$${value.toFixed(0)}`;
@@ -137,34 +139,27 @@ export function DealHubCards({
   layout?: "stack" | "carousel";
 }) {
   const cards = PROMO_BUNDLES.map((deal) => (
-    <Link key={deal.slug} href={`/offers/${deal.slug}`}>
+    <Link key={deal.slug} href={`/offers/${deal.slug}`} onClick={() => trackEvent(source === "homepage-bundles" ? "Homepage Bundle CTA Clicked" : "Deal Banner Clicked", { bundle: deal.slug, source })}>
       <a
-        aria-label={`${deal.title}, ${deal.bagLabel}, ${fmtDealPrice(deal.salePrice)} plus tax. Shop offer.`}
-        onClick={() =>
-          trackEvent(source === "homepage-bundles" ? "Homepage Bundle CTA Clicked" : "Deal Banner Clicked", {
-            bundle: deal.slug,
-            source,
-          })
-        }
-        className="relative block overflow-hidden rounded-[1.25rem] bg-[#153b22] shadow-[0_12px_28px_rgba(21,59,34,0.14)] ring-1 ring-[#183a23]/10 transition hover:shadow-[0_18px_40px_rgba(21,59,34,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a44f35] focus-visible:ring-offset-4"
+        aria-label={`${deal.title}, ${deal.bagLabel}, ${fmtDealPrice(deal.salePrice)} plus tax. View bundle.`}
+        className="group grid h-full overflow-hidden rounded-2xl bg-[#fffdf7] text-[#264027] shadow-[0_8px_24px_rgba(21,59,34,0.1)] ring-1 ring-[#183a23]/10 transition hover:-translate-y-1 hover:shadow-[0_14px_32px_rgba(21,59,34,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a44f35] focus-visible:ring-offset-4 sm:grid-cols-[1.1fr_1fr]"
       >
-        <img
-          src={deal.bannerImage}
-          alt={`${deal.title}: ${deal.bagLabel}, ${deal.volumeLabel}, ${fmtDealPrice(deal.salePrice)} plus tax.`}
-          width={1600}
-          height={646}
-          loading="lazy"
-          decoding="async"
-          className="pointer-events-none block h-auto w-full"
-        />
-        {deal.slug === "big-garden-setup" && (
-          <span className="absolute left-[5.3%] top-[65%] flex h-[6.8%] w-[11.1%] items-center justify-center bg-[#142315] text-center text-[clamp(5px,0.85vw,12px)] font-bold leading-none tracking-wider text-[#efce79]">
-            58 CU FT TOTAL
-          </span>
-        )}
-        <span className="absolute right-[5.2%] top-[57.4%] z-10 inline-flex h-[11.4%] min-h-8 min-w-[5rem] items-center justify-center rounded-full bg-[#f3ad2c] px-3 text-[clamp(0.5rem,1.55vw,1.05rem)] font-extrabold uppercase tracking-[0.06em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.22)] sm:min-h-11 sm:min-w-[9.75rem] sm:px-5">
-          Shop offer <span aria-hidden="true" className="ml-1.5 text-[1.05em] leading-none">›</span>
-        </span>
+        <div className="relative aspect-[2/1] overflow-hidden bg-[#dedede] sm:aspect-auto sm:min-h-[230px]">
+          <img src={bundleGroupImages[deal.slug]} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain sm:absolute sm:inset-0" />
+          {deal.slug !== "big-garden-setup" && <span className="absolute left-3 top-3 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white">{deal.slug === "garden-refresh" ? "3 dairy compost bags free" : "3 mulch bags free"}</span>}
+        </div>
+        <div className="flex flex-col items-start p-5 sm:p-6">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#74836a]">{deal.bagLabel} · Phoenix pickup</span>
+          <h3 className="mt-2 font-heading text-2xl font-semibold tracking-tight">{deal.title}</h3>
+          <p className="mt-2 text-sm leading-6 text-[#626b5d]">{getBundleDetails(deal.slug)?.summary}</p>
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <s className="text-sm font-semibold text-[#778271]">{comparisonPrice(bundleComparison[deal.slug])}</s>
+            <strong className="text-3xl font-bold tracking-tight">{fmtDealPrice(deal.salePrice)}</strong>
+            <span className="text-xs text-[#626b5d]">+ tax</span>
+          </div>
+          <span className="mt-2 rounded-full bg-[#f2d29b] px-3 py-1 text-xs font-bold text-[#264027]">Save {comparisonPrice(bundleComparison[deal.slug] - deal.salePrice)}</span>
+          <span className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-bold">Explore bundle <ArrowRight size={17} aria-hidden="true" /></span>
+        </div>
       </a>
     </Link>
   ));
@@ -182,7 +177,7 @@ function DealHubCarousel({ cards }: { cards: ReactNode[] }) {
   const [temporaryPause, setTemporaryPause] = useState(false);
 
   useEffect(() => {
-    if (!api || manualPause || temporaryPause) return;
+    if (!api || manualPause || temporaryPause || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(() => api.scrollNext(), 6500);
     return () => window.clearInterval(timer);
   }, [api, manualPause, temporaryPause]);

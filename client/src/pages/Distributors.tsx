@@ -8,11 +8,11 @@ import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/co
 
 const CORE_FOUR = [
   {
-    name: "PlantPal",
-    size: "1 cu ft bag",
+    name: "PlantPal Plus",
+    size: "1.5 cu ft bag",
     msrp: "$10.99",
     cost: "$5.50",
-    image: "/images/optimized/plantpal-with-veggies.jpg",
+    image: "/images/bundles/plantpal-15cf-illustration-640.webp",
   },
   {
     name: "Nature's Blanket Premium",
@@ -31,7 +31,7 @@ const CORE_FOUR = [
   {
     name: "Simon's Gold",
     size: "9 lb bag",
-    msrp: "$12.46",
+    msrp: "$6.95",
     cost: "$6.23",
     image: "/images/optimized/simons-gold-bag-context.jpg",
   },

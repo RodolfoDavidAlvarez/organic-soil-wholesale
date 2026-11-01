@@ -96,7 +96,7 @@ const Wholesale = () => {
       columns: ["MSRP", "Distributor", "Pallet (50)", "Tote (2.2 CY)", "Truckload (22)"],
       products: [
         { name: "Soil Craft Garden & Planter Blend", desc: "Organic Potting Soil", popular: true, cols: ["$15.99", "$8.00", "$399.75", "$359.78", "$7,123.55"] },
-        { name: "PlantPal", desc: "All-Stage Potting Mix", cols: ["$10.99", "$5.50", "$274.75", "$247.28", "$4,896.05"] },
+        { name: "PlantPal Plus", desc: "All-Stage Potting Mix", cols: ["$10.99", "$5.50", "$274.75", "$247.28", "$4,896.05"] },
         { name: "PropaGrow", desc: "Root Boosting Propagation Mix", cols: ["$10.99", "$5.50", "$274.75", "$247.28", "$4,896.05"] },
         { name: "PlugBoost", desc: "Seed Starter Mix", cols: ["$10.99", "$5.50", "$274.75", "$247.28", "$4,896.05"] },
       ],
@@ -115,7 +115,7 @@ const Wholesale = () => {
       subtitle: "9 lb bags | 144 per pallet | 1 CF bags | 50 per pallet",
       columns: ["9lb MSRP", "9lb Dist.", "Pallet (144)", "1CF MSRP", "1CF Dist.", "Tote"],
       products: [
-        { name: "Simon's Gold", desc: "All Natural Dairy Compost", popular: true, cols: ["$12.46", "$4.45", "$640.80", "$12.90", "$6.45", "$149.00"] },
+        { name: "Simon's Gold", desc: "All Natural Dairy Compost", popular: true, cols: ["$6.95", "$4.45", "$640.80", "$14.95", "$6.45", "$149.00"] },
         { name: "Mikey's Worm Poop", desc: "All Natural Worm Castings", cols: ["$18.10", "$6.45", "$928.80", "$19.70", "$9.85", "$399.00"] },
         { name: "Amazonian Dark Earth", desc: "Premium Biochar Soil Conditioner", cols: ["$20.58", "$7.35", "$1,058.40", "$24.90", "$12.45", "$459.00"] },
         { name: "Artemis Root Boost Blend", desc: "Mycorrhizal Root Stimulator", cols: ["$20.58", "$7.35", "$1,058.40", "$24.90", "$12.45", "$459.00"] },

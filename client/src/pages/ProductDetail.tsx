@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription, getPayPickupProductType } from "@/data/payPickupProductContent";
 import {
   cartItemAllowsPhoenixYardPickup,
+  isCongressOnlyBulkPickupProduct,
   isPayOnlineProduct,
   shouldHidePhoenixYardBulkSize,
 } from "@shared/phoenixYardPickup.js";
@@ -203,7 +204,7 @@ const fmt = (n: number): string => {
 const HERO_BAG_PHOTO: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg",
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
-  111: "/images/optimized/plantpal-with-veggies.jpg",
+  111: "/images/bundles/plantpal-15cf-illustration-640.webp",
   134: "/images/optimized/natures-blanket-bag-context.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
@@ -242,6 +243,13 @@ const BLOCKED_GALLERY_IMAGES: Record<number, Set<string>> = {
     "/images/optimized/ppl-7-5qt-texture.jpg",
     "/images/optimized/compost-texture-look.jpg",
     "/images/optimized/default-potting-soil-texture.jpg",
+    "/images/optimized/plantpal-with-veggies.jpg",
+    "/images/optimized/plantpal-bag-context.jpg",
+    "/images/optimized/plantpal-bag-context.webp",
+    "/images/optimized/plantpal-bag-in-context.jpg",
+    "/images/optimized/plantpal-bag-in-context-2.jpg",
+    "/images/bundles/plantpal-bag-640.webp",
+    "/images/bundles/plantpal-bag-320.webp",
   ]),
   3000: new Set(["/uploads/products/3000/gallery-1/1764113182186-ohei8u.webp"]),
 };
@@ -400,25 +408,33 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
   "2CF Bag": "/images/sizes/2cf-bag-single.png",
   "Pallet (25 x 2CF)": "/images/sizes/2cf-pallet.jpg",
   Tote: "/images/sizes/2-2cy-tote.png",
-  "Truckload (~24 tons)": "/images/size-formats/walking-floor-delivery.webp",
-  "Truckload (24 tons)": "/images/size-formats/walking-floor-delivery.webp",
+  "Dump Truck (6 tons)": "/images/size-formats/six-ton-dump-truck.webp",
+  "Truckload (~24 tons)": "/images/size-formats/walking-floor-delivery-v7.webp",
+  "Truckload (24 tons)": "/images/size-formats/walking-floor-delivery-v7.webp",
   "Truckload (22 pallets)": "/images/optimized/mixed-truckload-example.jpg",
   "Flatbed (22 pallets)": "/images/optimized/mixed-truckload-example.jpg",
   "Truckload (~60 cu yd)": "/images/size-formats/walking-floor-delivery.webp",
+  "Truckload (~64 cu yd)": "/images/size-formats/walking-floor-delivery-v7.webp",
   "Bulk Pickup": "/images/categories/sizes/CY of Bulk for pick only.png",
 };
 
 const productMsrpOverrides: Record<number, Record<string, { price: number; priceLabel?: string }>> = {
   1000: {
-    "1CF Bag": { price: 24.9 },
+    "9lb Bag": { price: 6.95 },
+    "1CF Bag": { price: 14.95 },
     Tote: { price: 149 },
-    "Truckload (~24 tons)": { price: 720 },
+    "Bulk Pickup": { price: 75 },
+    "Dump Truck (6 tons)": { price: 330 },
+    "Truckload (~24 tons)": { price: 1080 },
   },
   1001: {
     "Truckload (~24 tons)": { price: 4800 },
   },
   111: {
     "1.5CF Bag": { price: 10.99 },
+    "Dump Truck (6 tons)": { price: 660 },
+    "Truckload (~64 cu yd)": { price: 2160 },
+    "Truckload (~60 cu yd)": { price: 2160 },
   },
   3000: {
     "Truckload (22 pallets)": { price: 2700 },
@@ -433,15 +449,25 @@ const isPlantPalOrSoilCraftBag = (productId?: number | string) => {
   return id === 137 || id === 111;
 };
 
+const isSimonsGoldProduct = (productId?: number | string) => normalizeProductId(productId) === 1000;
+
 const isOneOrOneHalfCf = (size: string) => /1(?:\.5)?\s*(?:cf|cu\s*ft)/i.test(size);
+
+const isNinePoundBag = (size: string) => /9\s*lb/i.test(size);
 
 const categoryLabel = (size: string, productId?: number | string) => {
   const id = normalizeProductId(productId);
   if (size.includes("9lb")) return "9 lb Bag";
-  if (isOneOrOneHalfCf(size)) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
+  if (isOneOrOneHalfCf(size)) {
+    if (isPlantPalOrSoilCraftBag(productId)) return "1.5 cu ft Bag (~50 lb)";
+    // Simon's Gold 1 CF is sold as a cubic-foot bag; weight is approximate (~50 lb).
+    if (isSimonsGoldProduct(productId)) return "1 cu ft Bag (~50 lb)";
+    return "40 lb Bag (1 cu ft)";
+  }
   if (size.includes("2CF")) return "2 cu ft Bag (~60 lb)";
   if (size.includes("Tote")) return id === 137 || id === 111 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
   if (size.includes("Bulk Pickup")) return "Bulk Pickup";
+  if (/dump\s*truck/i.test(size)) return "Dump Truck (6 tons)";
   if (size.includes("Truckload") || size.includes("Bulk")) {
     // Flatbed pallet truckload (mixed bags/totes) — keep distinct from loose walking-floor.
     if (/pallet/i.test(size)) return size.includes("22") ? "Flatbed (22 pallets)" : "Flatbed truckload";
@@ -455,7 +481,9 @@ const categoryLabel = (size: string, productId?: number | string) => {
 const bagSizeMetricLabel = (size: string, productId?: number | string) => {
   if (size.includes("9lb") || size.includes("9 lb")) return "9 lb";
   if (isOneOrOneHalfCf(size)) {
-    return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft (~50 lb)" : "1 cu ft (~40–50 lb)";
+    if (isPlantPalOrSoilCraftBag(productId)) return "1.5 cu ft (~50 lb)";
+    if (isSimonsGoldProduct(productId)) return "1 cu ft (~50 lb approx.)";
+    return "1 cu ft (~40–50 lb)";
   }
   if (size.includes("2CF") || size.includes("2 cu")) return "2 cu ft (~60 lb)";
   return categoryLabel(size, productId);
@@ -480,12 +508,14 @@ const isLightVolumeMaterial = (productId: number) =>
 /** Loose walking-floor truckload — always one standardized 24-ton semi load. */
 const isLooseFullTruckload = (productId: number, size: string) =>
   /truckload/i.test(size) &&
-  !/pallet|flatbed/i.test(size) &&
+  !/pallet|flatbed|dump/i.test(size) &&
   (isTonBasisAmendment(productId) || isLightVolumeMaterial(productId));
 
-const looseTruckloadTonPrice = (price: number) => Number((price / 24).toFixed(2));
+const isDumpTruckLoad = (size: string) => /dump\s*truck/i.test(size);
 
-const isTruckloadCategoryKey = (key: string) => /truckload|flatbed/i.test(key);
+const looseTruckloadTonPrice = (price: number, tons = 24) => Number((price / tons).toFixed(2));
+
+const isTruckloadCategoryKey = (key: string) => /truckload|flatbed|dump/i.test(key);
 const isBulkPickupCategoryKey = (key: string) => /bulk pickup/i.test(key);
 const isFlatbedTruckloadKey = (key: string) => /flatbed|22 pallets/i.test(key);
 
@@ -503,11 +533,11 @@ const BULK_DUAL_UNITS: Record<
     truckloadVolume: string;
   }
 > = {
-  // Amendments — priced / sold by the ton.
+  // Amendments — priced / sold by the ton. V7 local pricing (Simon's Gold).
   1000: {
     pickupPrimaryUnit: "ton",
-    pickupSecondary: "$18 / cu yd equivalent",
-    truckloadSecondary: "$30 / ton",
+    pickupSecondary: "Congress Plant only · Mon–Fri 7 am–2:30 pm",
+    truckloadSecondary: "$45 / ton",
     truckloadVolume: "24-ton walking-floor semi",
   },
   1001: {
@@ -520,8 +550,9 @@ const BULK_DUAL_UNITS: Record<
   111: {
     pickupPrimaryUnit: "cu yd",
     pickupSecondary: "$200 / ton equivalent",
-    truckloadSecondary: "Est. 60 cu yd per truckload · $36/cu yd",
-    truckloadVolume: "24-ton walking-floor semi · est. 60 cu yd per truckload",
+    // Stored density 27.72 lb/ft³: 24 tons ≈ 64 cu yd, 6 tons ≈ 16 cu yd.
+    truckloadSecondary: "$90 / ton · about 64 cu yd · ~$34 / cu yd",
+    truckloadVolume: "24-ton walking-floor semi · about 64 cu yd",
   },
   137: {
     pickupPrimaryUnit: "cu yd",
@@ -553,12 +584,29 @@ const palletSizeForBag = (size: string, productId?: number | string) => {
 
 const singleCartLabelForSize = (size: string, productId?: number | string) => {
   if (size.includes("9lb")) return "9 lb Bag";
-  if (isOneOrOneHalfCf(size)) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
+  if (isOneOrOneHalfCf(size)) {
+    if (isPlantPalOrSoilCraftBag(productId)) return "1.5 cu ft Bag (~50 lb)";
+    if (isSimonsGoldProduct(productId)) return "1 cu ft Bag (~50 lb)";
+    return "40 lb Bag (1 cu ft)";
+  }
   if (size.includes("2CF")) return "2 cu ft Bag (~60 lb)";
   return categoryLabel(size, productId);
 };
 
-const imageForChoice = (choice: SizeChoice, fallback: string) => {
+const PLANTPAL_BAG_IMAGE = "/images/bundles/plantpal-15cf-illustration-640.webp";
+/** Same studio bags used on garden bundle OfferPage. */
+const SIMONS_GOLD_1CF_STUDIO_IMAGE = "/images/bundles/simons-gold-1cf-640.webp";
+const MIKEYS_WORM_1CF_STUDIO_IMAGE = "/images/bundles/mikeys-worm-poop-1cf-640.webp";
+
+const STUDIO_CF_BAG: Record<number, string> = {
+  1000: SIMONS_GOLD_1CF_STUDIO_IMAGE,
+  1001: MIKEYS_WORM_1CF_STUDIO_IMAGE,
+  111: PLANTPAL_BAG_IMAGE,
+};
+
+const imageForChoice = (choice: SizeChoice, fallback: string, productId?: number) => {
+  const studio = productId != null ? STUDIO_CF_BAG[productId] : "";
+  if (studio && choice.kind === "single" && isOneOrOneHalfCf(choice.size)) return studio;
   return choice.image || SIZE_CATEGORY_PHOTO[choice.size] || fallback;
 };
 
@@ -620,21 +668,32 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
     const pricing = priceForTier(product.id, tier);
     const key = categoryLabel(tier.size, product.id);
     const looseFullTruckload = isLooseFullTruckload(product.id, tier.size);
+    const dumpTruck = isDumpTruckLoad(tier.size) || isDumpTruckLoad(key);
     const bulkPickup = tier.size.includes("Bulk Pickup");
     const isTruckload =
+      dumpTruck ||
       /truckload|flatbed/i.test(tier.size) ||
       /truckload|flatbed/i.test(key) ||
       (tier.size.includes("Bulk") && !bulkPickup);
     const unitFromTier = /ton/i.test(tier.unit) ? "ton" : /cu\s*yd/i.test(tier.unit) ? "cu yd" : null;
     const pickupUnit = unitFromTier ?? dual?.pickupPrimaryUnit ?? "cu yd";
-    // Loose full loads: charge the full truck ($720 / $4800 / $1440), show $/ton as secondary.
+    // Loose full loads: charge the full truck, show $/ton as secondary.
     const displayPrice = pricing.price;
     const palletTruckload = isTruckload && isFlatbedTruckloadKey(key + " " + tier.size);
-    const tonEquivalent = looseFullTruckload ? looseTruckloadTonPrice(pricing.price) : null;
+    const tonEquivalent = dumpTruck
+      ? looseTruckloadTonPrice(pricing.price, 6)
+      : looseFullTruckload
+      ? looseTruckloadTonPrice(pricing.price, 24)
+      : null;
 
     let priceLabel = pricing.priceLabel;
     let secondaryPriceLabel: string | undefined;
-    if (looseFullTruckload) {
+    if (dumpTruck) {
+      priceLabel = pricing.priceLabel;
+      secondaryPriceLabel = product.id === 111
+        ? "$110 / ton · about 16 cu yd · freight additional"
+        : `$${tonEquivalent!.toFixed(0)} / ton · max 6 tons · freight additional`;
+    } else if (looseFullTruckload) {
       priceLabel = pricing.priceLabel;
       // Amendments: $/ton only. Light materials: ~60 cu yd conversion on the same 24-ton load.
       secondaryPriceLabel =
@@ -661,6 +720,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
       priceLabel,
       secondaryPriceLabel,
       image:
+        (STUDIO_CF_BAG[product.id] && isOneOrOneHalfCf(tier.size) ? STUDIO_CF_BAG[product.id] : "") ||
         tier.image ||
         SIZE_CATEGORY_PHOTO[key] ||
         SIZE_CATEGORY_PHOTO[tier.size] ||
@@ -673,8 +733,10 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
           kind: isTruckload || bulkPickup ? "bulk" : "single",
           displayLabel: palletTruckload
             ? "Flatbed delivery"
+            : dumpTruck
+            ? "Dump truck"
             : looseFullTruckload || key.includes("Truckload")
-            ? "Loose truckload"
+            ? "24-ton truckload"
             : bulkPickup
             ? `Per ${pickupUnit}`
             : key.includes("Super Sack")
@@ -682,6 +744,10 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
             : "Single bag",
           subLabel: palletTruckload
             ? "22 pallet spots"
+            : dumpTruck
+            ? product.id === 111
+              ? "About 16 cu yd · freight additional"
+              : "Up to 6 tons · freight additional"
             : looseFullTruckload || key.includes("Truckload")
             ? dual?.truckloadVolume ?? "24-ton walking-floor semi"
             : bulkPickup
@@ -691,16 +757,18 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
               : bagMetric,
           cartLabel: palletTruckload
             ? "Flatbed (22 pallets)"
+            : dumpTruck
+            ? "Dump Truck (6 tons)"
             : looseFullTruckload
             ? "Truckload (24 tons)"
             : bulkPickup
             ? `Bulk Pickup (${pickupUnit})`
-            : key.includes("Truckload") || key.includes("Flatbed") || key.includes("Super Sack")
+            : key.includes("Truckload") || key.includes("Flatbed") || key.includes("Dump") || key.includes("Super Sack")
             ? key
             : singleCartLabelForSize(tier.size, product.id),
           displayPrice,
           secondaryPriceLabel,
-          unit: looseFullTruckload || palletTruckload
+          unit: dumpTruck || looseFullTruckload || palletTruckload
             ? "per truckload"
             : bulkPickup
             ? `per ${pickupUnit}`
@@ -901,9 +969,8 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "potting mix Arizona",
     ],
     guideImages: [
-      "/images/optimized/plantpal-with-veggies.jpg",
+      "/images/bundles/plantpal-15cf-illustration-640.webp",
       "/images/optimized/plantpal-new-graphics-2-lifestyle.jpg",
-      "/images/optimized/plantpal-bag-context.jpg",
       "/images/optimized/plantpal-bestfor.jpg",
     ],
   },
@@ -1116,6 +1183,38 @@ const ProductDetail = () => {
 
   const productDetailContent = product ? PRODUCT_DETAIL_CONTENT[product.id] : undefined;
 
+  const sizeCategories = useMemo(() => product ? buildSizeCategories(product) : [], [product]);
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
+  const [selectedChoiceSize, setSelectedChoiceSize] = useState("");
+  const selectedCategory = useMemo(
+    () => sizeCategories.find((category) => category.key === selectedCategoryKey),
+    [selectedCategoryKey, sizeCategories],
+  );
+  const needsChoice = (selectedCategory?.choices.length ?? 0) > 1;
+  const selectedChoice = useMemo(
+    () => selectedCategory?.choices.find((choice) => choice.size === selectedChoiceSize) ??
+      (needsChoice ? undefined : selectedCategory?.choices[0]),
+    [needsChoice, selectedCategory, selectedChoiceSize],
+  );
+  // Hero follows the size row immediately (including before bag vs pallet).
+  const studioCfBag = product ? STUDIO_CF_BAG[product.id] || "" : "";
+  const bagSizeRowOpen =
+    Boolean(studioCfBag) &&
+    Boolean(selectedCategoryKey) &&
+    (!selectedChoice || selectedChoice.kind !== "pallet");
+  const showCfStudio =
+    bagSizeRowOpen &&
+    (isOneOrOneHalfCf(selectedChoice?.size || "") || isOneOrOneHalfCf(selectedCategoryKey));
+  const showNineLbBag =
+    bagSizeRowOpen &&
+    (product?.id === 1000 || product?.id === 1001) &&
+    (isNinePoundBag(selectedChoice?.size || "") || isNinePoundBag(selectedCategoryKey));
+  const sizeHero = showCfStudio
+    ? studioCfBag
+    : showNineLbBag
+    ? SIZE_CATEGORY_PHOTO["9lb Bag"] || selectedCategory?.image || ""
+    : "";
+
   // --- Gallery ---
   type GalleryItem = { type: "image"; url: string } | { type: "video"; url: string; videoId: string };
 
@@ -1130,7 +1229,15 @@ const ProductDetail = () => {
     // page MUST use the same override or the hero will not match the card the
     // customer just tapped.
     const heroBagOverride = HERO_BAG_PHOTO[product.id];
-    const productPhotos = [heroBagOverride, product.imageUrl, product.texturePhotoUrl, ...product.additionalImages, ...product.priceTiers.map((tier) => tier.image)]
+    const selectedBagHero = sizeHero || heroBagOverride;
+    const productPhotos = [
+      selectedBagHero,
+      ...(sizeHero ? [heroBagOverride] : []),
+      product.imageUrl,
+      product.texturePhotoUrl,
+      ...product.additionalImages,
+      ...product.priceTiers.map((tier) => tier.image),
+    ]
       .filter((u): u is string => Boolean(u?.trim()))
       .filter((url) => !isBlockedGalleryImage(product.id, url));
 
@@ -1164,7 +1271,7 @@ const ProductDetail = () => {
     });
 
     return items;
-  }, [product]);
+  }, [product, sizeHero]);
 
   const heroImage = galleryItems.find((i) => i.type === "image")?.url ?? null;
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -1318,13 +1425,6 @@ const ProductDetail = () => {
     return product.priceTiers.find((tier) => isBagTier(tier) && tier.msrp) ?? product.priceTiers.find((tier) => tier.msrp) ?? null;
   }, [product?.priceTiers]);
 
-  const sizeCategories = useMemo(() => {
-    if (!product) return [];
-    return buildSizeCategories(product);
-  }, [product]);
-
-  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
-  const [selectedChoiceSize, setSelectedChoiceSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const [callbackOpen, setCallbackOpen] = useState(false);
@@ -1334,12 +1434,6 @@ const ProductDetail = () => {
   const [deliveryRoughAccess, setDeliveryRoughAccess] = useState(false);
   const [deliverySemiAccess, setDeliverySemiAccess] = useState(true);
 
-  const selectedCategory = useMemo(
-    () => sizeCategories.find((category) => category.key === selectedCategoryKey),
-    [selectedCategoryKey, sizeCategories]
-  );
-
-  const needsChoice = (selectedCategory?.choices.length ?? 0) > 1;
   /** Drill-down chain: sizes → sub-options (if any) → configure (qty / delivery / CTAs). */
   const buyStep: "sizes" | "subchoice" | "configure" = !selectedCategory
     ? "sizes"
@@ -1360,20 +1454,6 @@ const ProductDetail = () => {
   const isFlatbedCategorySelected = Boolean(
     selectedCategory && isFlatbedTruckloadKey(selectedCategory.key),
   );
-  const selectedChoice = useMemo(
-    () =>
-      selectedCategory?.choices.find((choice) => choice.size === selectedChoiceSize) ??
-      (needsChoice ? undefined : selectedCategory?.choices[0]),
-    [needsChoice, selectedCategory, selectedChoiceSize]
-  );
-
-  useEffect(() => {
-    const image = selectedChoice?.image || selectedCategory?.choices.find((choice) => choice.kind === "single")?.image;
-    if (!image) return;
-    const index = galleryItems.findIndex((item) => item.type === "image" && item.url === image);
-    if (index >= 0) setActiveGalleryIndex(index);
-  }, [selectedChoice?.image, selectedCategory, galleryItems]);
-
   const selectedAddsFlatbedSpots = selectedChoice
     ? spotsForFormat(selectedChoice.cartLabel, quantity) > 0
     : isFlatbedCategorySelected;
@@ -1399,6 +1479,10 @@ const ProductDetail = () => {
         format: selectedChoice?.cartLabel || selectedCategory?.key || "",
       })
     : false;
+  const congressOnlyBulkPickup = Boolean(
+    product && isBulkPickupSelected && isCongressOnlyBulkPickupProduct(product.id),
+  );
+  const showPhoenixPickupYard = phoenixYardPickupOk && !congressOnlyBulkPickup;
   const pendingFlatbedSpots = selectedChoice ? spotsForFormat(selectedChoice.cartLabel, quantity) : 0;
 
   const scrollBuyIntoView = useCallback(() => {
@@ -1502,6 +1586,13 @@ const ProductDetail = () => {
     setDeliverySemiAccess(true);
   }, [product?.id]);
 
+  // Keep the main gallery on the bag that matches the selected Simon's / PlantPal size.
+  useEffect(() => {
+    if (showCfStudio || showNineLbBag) {
+      setActiveGalleryIndex(0);
+    }
+  }, [showCfStudio, showNineLbBag, selectedCategoryKey, selectedChoiceSize]);
+
   useEffect(() => {
     if (!isTruckloadSelected) {
       setDeliveryQuote(null);
@@ -1592,8 +1683,16 @@ const ProductDetail = () => {
       unitsPerPallet: selectedChoice.kind === "pallet" ? selectedChoice.qty : undefined,
       unit: selectedChoice.unit || "per unit",
       mode: canPayOnline ? "pay" : "quote",
-      imageUrl: HERO_BAG_PHOTO[product.id] || product.imageUrl || product.texturePhotoUrl,
-      sizeImage: selectedChoice.image || SIZE_CATEGORY_PHOTO[selectedChoice.size] || undefined,
+      imageUrl:
+        (STUDIO_CF_BAG[product.id] &&
+        selectedChoice.kind === "single" &&
+        isOneOrOneHalfCf(selectedChoice.size)
+          ? STUDIO_CF_BAG[product.id]
+          : HERO_BAG_PHOTO[product.id]) ||
+        selectedChoice.image ||
+        product.imageUrl ||
+        product.texturePhotoUrl,
+      sizeImage: imageForChoice(selectedChoice, "", product.id) || undefined,
     };
   }, [canPayOnline, product, quantity, selectedChoice]);
 
@@ -2104,9 +2203,9 @@ const ProductDetail = () => {
                                 {fulfillmentMode === "loose_truckload"
                                   ? "Standardized semi load. Enter ZIP below for delivery pricing."
                                   : fulfillmentMode === "bulk_pickup"
-                                  ? phoenixYardPickupOk
+                                  ? showPhoenixPickupYard
                                     ? "Load at the yard — pick Phoenix or Congress at checkout."
-                                    : "Loose bulk is not loading at Phoenix. Choose Congress pickup or delivery at checkout."
+                                    : "Loose bulk pickup is at the Congress Plant only."
                                   : phoenixYardPickupOk
                                     ? "Pay online, then pick up at the Phoenix yard."
                                     : "Phoenix yard is not loading this product right now. Choose delivery or Congress pickup at checkout."}
@@ -2133,6 +2232,14 @@ const ProductDetail = () => {
                                 onClick={() => {
                                   setSelectedCategoryKey(category.key);
                                   setSelectedChoiceSize("");
+                                  // Update main photo as soon as the size row is tapped
+                                  // (1 CF has bag+pallet, so don't wait for a single-choice auto-select).
+                                  if (
+                                    STUDIO_CF_BAG[product.id] &&
+                                    (isOneOrOneHalfCf(category.key) || isNinePoundBag(category.key))
+                                  ) {
+                                    setActiveGalleryIndex(0);
+                                  }
                                   setQuantity(1);
                                   setDeliveryQuote(null);
                                   trackEvent("Product Size Selected", {
@@ -2231,7 +2338,7 @@ const ProductDetail = () => {
                                 )
                                 .map((choice) => {
                                 const isSelected = choice.size === selectedChoiceSize;
-                                const choiceImage = imageForChoice(choice, selectedCategory.image);
+                                const choiceImage = imageForChoice(choice, selectedCategory.image, product.id);
                                 return (
                                   <button
                                     key={choice.size}
@@ -2239,6 +2346,13 @@ const ProductDetail = () => {
                                     onClick={() => {
                                       if (isSelected && buyStep === "configure") return;
                                       setSelectedChoiceSize(choice.size);
+                                      if (
+                                        choice.kind === "single" &&
+                                        STUDIO_CF_BAG[product.id] &&
+                                        (isOneOrOneHalfCf(choice.size) || isNinePoundBag(choice.size))
+                                      ) {
+                                        setActiveGalleryIndex(0);
+                                      }
                                       setQuantity(1);
                                       trackEvent("Product Purchase Type Selected", {
                                         product_id: product.id,
@@ -2348,12 +2462,19 @@ const ProductDetail = () => {
                                   Pickup yards
                                 </p>
                                 <p className="text-[11px] font-medium text-muted-foreground">
-                                  Choose yard at checkout
+                                  {showPhoenixPickupYard
+                                    ? "Choose yard at checkout"
+                                    : "Congress Plant only"}
                                 </p>
                               </div>
-                              <div className="grid gap-2 sm:grid-cols-2">
+                              <div
+                                className={cn(
+                                  "grid gap-2",
+                                  showPhoenixPickupYard ? "sm:grid-cols-2" : "sm:grid-cols-1",
+                                )}
+                              >
                                 {PICKUP_LOCATIONS.filter((loc) =>
-                                  phoenixYardPickupOk || loc.id === "congress",
+                                  showPhoenixPickupYard || loc.id === "congress",
                                 ).map((loc) => {
                                   const isCongress = loc.id === "congress";
                                   return (
@@ -2624,9 +2745,9 @@ const ProductDetail = () => {
                                   </div>
                                   <p className="text-center text-[11px] text-stone-500">
                                     {isBulkPickupSelected
-                                      ? phoenixYardPickupOk
+                                      ? showPhoenixPickupYard
                                         ? "Choose Congress or Phoenix at checkout."
-                                        : "Congress pickup or delivery — Phoenix is not loading this bulk."
+                                        : "Congress Plant pickup only for this bulk."
                                       : phoenixYardPickupOk
                                         ? "Bags ready in about 30 min · need delivery? Choose it at checkout."
                                         : "Delivery or Congress pickup at checkout. Phoenix yard is not loading this product right now."}

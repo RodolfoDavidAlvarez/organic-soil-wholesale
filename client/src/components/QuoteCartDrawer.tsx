@@ -35,7 +35,7 @@ const fmt = (n: number): string => {
 const CART_IMAGE_FALLBACKS: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg",
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
-  111: "/images/optimized/plantpal-with-veggies.jpg",
+  111: "/images/bundles/plantpal-15cf-illustration-640.webp",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
   4100: "/images/offers/flyers/garden-refresh.webp",
   4101: "/images/offers/flyers/garden-refresh-plus.webp",

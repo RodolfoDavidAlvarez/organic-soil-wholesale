@@ -53,12 +53,18 @@ const exactCases = [
   [137, "Soil Craft", "Pallet (30 x 1.5CF)", 383.76, 479.7],
   [111, "PlantPal", "1.5CF Bag", 10.99, 10.99],
   [111, "PlantPal", "Pallet (30 x 1.5CF)", 263.76, 329.7],
+  [111, "PlantPal", "Dump Truck (6 tons)", 660, 660],
+  [111, "PlantPal", "Truckload (~64 cu yd)", 2160, 2160],
+  [111, "PlantPal", "Truckload (~60 cu yd)", 2160, 2160],
   [3000, "Nature's Blanket Premium", "2CF Bag", 10.99, 10.99],
   [3000, "Nature's Blanket Premium", "Pallet of 2CF Bags", 219.8, 274.75],
-  [1000, "Simon's Gold", "9lb Bag", 12.46, 12.46],
-  [1000, "Simon's Gold", "Pallet of 9 lb Bags", 1435.39, 1794.24],
-  [1000, "Simon's Gold", "1CF Bag", 24.9, 24.9],
-  [1000, "Simon's Gold", "Pallet of 1CF Bags", 996, 1245],
+  [1000, "Simon's Gold", "9lb Bag", 6.95, 6.95],
+  [1000, "Simon's Gold", "Pallet of 9 lb Bags", 800.64, 1000.8],
+  [1000, "Simon's Gold", "1CF Bag", 14.95, 14.95],
+  [1000, "Simon's Gold", "Pallet of 1CF Bags", 598, 747.5],
+  [1000, "Simon's Gold", "Bulk Pickup", 75, 75],
+  [1000, "Simon's Gold", "Dump Truck (6 tons)", 330, 330],
+  [1000, "Simon's Gold", "Truckload 24 ton walking floor", 1080, 1080],
   [1001, "Mikey's Worm Poop", "9lb Bag", 18.1, 18.1],
   [1001, "Mikey's Worm Poop", "Pallet of 9 lb Bags", 2085.12, 2606.4],
   [1001, "Mikey's Worm Poop", "1CF Bag", 34.9, 34.9],
@@ -105,6 +111,7 @@ for (const quantity of [21, 22, 23]) {
 
 const product = normalizeV5ProductRecord({ id: 111, name: "Stage Potting Mix", size_price_options: [] });
 assert.equal(product.name, "PlantPal Plus");
+assert.equal(product.displayTitle, "PlantPal Plus");
 assert.equal(product.sizePriceOptions.find((entry) => entry.label.includes("Pallet")).unitsPerPallet, 30);
 assert.equal(product.sizePriceOptions.find((entry) => entry.label.includes("Pallet")).price, 263.76);
 
@@ -232,10 +239,10 @@ assert.doesNotMatch(bundleOffersSource, /Three setups\. Tap one\./);
 assert.doesNotMatch(bundleOffersSource, /Need a truckload, not a bundle/);
 assert.match(bundleOffersSource, /href=\{product\.href\}/);
 assert.match(bundleOffersSource, /id="bundle-contents-heading"/);
-assert.match(bundleOffersSource, /id="bundle-use-heading"/);
+assert.match(bundleOffersSource, /refreshCopy\[product\.productKey\]/);
 assert.match(bundleOffersSource, /id="bundle-faq-heading"/);
 assert.match(bundleOffersSource, /href="\/garden-bed-offer\.html"/);
-assert.match(bundleOffersSource, /useRoute\("\/deals\/:slug"\)/);
+assert.match(bundleOffersSource, /useRoute(?:<[^>]+>)?\("\/deals\/:slug"\)/);
 assert.doesNotMatch(bundleOffersSource, /\$69/);
 assert.doesNotMatch(bundleOffersSource, /\$459/);
 
@@ -255,10 +262,9 @@ assert.doesNotMatch(headerSource, /Garden bundles/);
 const dealListSource = readFileSync(new URL("../client/src/components/DealList.tsx", import.meta.url), "utf8");
 assert.match(dealListSource, /deal\.listCaption/);
 assert.match(dealListSource, /href=\{`\/offers\/\$\{deal\.slug\}`\}/);
-assert.match(dealListSource, /deal\.bannerImage/, "homepage keeps the user-approved original bundle banners");
-assert.match(dealListSource, /58 CU FT TOTAL/, "the original Big Garden banner volume typo stays corrected");
+assert.match(dealListSource, /bundleGroupImages\[deal\.slug\]/, "homepage uses the current bundle images");
 assert.match(dealListSource, /fmtDealPrice\(deal\.salePrice\)/);
-assert.match(dealListSource, /Shop offer/);
+assert.match(dealListSource, /Explore bundle/);
 assert.doesNotMatch(dealListSource, /Buy Now/);
 
 assert.equal(getPromoBundleBySlug("garden-refresh")?.listCaption, "Perfect for an existing garden. Quick soil feed and replenishment.");
@@ -319,7 +325,7 @@ assert.equal(resolveV5CartPricing(line(134, "Nature's Blanket", "2CF Bag"))?.uni
 
 const payPickupGridSource = readFileSync(new URL("../client/src/components/PayPickupGrid.tsx", import.meta.url), "utf8");
 assert.match(payPickupGridSource, /PHOENIX_YARD_PICKUP_GRID_IDS/);
-assert.match(payPickupGridSource, /plantpal-with-veggies/);
+assert.match(payPickupGridSource, /plantpal-15cf-illustration-640/);
 assert.match(payPickupGridSource, /mikeys-worm-poop-bag-context/);
 
 for (const slug of ["garden-refresh", "garden-refresh-plus", "big-garden-setup"]) {

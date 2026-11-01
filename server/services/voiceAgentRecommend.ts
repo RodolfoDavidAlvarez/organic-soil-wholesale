@@ -19,7 +19,7 @@ const SIMONS_GOLD_1CF = {
   productId: 1000,
   productName: "Simon's Gold Dairy Compost",
   format: "1CF Bag",
-  unitPrice: 24.9,
+  unitPrice: 14.95,
   unit: "per bag",
   cubicFeetPerBag: 1,
 };
@@ -28,7 +28,7 @@ const SIMONS_GOLD_9LB = {
   productId: 1000,
   productName: "Simon's Gold Dairy Compost",
   format: "9lb Bag",
-  unitPrice: 12.46,
+  unitPrice: 6.95,
   unit: "per bag",
 };
 

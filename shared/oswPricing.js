@@ -44,7 +44,8 @@ export const V5_PRODUCT_PRICING = Object.freeze({
       option("Pallet (30 x 1.5CF)", "Pallet (30 x 1.5CF)", 263.76, "per pallet", { listPrice: 329.7, unitsPerPallet: 30, discountPercent: 20 }),
       option("Tote", "Tote", 247.28, "per tote"),
       option("Bulk Pickup", "Bulk Pickup", 80, "per cu yd"),
-      option("Truckload (~60 cu yd)", "Truckload (~60 cu yd)", 2160, "per truckload"),
+      option("Dump Truck (6 tons)", "Dump Truck (6 tons)", 660, "per truckload", { tonsPerLoad: 6, tonPrice: 110, cubicYards: 16 }),
+      option("Truckload (~64 cu yd)", "Truckload (~64 cu yd)", 2160, "per truckload", { tonsPerLoad: 24, tonPrice: 90, cubicYards: 64 }),
     ],
   },
   134: {
@@ -70,15 +71,16 @@ export const V5_PRODUCT_PRICING = Object.freeze({
   },
   1000: {
     name: "Simon's Gold",
-    aliases: ["simon's gold", "simons gold"],
+    aliases: ["simon's gold", "simons gold", "dairy compost", "organic dairy compost"],
     options: [
-      option("9lb Bag", "9lb Bag", 12.46, "per bag"),
-      option("Pallet (144 x 9lb)", "Pallet (144 x 9lb)", 1435.39, "per pallet", { listPrice: 1794.24, unitsPerPallet: 144, discountPercent: 20 }),
-      option("1CF Bag", "1CF Bag", 24.9, "per bag"),
-      option("Pallet (50 x 1CF)", "Pallet (50 x 1CF)", 996, "per pallet", { listPrice: 1245, unitsPerPallet: 50, discountPercent: 20 }),
+      option("9lb Bag", "9lb Bag", 6.95, "per bag"),
+      option("Pallet (144 x 9lb)", "Pallet (144 x 9lb)", 800.64, "per pallet", { listPrice: 1000.8, unitsPerPallet: 144, discountPercent: 20 }),
+      option("1CF Bag", "1CF Bag", 14.95, "per bag"),
+      option("Pallet (50 x 1CF)", "Pallet (50 x 1CF)", 598, "per pallet", { listPrice: 747.5, unitsPerPallet: 50, discountPercent: 20 }),
       option("Tote", "Tote", 149, "per tote"),
-      option("Bulk Pickup", "Bulk Pickup", 45, "per ton"),
-      option("Truckload (~24 tons)", "Truckload (~24 tons)", 720, "per truckload"),
+      option("Bulk Pickup", "Bulk Pickup", 75, "per ton"),
+      option("Dump Truck (6 tons)", "Dump Truck (6 tons)", 330, "per truckload", { tonsPerLoad: 6, tonPrice: 55 }),
+      option("Truckload (~24 tons)", "Truckload (~24 tons)", 1080, "per truckload", { tonsPerLoad: 24, tonPrice: 45 }),
     ],
   },
   1034: {
@@ -132,6 +134,9 @@ function matchOption(productId, format) {
     if (isOneAndHalfCf || isOneCf) {
       return product.options.find((entry) => entry.label.includes(productId === 111 || productId === 137 ? "30 x 1.5CF" : "50 x 1CF")) || null;
     }
+  }
+  if (value.includes("dump")) {
+    return product.options.find((entry) => entry.label.includes("Dump Truck")) || null;
   }
   if (value.includes("truckload") || value.includes("walking floor")) {
     return product.options.find((entry) => entry.label.includes("Truckload")) || null;
@@ -214,18 +219,24 @@ export function normalizeV5ProductRecord(product) {
   const pricing = V5_PRODUCT_PRICING[productId];
   const savedOptions = product?.sizePriceOptions ?? product?.size_price_options;
   const sizeImages = new Map((Array.isArray(savedOptions) ? savedOptions : [])
-    .filter((entry) => typeof entry?.image === 'string' && entry.image.trim())
-    .map((entry) => [entry.key || entry.size || entry.label, entry.image.trim()]));
+    .filter((entry) => {
+      const image = entry?.image || entry?.imageUrl;
+      return typeof image === "string" && image.trim();
+    })
+    .map((entry) => [entry.key || entry.size || entry.label, String(entry.image || entry.imageUrl).trim()]));
   const options = pricing.options.map((entry) => ({
     ...entry,
-    ...(sizeImages.has(entry.key) ? { image: sizeImages.get(entry.key) } : {}),
+    ...(sizeImages.has(entry.key) || sizeImages.has(entry.label) ? { image: sizeImages.get(entry.key) || sizeImages.get(entry.label) } : {}),
     isActive: shouldHidePhoenixYardBulkSize(productId, entry.label) ? false : entry.isActive !== false,
   }));
+  const publicName = productId === 111
+    ? "PlantPal Plus"
+    : (product?.displayTitle || product?.display_title || product?.name || pricing.name);
   return {
     ...product,
-    name: pricing.name,
-    display_title: product?.display_title || pricing.name,
-    displayTitle: product?.displayTitle || product?.display_title || pricing.name,
+    name: publicName,
+    display_title: publicName,
+    displayTitle: publicName,
     size_price_options: options.map((entry) => ({ ...entry })),
     sizePriceOptions: options.map((entry) => ({ ...entry })),
   };

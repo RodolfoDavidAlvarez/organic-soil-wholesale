@@ -13,6 +13,9 @@
  * phoenixYardPickup: true on the bundle record.
  *
  * Delivery, bags, pallets, totes, and Congress pickup stay available.
+ *
+ * Product pages may still advertise Congress-only for Simon's Gold bulk
+ * (V7 local pricing) even though the Phoenix yard can load it in some flows.
  */
 import { resolvePromoBundle } from "./promoBundles.js";
 
@@ -33,6 +36,13 @@ export const PAY_ONLINE_PRODUCT_IDS = Object.freeze([1000, 134, 3000, 1001, 111,
 /** Loose bulk the Phoenix yard can actually load (priced SKUs only). */
 const PHOENIX_YARD_LOOSE_BULK_PRODUCT_IDS = Object.freeze([1000, 3000]);
 
+/** Products whose bulk pickup UI should only advertise Congress Plant. */
+export const CONGRESS_ONLY_BULK_PICKUP_PRODUCT_IDS = Object.freeze([1000]);
+
+export function isCongressOnlyBulkPickupProduct(productId) {
+  return CONGRESS_ONLY_BULK_PICKUP_PRODUCT_IDS.includes(Number(productId));
+}
+
 export const PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE =
   "One or more items in this cart cannot pick up at the Phoenix yard. Choose Congress pickup or delivery, or remove the blocked items.";
 
@@ -52,7 +62,7 @@ export function isPhoenixYardLooseBulkProduct(productId) {
 export function isLooseYardBulkFormat(format) {
   const key = String(format || "").toLowerCase();
   if (!key) return false;
-  if (key.includes("truckload") || key.includes("walking")) return false;
+  if (key.includes("truckload") || key.includes("walking") || key.includes("dump")) return false;
   if (key.includes("pallet") || key.includes("tote") || key.includes("supersack") || key.includes("super sack")) {
     return false;
   }

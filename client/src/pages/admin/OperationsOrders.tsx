@@ -190,7 +190,7 @@ export default function OperationsOrders() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => navigate(`/admin/orders/${order.id}`)}
+                              onClick={() => navigate(`/admin/orders?id=${order.id}`)}
                               className="h-8 text-xs"
                             >
                               <ExternalLink className="w-3.5 h-3.5 mr-1" />

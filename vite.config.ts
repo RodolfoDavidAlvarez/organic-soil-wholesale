@@ -24,6 +24,7 @@ export default defineConfig({
       "@app-entry": path.resolve(__dirname, "client", "src", "AppEntry.tsx"),
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
+      "@app-entry": path.resolve(__dirname, "client", "src", "AppEntry.tsx"),
     },
   },
   root: path.resolve(__dirname, "client"),

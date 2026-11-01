@@ -204,8 +204,9 @@ export function promoBundleCartItem(bundle, quantity = 1) {
     quantity: qty,
     unitPrice: bundle.salePrice,
     price: bundle.salePrice,
-    listUnitPrice: bundle.listPrice,
-    savingsPerUnit: bundle.savings,
+    // Flyer values are historical; do not present them as current cart prices.
+    listUnitPrice: undefined,
+    savingsPerUnit: undefined,
     discountPercent: 0,
     unit: bundle.unit,
     mode: "pay",
