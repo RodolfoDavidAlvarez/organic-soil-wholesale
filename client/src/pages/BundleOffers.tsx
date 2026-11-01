@@ -199,7 +199,7 @@ function OffersIndex() {
               Choose a complete raised bed or a pickup bundle of growing materials.
             </p>
           </div>
-          <p className="bo-comparison-note">Pricing preview: individual bag totals use proposed prices of $12.95 for dairy compost and $47.95 for worm castings.</p>
+          <p className="bo-comparison-note">Pricing preview: individual bag totals use $14.95 for dairy compost and $34.90 for worm castings.</p>
           <div className="bo-deal-grid">
             <article className="bo-deal-card bo-bed-card">
               <div className="bo-bed-card-image">
@@ -360,7 +360,7 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
               <div><span>Bundle price</span><strong>{fmtDealPrice(offer.salePrice)} <small>+ tax</small></strong></div>
               <b>You save {comparisonPrice(bundleComparison[offer.slug] - offer.salePrice)}</b>
             </div>
-            <p className="bo-comparison-note">Pricing preview based on proposed $12.95 dairy compost and $47.95 worm castings bags.</p>
+            <p className="bo-comparison-note">Pricing preview based on $14.95 dairy compost and $34.90 worm castings bags.</p>
             <button
               type="button"
               className="bo-button bo-hero-add"

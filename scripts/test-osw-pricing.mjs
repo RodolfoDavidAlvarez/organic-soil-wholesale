@@ -38,7 +38,7 @@ const line = (productId, productName, sizeOption, quantity = 1, price = 0.01) =>
 
 assert.deepEqual(resolveV5CartPricing(line(111, "Stage Potting Mix", "Pallet of 1.5 cu ft Bags")), {
   productId: 111,
-  productName: "PlantPal",
+  productName: "PlantPal Plus",
   format: "Pallet (30 x 1.5CF)",
   unitPrice: 263.76,
   listUnitPrice: 329.7,
@@ -53,12 +53,18 @@ const exactCases = [
   [137, "Soil Craft", "Pallet (30 x 1.5CF)", 383.76, 479.7],
   [111, "PlantPal", "1.5CF Bag", 10.99, 10.99],
   [111, "PlantPal", "Pallet (30 x 1.5CF)", 263.76, 329.7],
+  [111, "PlantPal", "Dump Truck (6 tons)", 660, 660],
+  [111, "PlantPal", "Truckload (~64 cu yd)", 2160, 2160],
+  [111, "PlantPal", "Truckload (~60 cu yd)", 2160, 2160],
   [3000, "Nature's Blanket Premium", "2CF Bag", 10.99, 10.99],
   [3000, "Nature's Blanket Premium", "Pallet of 2CF Bags", 219.8, 274.75],
-  [1000, "Simon's Gold", "9lb Bag", 12.46, 12.46],
-  [1000, "Simon's Gold", "Pallet of 9 lb Bags", 1435.39, 1794.24],
-  [1000, "Simon's Gold", "1CF Bag", 24.9, 24.9],
-  [1000, "Simon's Gold", "Pallet of 1CF Bags", 996, 1245],
+  [1000, "Simon's Gold", "9lb Bag", 6.95, 6.95],
+  [1000, "Simon's Gold", "Pallet of 9 lb Bags", 800.64, 1000.8],
+  [1000, "Simon's Gold", "1CF Bag", 14.95, 14.95],
+  [1000, "Simon's Gold", "Pallet of 1CF Bags", 598, 747.5],
+  [1000, "Simon's Gold", "Bulk Pickup", 75, 75],
+  [1000, "Simon's Gold", "Dump Truck (6 tons)", 330, 330],
+  [1000, "Simon's Gold", "Truckload 24 ton walking floor", 1080, 1080],
   [1001, "Mikey's Worm Poop", "9lb Bag", 18.1, 18.1],
   [1001, "Mikey's Worm Poop", "Pallet of 9 lb Bags", 2085.12, 2606.4],
   [1001, "Mikey's Worm Poop", "1CF Bag", 34.9, 34.9],
@@ -78,7 +84,7 @@ const tampered = normalizeV5CheckoutItems([
   line(111, "Stage Potting Mix", "Pallet of 1.5 cu ft Bags", 1, 1),
   line(3000, "Nature's Blanket Premium", "Pallet of 2CF Bags", 1, 9999),
 ]);
-assert.equal(tampered[0].productName, "PlantPal");
+assert.equal(tampered[0].productName, "PlantPal Plus");
 assert.equal(tampered[0].price, 263.76);
 assert.equal(tampered[1].price, 219.8);
 
@@ -104,7 +110,8 @@ for (const quantity of [21, 22, 23]) {
 }
 
 const product = normalizeV5ProductRecord({ id: 111, name: "Stage Potting Mix", size_price_options: [] });
-assert.equal(product.name, "PlantPal");
+assert.equal(product.name, "PlantPal Plus");
+assert.equal(product.displayTitle, "PlantPal Plus");
 assert.equal(product.sizePriceOptions.find((entry) => entry.label.includes("Pallet")).unitsPerPallet, 30);
 assert.equal(product.sizePriceOptions.find((entry) => entry.label.includes("Pallet")).price, 263.76);
 
@@ -283,8 +290,8 @@ assert.match(getPromoBundleBySlug("garden-refresh")?.items[1].amount || "", /3 b
 assert.match(getPromoBundleBySlug("garden-refresh")?.items[2].amount || "", /2 bags/);
 assert.match(getPromoBundleBySlug("big-garden-setup")?.items.find((item) => item.name.includes("PlantPal"))?.amount || "", /30 bags/);
 assert.equal(getPromoBundleBySlug("garden-refresh")?.includedLabel, "5 Nature's Blanket, 3 Simon's Gold free, 2 Mikey's Worm Poop");
-assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.includedLabel, "10 PlantPal, 3 Nature's Blanket free, 3 Mikey's Worm Poop");
-assert.equal(getPromoBundleBySlug("big-garden-setup")?.includedLabel, "30 PlantPal, 4 Simon's Gold, 3 Mikey's Worm Poop, 3 Nature's Blanket");
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.includedLabel, "10 PlantPal Plus, 3 Nature's Blanket free, 3 Mikey's Worm Poop");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.includedLabel, "30 PlantPal Plus, 4 Simon's Gold, 3 Mikey's Worm Poop, 3 Nature's Blanket");
 assert.equal(getPromoBundleBySlug("garden-refresh")?.phoenixYardPickup, true);
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.phoenixYardPickup, true);
 assert.equal(getPromoBundleBySlug("big-garden-setup")?.phoenixYardPickup, true);
@@ -318,7 +325,7 @@ assert.equal(resolveV5CartPricing(line(134, "Nature's Blanket", "2CF Bag"))?.uni
 
 const payPickupGridSource = readFileSync(new URL("../client/src/components/PayPickupGrid.tsx", import.meta.url), "utf8");
 assert.match(payPickupGridSource, /PHOENIX_YARD_PICKUP_GRID_IDS/);
-assert.match(payPickupGridSource, /plantpal-with-veggies/);
+assert.match(payPickupGridSource, /plantpal-15cf-illustration-640/);
 assert.match(payPickupGridSource, /mikeys-worm-poop-bag-context/);
 
 for (const slug of ["garden-refresh", "garden-refresh-plus", "big-garden-setup"]) {

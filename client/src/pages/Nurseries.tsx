@@ -243,19 +243,19 @@ const Nurseries = () => {
                       <div className="font-semibold text-gray-900">Simon's Gold Compost</div>
                       <div className="text-xs text-gray-500">9 lb bags, 144/pallet</div>
                     </td>
-                    <td className="p-4 text-right text-gray-500">$12.46</td>
+                    <td className="p-4 text-right text-gray-500">$6.95</td>
                     <td className="p-4 text-right font-bold text-green-700">$4.45</td>
                     <td className="p-4 text-right text-gray-700">$640.80</td>
-                    <td className="p-4 text-right font-bold text-green-700">64%</td>
+                    <td className="p-4 text-right font-bold text-green-700">36%</td>
                   </tr>
                   <tr className="bg-gray-50 border-b border-gray-100">
                     <td className="p-4">
-                      <div className="font-semibold text-gray-900">PlantPal Nursery Mix</div>
-                      <div className="text-xs text-gray-500">1 CF bags, 50/pallet</div>
+                      <div className="font-semibold text-gray-900">PlantPal Plus</div>
+                      <div className="text-xs text-gray-500">1.5 cu ft bags, 30/pallet</div>
                     </td>
                     <td className="p-4 text-right text-gray-500">$10.99</td>
                     <td className="p-4 text-right font-bold text-green-700">$5.50</td>
-                    <td className="p-4 text-right text-gray-700">$274.75</td>
+                    <td className="p-4 text-right text-gray-700">$165.00</td>
                     <td className="p-4 text-right font-bold text-green-700">50%</td>
                   </tr>
                   <tr className="bg-white">
@@ -351,7 +351,7 @@ const Nurseries = () => {
                     >
                       <option value="Worm Castings">Worm Castings (Mikey's Worm Poop)</option>
                       <option value="Compost">Compost (Simon's Gold)</option>
-                      <option value="Nursery Mix">Nursery Mix (PlantPal)</option>
+                      <option value="Nursery Mix">Nursery Mix (PlantPal Plus)</option>
                       <option value="Soil Amendments">Soil Amendments (Specialty Blends)</option>
                       <option value="Multiple Products">Multiple Products</option>
                     </select>

@@ -134,7 +134,6 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
   // Hero stays on the BRANDED BAG photo — customers want to see the product, not the pallet
   const baseHero = heroImageOverride || product.imageUrl || product.texturePhotoUrl;
   const heroImage = baseHero;
-  const textureImage = product.texturePhotoUrl;
   const startingPrice = getStartingPrice(product);
   const sizeCategories = getSizeCategories(product);
   const cardContent = getPayPickupProductContent(product.id);
@@ -207,17 +206,6 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
             <span className="hidden sm:inline">Pickup Options</span>
           </div>
 
-          {textureImage && (
-            <div className="absolute bottom-2 left-2 hidden h-[72px] w-[72px] overflow-hidden rounded-xl border-2 border-white bg-white shadow-md ring-1 ring-stone-300/60 sm:block sm:h-[84px] sm:w-[84px] md:block">
-              <OptimizedImage
-                src={textureImage}
-                alt={`${product.name} texture`}
-                className="h-full w-full scale-125 object-cover"
-                width={120}
-                q={60}
-              />
-            </div>
-          )}
         </div>
 
         {/* Mobile only: name + short description preview beside the image */}

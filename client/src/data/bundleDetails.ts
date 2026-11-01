@@ -52,7 +52,7 @@ export const BUNDLE_PRODUCT_DETAILS: Record<
 > = {
   plantpal: {
     productKey: "plantpal",
-    name: "PlantPal",
+    name: "PlantPal Plus",
     role: "Your growing mix",
     purpose:
       "A ready-to-use potting mix that gives roots a balance of nutrition, air and moisture.",

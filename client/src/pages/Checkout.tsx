@@ -48,7 +48,7 @@ const fmt = (n: number) =>
 const CART_IMAGE_FALLBACKS: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg",
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
-  111: "/images/optimized/plantpal-with-veggies.jpg",
+  111: "/images/bundles/plantpal-15cf-illustration-640.webp",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
   4100: "/images/offers/flyers/garden-refresh.webp",
   4101: "/images/offers/flyers/garden-refresh-plus.webp",
@@ -1257,7 +1257,7 @@ const Checkout: React.FC = () => {
                   )}
                   {!hasBulkItem && selectedPickupSite.id === "phoenix" && (
                     <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm leading-snug text-emerald-950">
-                      <span className="font-bold">Phoenix pickup</span> is available for PlantPal, Mikey’s Worm Poop,
+                      <span className="font-bold">Phoenix pickup</span> is available for PlantPal Plus, Mikey’s Worm Poop,
                       Simon’s Gold, Nature’s Blanket and Sabrina Kills Bugs. Loose bulk is compost and mulch by appointment.
                       {pickupNeedsHeadsUp
                         ? " Pallet or more needs a scheduled slot."
