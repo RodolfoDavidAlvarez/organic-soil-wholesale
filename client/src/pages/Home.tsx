@@ -255,6 +255,10 @@ const Home = () => {
         </div>
       </section>
 
+      <section aria-labelledby="garden-bundles-heading" className="bg-[#e9edde] px-5 py-12 text-[#264027] sm:px-8">
+        <div className="mx-auto max-w-7xl"><div className="mb-6"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">For the garden you’re growing · Phoenix pickup</p><h2 id="garden-bundles-heading" className="mt-3 scroll-mt-24 font-heading text-3xl font-semibold tracking-[-0.04em]">A little refresh. Or a bigger beginning.</h2><p className="mt-3 text-sm text-[#626b5d]">Choose the materials that fit your project. New beds need enough growing mix for their size and depth.</p></div><DealHubCards source="homepage-bundles" layout="carousel" /><p className="mt-3 text-xs leading-5 text-[#626b5d]">Pricing preview: savings use proposed individual prices of $12.95 for dairy compost and $47.95 for worm castings.</p></div>
+      </section>
+
       <section aria-labelledby="soil-essentials-heading" className="bg-[#efeee5] px-5 py-8 text-[#264027] sm:px-8 lg:py-10">
         <div className="mx-auto max-w-7xl">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -344,10 +348,6 @@ const Home = () => {
             </div>
           </div>
         </div>
-      </section>
-
-      <section aria-labelledby="garden-bundles-heading" className="bg-[#e9edde] px-5 py-12 text-[#264027] sm:px-8">
-        <div className="mx-auto max-w-7xl"><div className="mb-6"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b795b]">For the garden you’re growing · Phoenix pickup</p><h2 id="garden-bundles-heading" className="mt-3 scroll-mt-24 font-heading text-3xl font-semibold tracking-[-0.04em]">A little refresh. Or a bigger beginning.</h2><p className="mt-3 text-sm text-[#626b5d]">Choose the materials that fit your project. New beds need enough growing mix for their size and depth.</p></div><DealHubCards source="homepage-bundles" layout="carousel" /></div>
       </section>
 
       <section aria-labelledby="growing-community-heading" className="bg-[#f7f5ef] px-5 py-12 text-[#264027] sm:px-8 lg:py-16">

@@ -232,10 +232,10 @@ assert.doesNotMatch(bundleOffersSource, /Three setups\. Tap one\./);
 assert.doesNotMatch(bundleOffersSource, /Need a truckload, not a bundle/);
 assert.match(bundleOffersSource, /href=\{product\.href\}/);
 assert.match(bundleOffersSource, /id="bundle-contents-heading"/);
-assert.match(bundleOffersSource, /id="bundle-use-heading"/);
+assert.match(bundleOffersSource, /refreshCopy\[product\.productKey\]/);
 assert.match(bundleOffersSource, /id="bundle-faq-heading"/);
 assert.match(bundleOffersSource, /href="\/garden-bed-offer\.html"/);
-assert.match(bundleOffersSource, /useRoute\("\/deals\/:slug"\)/);
+assert.match(bundleOffersSource, /useRoute(?:<[^>]+>)?\("\/deals\/:slug"\)/);
 assert.doesNotMatch(bundleOffersSource, /\$69/);
 assert.doesNotMatch(bundleOffersSource, /\$459/);
 
@@ -255,10 +255,9 @@ assert.doesNotMatch(headerSource, /Garden bundles/);
 const dealListSource = readFileSync(new URL("../client/src/components/DealList.tsx", import.meta.url), "utf8");
 assert.match(dealListSource, /deal\.listCaption/);
 assert.match(dealListSource, /href=\{`\/offers\/\$\{deal\.slug\}`\}/);
-assert.match(dealListSource, /deal\.bannerImage/, "homepage keeps the user-approved original bundle banners");
-assert.match(dealListSource, /58 CU FT TOTAL/, "the original Big Garden banner volume typo stays corrected");
+assert.match(dealListSource, /bundleGroupImages\[deal\.slug\]/, "homepage uses the current bundle images");
 assert.match(dealListSource, /fmtDealPrice\(deal\.salePrice\)/);
-assert.match(dealListSource, /Shop offer/);
+assert.match(dealListSource, /Explore bundle/);
 assert.doesNotMatch(dealListSource, /Buy Now/);
 
 assert.equal(getPromoBundleBySlug("garden-refresh")?.listCaption, "Perfect for an existing garden. Quick soil feed and replenishment.");

@@ -33,16 +33,12 @@ import {
   type PromoBundle,
 } from "@shared/promoBundles.js";
 import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
+import { bundleComparison, comparisonPrice, bundleGroupImages } from "@/data/bundlePresentation";
 import "./BundleOffers.css";
 
 const legacyOfferAliases: Record<string, string> = {
   "raised-bed-refresh": "garden-refresh",
   "garden-bed-builder": "big-garden-setup",
-};
-const headlines: Record<string, string> = {
-  "garden-refresh": "Good soil deserves a fresh start.",
-  "garden-refresh-plus": "Fresh mix. Fed roots. A covered bed.",
-  "big-garden-setup": "Think bigger. Get growing together.",
 };
 const imageKeys: Record<string, string> = {
   plantpal: "plantpal",
@@ -53,13 +49,14 @@ const imageKeys: Record<string, string> = {
 const textureImage = (product: BundleProductDetail) =>
   `/images/bundles/${imageKeys[product.productKey]}-texture-640.webp`;
 const bagImage = (product: BundleProductDetail, size = 320) =>
-  `/images/bundles/${imageKeys[product.productKey]}-bag-${size}.webp`;
+  `/images/bundles/${imageKeys[product.productKey]}-${product.productKey === "plantpal" ? "15cf-illustration" : product.productKey === "simons" || product.productKey === "mikeys" ? "1cf" : "bag"}-${size}.webp`;
 const productsFor = (offer: PromoBundle) =>
   (getBundleDetails(offer.slug)?.products || []).map(
     (key) => BUNDLE_PRODUCT_DETAILS[key],
   );
 const amountFor = (offer: PromoBundle, product: BundleProductDetail) =>
   offer.items.find((item) => item.href === product.href)?.amount || "Included";
+
 
 export default function BundleOffers() {
   const [, offerParams] = useRoute<{ slug: string }>("/offers/:slug");
@@ -106,9 +103,23 @@ function BundleVisual({
     products.find((product) => product.productKey === "plantpal") ||
     products[0];
   if (!primary) return null;
+  const groupImages: Record<string, { src: string; alt: string; free?: string }> = {
+    "garden-refresh": { src: bundleGroupImages["garden-refresh"], alt: "Illustration of five mulch bags, three dairy compost bags and two worm castings bags", free: "3 dairy compost bags free" },
+    "garden-refresh-plus": { src: bundleGroupImages["garden-refresh-plus"], alt: "Illustration of PlantPal, mulch and worm castings in the Garden Refresh Plus bundle", free: "3 mulch bags free" },
+    "big-garden-setup": { src: bundleGroupImages["big-garden-setup"], alt: "Illustration of a large stack of PlantPal with dairy compost, worm castings and mulch" },
+  };
+  const groupImage = groupImages[offer.slug];
+  if (compact && groupImage) {
+    return (
+      <div className="bo-group-image">
+        <img src={groupImage.src} alt={groupImage.alt} loading="lazy" />
+        {groupImage.free && <span className="bo-free-badge">{groupImage.free}</span>}
+      </div>
+    );
+  }
   return (
     <div className={`bo-visual${compact ? " bo-visual-compact" : ""}`}>
-      <figure className="bo-texture">
+      {!compact && <figure className="bo-texture">
         <img
           src={textureImage(primary)}
           alt={primary.textureAlt}
@@ -118,17 +129,17 @@ function BundleVisual({
           fetchPriority={priority ? "high" : undefined}
           decoding="async"
         />
-        <figcaption>
+        {!compact && <figcaption>
           <Leaf size={16} aria-hidden="true" />
           {primary.productKey === "plantpal"
             ? "Start with a good growing mix."
             : "Feed the soil you already have."}
-        </figcaption>
+        </figcaption>}
         <span className="bo-bag-count">
           {offer.bagLabel}
           <span>One bundle</span>
         </span>
-      </figure>
+      </figure>}
       <div
         className="bo-bag-lineup"
         style={{ "--product-count": products.length } as CSSProperties}
@@ -137,13 +148,13 @@ function BundleVisual({
           <figure key={product.productKey}>
             <img
               src={bagImage(product)}
-              alt={product.bagAlt}
+              alt={product.productKey === "plantpal" ? "Illustration of a PlantPal 1.5 cubic foot bag" : product.productKey === "simons" || product.productKey === "mikeys" ? `${product.name} 1 cubic foot bag` : product.bagAlt}
               width={320}
               height={product.productKey === "mulch" ? 430 : 320}
               loading="lazy"
               decoding="async"
             />
-            <figcaption>{product.name}</figcaption>
+            <figcaption>{product.name}{compact && <span className="bo-product-amount">{amountFor(offer, product).split(" · ")[0]}</span>}</figcaption>
           </figure>
         ))}
       </div>
@@ -174,126 +185,60 @@ function OffersIndex() {
           </p>
         </header>
         <section
-          className="bo-raised-offer"
-          aria-labelledby="raised-offer-heading"
-        >
-          <div className="bo-raised-image">
-            <img
-              src="/garden-bed/bundle-960.webp"
-              srcSet="/garden-bed/bundle-480.webp 480w, /garden-bed/bundle-960.webp 960w"
-              sizes="(min-width: 900px) 48vw, 100vw"
-              alt="Illustration of a raised garden bed with bagged and bulk growing materials"
-              width={1536}
-              height={1024}
-              fetchPriority="high"
-            />
-          </div>
-          <div className="bo-raised-copy">
-            <span className="bo-pill">New · Limited-time community offer</span>
-            <h2 id="raised-offer-heading">
-              The heavy-duty raised garden bed bundle.
-            </h2>
-            <p>
-              A large 4×8 ft bed, 2 ft deep, with soil, mulch and amendments
-              brought together in one package.
-            </p>
-            <div className="bo-raised-price">
-              <span>
-                Bundle value <s>$1,408.43</s>
-              </span>
-              <div>
-                <strong>$945.43</strong>
-                <span>
-                  pay in full
-                  <br />+ tax
-                </span>
-              </div>
-              <b>Save $463 with this offer.</b>
-            </div>
-            <p className="bo-plan-note">
-              Or start with <strong>$346.66 + tax</strong> today. Three monthly
-              payments · $1,039.87 total + tax.
-            </p>
-            <a
-              href="/garden-bed-offer.html"
-              className="bo-button bo-button-gold"
-              onClick={() =>
-                trackEvent("Garden Bed Offer Clicked", {
-                  source: "offers-index",
-                })
-              }
-            >
-              See the complete bed bundle{" "}
-              <ArrowRight size={18} aria-hidden="true" />
-            </a>
-            <p className="bo-raised-terms">
-              <strong>Free Arizona delivery in November 2026 only.</strong> For
-              our giveaway community; a personal offer link is required to pay.
-              Assembly, plants, irrigation and shade accessories are not
-              included. Package image is an illustration.
-            </p>
-          </div>
-        </section>
-        <section
           className="bo-index-bundles"
           aria-labelledby="pickup-bundles-heading"
         >
           <div className="bo-section-heading">
             <div>
               <span className="bo-eyebrow">
-                Bagged materials · Phoenix pickup
+                Garden bundles · Arizona
               </span>
               <h2 id="pickup-bundles-heading">Find your garden’s next step.</h2>
             </div>
             <p>
-              Already have a bed? Start here. Bed frames are not included in
-              these pickup bundles.
+              Choose a complete raised bed or a pickup bundle of growing materials.
             </p>
           </div>
+          <p className="bo-comparison-note">Pricing preview: individual bag totals use proposed prices of $12.95 for dairy compost and $47.95 for worm castings.</p>
           <div className="bo-deal-grid">
+            <article className="bo-deal-card bo-bed-card">
+              <div className="bo-bed-card-image">
+                <img
+                  src="/garden-bed/bundle-960.webp"
+                  srcSet="/garden-bed/bundle-480.webp 480w, /garden-bed/bundle-960.webp 960w"
+                  sizes="(min-width: 900px) 45vw, 100vw"
+                  alt="Illustration of a raised garden bed with soil, mulch and amendments"
+                  width={1536}
+                  height={1024}
+                  fetchPriority="high"
+                />
+              </div>
+              <div className="bo-deal-card-copy">
+                <div className="bo-card-price"><span>4 × 8 ft · 2 ft deep</span><b>Save $463</b></div>
+                <h3>Raised Garden Bed Bundle</h3>
+                <p>A heavy-duty raised bed with soil, mulch and amendments.</p>
+                <div className="bo-card-total"><strong>$945.43</strong><span>+ tax <span className="bo-card-value">Bundle value <s>$1,408.43</s></span></span></div>
+                <p className="bo-bed-card-note">Free Arizona delivery in November 2026. A personal offer link is required to pay. Image is an illustration.</p>
+              </div>
+              <a href="/garden-bed-offer.html" className="bo-card-link" aria-label="Explore the Raised Garden Bed Bundle" onClick={() => trackEvent("Garden Bed Offer Clicked", { source: "offers-index" })} />
+            </article>
             {PROMO_BUNDLES.map((deal) => (
               <article className="bo-deal-card" key={deal.slug}>
                 <BundleVisual offer={deal} compact />
                 <div className="bo-deal-card-copy">
                   <div className="bo-card-price">
                     <span>{deal.bagLabel}</span>
-                    <b>Save {fmtDealPrice(deal.savings)}</b>
                   </div>
                   <h3>{deal.title}</h3>
                   <p>{getBundleDetails(deal.slug)?.summary}</p>
-                  <div className="bo-card-total">
-                    <strong>{fmtDealPrice(deal.salePrice)}</strong>
-                    <span>
-                      + tax{" "}
-                      <span className="bo-card-value">
-                        Bundle value <s>{fmtDealPrice(deal.listPrice)}</s>
-                      </span>
-                    </span>
+                  <div className="bo-price-comparison" aria-label={`Individual bag total ${comparisonPrice(bundleComparison[deal.slug])}, bundle price ${fmtDealPrice(deal.salePrice)} plus tax`}>
+                    <span className="bo-was-price"><small>Individual bags</small><s>{comparisonPrice(bundleComparison[deal.slug])}</s></span>
+                    <ArrowRight size={19} aria-hidden="true" />
+                    <span className="bo-now-price"><small>Bundle price</small><strong>{fmtDealPrice(deal.salePrice)}</strong><span>+ tax</span></span>
+                    <b className="bo-price-saving">You save <strong>{comparisonPrice(bundleComparison[deal.slug] - deal.salePrice)}</strong></b>
                   </div>
-                  <ul className="bo-card-contents">
-                    {deal.items.map((item) => (
-                      <li key={item.name}>
-                        <Check size={15} aria-hidden="true" />
-                        <span>
-                          {item.amount} · {item.name}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={`/offers/${deal.slug}`}
-                    className="bo-button"
-                    onClick={() =>
-                      trackEvent("Deal Card CTA Clicked", {
-                        bundle: deal.slug,
-                        source: "offers-index",
-                      })
-                    }
-                  >
-                    Explore this bundle{" "}
-                    <ArrowRight size={18} aria-hidden="true" />
-                  </Link>
                 </div>
+                <Link href={`/offers/${deal.slug}`} className="bo-card-link" aria-label={`Explore ${deal.title}`} onClick={() => trackEvent("Deal Card CTA Clicked", { bundle: deal.slug, source: "offers-index" })} />
               </article>
             ))}
           </div>
@@ -367,6 +312,12 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
     addedTimer.current = window.setTimeout(() => setJustAdded(false), 1800);
   };
   if (!detail) return <OffersIndex />;
+  const refreshCopy: Record<string, string> = {
+    plantpal: "Ready-to-use growing mix for beds, containers and new planting areas. Add it where you need fresh soil, then water after planting.",
+    mulch: "Chocolate-colored mulch enhanced with dairy compost and worm castings. It helps hold moisture and gives your garden a finished look. Spread it on top, keeping stems clear.",
+    simons: "Dairy compost adds organic matter and slow-release nutrients. Mix it into garden beds, in-ground soil or around trees.",
+    mikeys: "Worm castings add nutrients to your soil. Mix them in before planting or topdress around established plants and water in.",
+  };
   return (
     <main className="bundle-page bo-detail">
       <Helmet>
@@ -401,20 +352,15 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
             </span>
             <h1 id="bundle-detail-heading">
               {offer.title}
-              <span>{headlines[offer.slug]}</span>
             </h1>
             <p className="bo-lead">{detail.summary}</p>
-            <div className="bo-detail-price">
-              <strong>{fmtDealPrice(offer.salePrice)}</strong>
-              <span>
-                per bundle
-                <br />+ tax
-              </span>
-              <b>Save {fmtDealPrice(offer.savings)}</b>
+            <div className="bo-refresh-deal">
+              <div><span>Individual bags</span><s>{comparisonPrice(bundleComparison[offer.slug])}</s></div>
+              <ArrowRight size={20} aria-hidden="true" />
+              <div><span>Bundle price</span><strong>{fmtDealPrice(offer.salePrice)} <small>+ tax</small></strong></div>
+              <b>You save {comparisonPrice(bundleComparison[offer.slug] - offer.salePrice)}</b>
             </div>
-            <p className="bo-reference-price">
-              Bundle value <s>{fmtDealPrice(offer.listPrice)}</s>
-            </p>
+            <p className="bo-comparison-note">Pricing preview based on proposed $12.95 dairy compost and $47.95 worm castings bags.</p>
             <button
               type="button"
               className="bo-button bo-hero-add"
@@ -428,21 +374,13 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
             <p className="bo-order-note">
               Pay online. Pick up at our Phoenix yard. Bed frame not included.
             </p>
-            <div className="bo-best-for">
-              <strong>A good fit for</strong>
-              <ul>
-                {detail.bestFor.map((use) => (
-                  <li key={use}>
-                    <Check size={16} aria-hidden="true" />
-                    {use}
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
           <div className="bo-detail-gallery">
-            <BundleVisual offer={offer} priority />
-            <p className="bo-artwork-note">{detail.packagingNote}</p>
+            <div className="bo-refresh-photo">
+              <img src={bundleGroupImages[offer.slug]} alt={`${offer.title} bundle of bagged garden materials`} fetchPriority="high" />
+              {offer.slug === "garden-refresh" && <span>3 dairy compost bags free</span>}
+              {offer.slug === "garden-refresh-plus" && <span>3 mulch bags free</span>}
+            </div>
           </div>
         </section>
         <section
@@ -454,54 +392,12 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
               <span className="bo-eyebrow">Every bag has a job</span>
               <h2 id="bundle-contents-heading">What’s in your bundle.</h2>
             </div>
-            <p>
-              Here is what you get, what it does and where it belongs in your
-              garden.
-            </p>
+            <p>What you get and how each material helps your garden.</p>
           </div>
-          <div className={`bo-product-grid bo-product-grid-${products.length}`}>
-            {products.map((product, index) => (
-              <article className="bo-product-card" key={product.productKey}>
-                <div className="bo-product-images">
-                  <img
-                    className="bo-product-texture"
-                    src={textureImage(product)}
-                    alt={product.textureAlt}
-                    width={640}
-                    height={480}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <img
-                    className="bo-product-bag"
-                    src={bagImage(product)}
-                    alt={product.bagAlt}
-                    width={320}
-                    height={product.productKey === "mulch" ? 430 : 320}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <span className="bo-product-number">0{index + 1}</span>
-                </div>
-                <div className="bo-product-copy">
-                  <span className="bo-eyebrow">{product.role}</span>
-                  <h3>{product.name}</h3>
-                  <p className="bo-included-amount">
-                    {amountFor(offer, product)}
-                  </p>
-                  <p>{product.purpose}</p>
-                  <div className="bo-use-note">
-                    <strong>How to use it</strong>
-                    <p>{product.use}</p>
-                  </div>
-                  <Link href={product.href}>
-                    Meet {product.name}
-                    <ArrowRight size={16} aria-hidden="true" />
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
+          <div className={`bo-refresh-products bo-refresh-products-${products.length}`}>{products.map((product) => <article className="bo-refresh-product" key={product.productKey}>
+            <img src={bagImage(product)} alt={`${product.name} bag`} loading="lazy" />
+            <div><span>{amountFor(offer, product).replace(" included", "")}</span><h3>{product.name}</h3><p>{refreshCopy[product.productKey]}</p><Link href={product.href}>Product details <ArrowRight size={15} aria-hidden="true" /></Link></div>
+          </article>)}</div>
           <div className="bo-coverage-note">
             <Leaf size={23} aria-hidden="true" />
             <div>
@@ -512,22 +408,6 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
                 Bed frame, plants, irrigation and tools are not included.
               </p>
             </div>
-          </div>
-        </section>
-        <section
-          className="bo-use-section"
-          aria-labelledby="bundle-use-heading"
-        >
-          <span className="bo-eyebrow">From bags to a better bed</span>
-          <h2 id="bundle-use-heading">Put your bundle to work.</h2>
-          <div className="bo-step-grid">
-            {detail.steps.map((step, index) => (
-              <article key={step.title}>
-                <span className="bo-step-number">0{index + 1}</span>
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
-              </article>
-            ))}
           </div>
         </section>
         <section

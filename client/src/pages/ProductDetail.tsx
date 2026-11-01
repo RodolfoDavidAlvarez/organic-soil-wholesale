@@ -557,7 +557,10 @@ const singleCartLabelForSize = (size: string, productId?: number | string) => {
   return categoryLabel(size, productId);
 };
 
-const imageForChoice = (choice: SizeChoice, fallback: string) => {
+const PLANTPAL_BAG_IMAGE = "/images/bundles/plantpal-15cf-illustration-640.webp";
+
+const imageForChoice = (choice: SizeChoice, fallback: string, productId?: number) => {
+  if (productId === 111 && choice.kind === "single" && isOneOrOneHalfCf(choice.size)) return PLANTPAL_BAG_IMAGE;
   return SIZE_CATEGORY_PHOTO[choice.size] || fallback;
 };
 
@@ -660,6 +663,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
       priceLabel,
       secondaryPriceLabel,
       image:
+        (product.id === 111 && isOneOrOneHalfCf(tier.size) ? PLANTPAL_BAG_IMAGE : "") ||
         SIZE_CATEGORY_PHOTO[key] ||
         SIZE_CATEGORY_PHOTO[tier.size] ||
         product.imageUrl ||
@@ -1114,6 +1118,21 @@ const ProductDetail = () => {
 
   const productDetailContent = product ? PRODUCT_DETAIL_CONTENT[product.id] : undefined;
 
+  const sizeCategories = useMemo(() => product ? buildSizeCategories(product) : [], [product]);
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
+  const [selectedChoiceSize, setSelectedChoiceSize] = useState("");
+  const selectedCategory = useMemo(
+    () => sizeCategories.find((category) => category.key === selectedCategoryKey),
+    [selectedCategoryKey, sizeCategories],
+  );
+  const needsChoice = (selectedCategory?.choices.length ?? 0) > 1;
+  const selectedChoice = useMemo(
+    () => selectedCategory?.choices.find((choice) => choice.size === selectedChoiceSize) ??
+      (needsChoice ? undefined : selectedCategory?.choices[0]),
+    [needsChoice, selectedCategory, selectedChoiceSize],
+  );
+  const showPlantPalBag = product?.id === 111 && selectedChoice?.kind === "single" && isOneOrOneHalfCf(selectedChoice.size);
+
   // --- Gallery ---
   type GalleryItem = { type: "image"; url: string } | { type: "video"; url: string; videoId: string };
 
@@ -1128,7 +1147,7 @@ const ProductDetail = () => {
     // page MUST use the same override or the hero will not match the card the
     // customer just tapped.
     const heroBagOverride = HERO_BAG_PHOTO[product.id];
-    const productPhotos = [heroBagOverride, product.imageUrl, product.texturePhotoUrl, ...product.additionalImages]
+    const productPhotos = [showPlantPalBag ? PLANTPAL_BAG_IMAGE : heroBagOverride, ...(showPlantPalBag ? [heroBagOverride] : []), product.imageUrl, product.texturePhotoUrl, ...product.additionalImages]
       .filter((u): u is string => Boolean(u?.trim()))
       .filter((url) => !isBlockedGalleryImage(product.id, url));
 
@@ -1162,7 +1181,7 @@ const ProductDetail = () => {
     });
 
     return items;
-  }, [product]);
+  }, [product, showPlantPalBag]);
 
   const heroImage = galleryItems.find((i) => i.type === "image")?.url ?? null;
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -1316,13 +1335,6 @@ const ProductDetail = () => {
     return product.priceTiers.find((tier) => isBagTier(tier) && tier.msrp) ?? product.priceTiers.find((tier) => tier.msrp) ?? null;
   }, [product?.priceTiers]);
 
-  const sizeCategories = useMemo(() => {
-    if (!product) return [];
-    return buildSizeCategories(product);
-  }, [product]);
-
-  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
-  const [selectedChoiceSize, setSelectedChoiceSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const [callbackOpen, setCallbackOpen] = useState(false);
@@ -1332,12 +1344,6 @@ const ProductDetail = () => {
   const [deliveryRoughAccess, setDeliveryRoughAccess] = useState(false);
   const [deliverySemiAccess, setDeliverySemiAccess] = useState(true);
 
-  const selectedCategory = useMemo(
-    () => sizeCategories.find((category) => category.key === selectedCategoryKey),
-    [selectedCategoryKey, sizeCategories]
-  );
-
-  const needsChoice = (selectedCategory?.choices.length ?? 0) > 1;
   /** Drill-down chain: sizes → sub-options (if any) → configure (qty / delivery / CTAs). */
   const buyStep: "sizes" | "subchoice" | "configure" = !selectedCategory
     ? "sizes"
@@ -1358,13 +1364,6 @@ const ProductDetail = () => {
   const isFlatbedCategorySelected = Boolean(
     selectedCategory && isFlatbedTruckloadKey(selectedCategory.key),
   );
-  const selectedChoice = useMemo(
-    () =>
-      selectedCategory?.choices.find((choice) => choice.size === selectedChoiceSize) ??
-      (needsChoice ? undefined : selectedCategory?.choices[0]),
-    [needsChoice, selectedCategory, selectedChoiceSize]
-  );
-
   const selectedAddsFlatbedSpots = selectedChoice
     ? spotsForFormat(selectedChoice.cartLabel, quantity) > 0
     : isFlatbedCategorySelected;
@@ -1584,7 +1583,7 @@ const ProductDetail = () => {
       unit: selectedChoice.unit || "per unit",
       mode: canPayOnline ? "pay" : "quote",
       imageUrl: HERO_BAG_PHOTO[product.id] || product.imageUrl || product.texturePhotoUrl,
-      sizeImage: SIZE_CATEGORY_PHOTO[selectedChoice.size] || undefined,
+      sizeImage: imageForChoice(selectedChoice, "", product.id) || undefined,
     };
   }, [canPayOnline, product, quantity, selectedChoice]);
 
@@ -2115,6 +2114,7 @@ const ProductDetail = () => {
                                 onClick={() => {
                                   setSelectedCategoryKey(category.key);
                                   setSelectedChoiceSize("");
+                                  if (product.id === 111 && category.choices.length === 1 && category.choices[0].kind === "single" && isOneOrOneHalfCf(category.choices[0].size)) setActiveGalleryIndex(0);
                                   setQuantity(1);
                                   setDeliveryQuote(null);
                                   trackEvent("Product Size Selected", {
@@ -2213,7 +2213,7 @@ const ProductDetail = () => {
                                 )
                                 .map((choice) => {
                                 const isSelected = choice.size === selectedChoiceSize;
-                                const choiceImage = imageForChoice(choice, selectedCategory.image);
+                                const choiceImage = imageForChoice(choice, selectedCategory.image, product.id);
                                 return (
                                   <button
                                     key={choice.size}
@@ -2221,6 +2221,7 @@ const ProductDetail = () => {
                                     onClick={() => {
                                       if (isSelected && buyStep === "configure") return;
                                       setSelectedChoiceSize(choice.size);
+                                      if (product.id === 111 && choice.kind === "single" && isOneOrOneHalfCf(choice.size)) setActiveGalleryIndex(0);
                                       setQuantity(1);
                                       trackEvent("Product Purchase Type Selected", {
                                         product_id: product.id,

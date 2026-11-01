@@ -138,7 +138,7 @@ const bedFaq = {
 export const BUNDLE_DETAILS: Record<string, BundleDetail> = {
   "garden-refresh": {
     summary:
-      "Refresh the soil you already have, then finish with a protective layer of enhanced mulch.",
+      "10 bags to feed, replenish and protect your existing garden.",
     bestFor: [
       "An existing raised bed",
       "Seasonal soil replenishment",
@@ -179,7 +179,7 @@ export const BUNDLE_DETAILS: Record<string, BundleDetail> = {
   },
   "garden-refresh-plus": {
     summary:
-      "Add fresh growing mix, feed the root zone with worm castings, and cover the surface with the included mulch.",
+      "Fresh soil, worm castings and mulch to start, expand or refresh your garden.",
     bestFor: [
       "Topping up an existing bed",
       "Adding fresh growing mix",
@@ -220,7 +220,7 @@ export const BUNDLE_DETAILS: Record<string, BundleDetail> = {
   },
   "big-garden-setup": {
     summary:
-      "A larger supply of growing mix, dairy compost, worm castings and enhanced mulch for multiple beds or a deeper reset.",
+      "A larger bundle to start a garden or refresh multiple beds and in-ground areas.",
     bestFor: [
       "Multiple raised beds",
       "Larger soil top-ups",
