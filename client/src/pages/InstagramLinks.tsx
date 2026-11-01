@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArrowRight, Briefcase, ChevronDown, ExternalLink, Gift, Sprout } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { trackEvent } from "@/lib/analytics";
@@ -31,9 +31,68 @@ function trackedLink(channel: SocialChannel, target: string, campaign: string, c
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+const focusRing =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a]";
+
+type PhotoCardProps = {
+  href: string;
+  onClick: () => void;
+  ariaLabel?: string;
+  shellClass: string;
+  eyebrowClass: string;
+  icon: ReactNode;
+  eyebrow: string;
+  title: string;
+  detail?: string;
+  detailClass?: string;
+  action: string;
+  actionClass: string;
+  image: ReactNode;
+};
+
+function PhotoCard({
+  href,
+  onClick,
+  ariaLabel,
+  shellClass,
+  eyebrowClass,
+  icon,
+  eyebrow,
+  title,
+  detail,
+  detailClass = "",
+  action,
+  actionClass,
+  image,
+}: PhotoCardProps) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className={`group grid min-h-[8.75rem] grid-cols-[1fr_6.75rem] overflow-hidden rounded-3xl shadow-[0_12px_32px_rgba(19,61,42,0.16)] transition duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.985] sm:min-h-36 sm:grid-cols-[1fr_9.25rem] ${focusRing} ${shellClass}`}
+    >
+      <span className="flex min-w-0 flex-col justify-center px-4 py-4 sm:px-6 sm:py-5">
+        <span className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] ${eyebrowClass}`}>
+          {icon}
+          {eyebrow}
+        </span>
+        <span className="mt-1.5 text-balance font-heading text-[1.35rem] font-bold leading-[1.15] sm:text-2xl">{title}</span>
+        {detail ? <span className={`mt-1.5 text-pretty text-sm font-semibold leading-5 ${detailClass}`}>{detail}</span> : null}
+        <span className={`mt-2.5 flex items-center gap-1.5 text-sm font-bold ${actionClass}`}>
+          {action}
+          <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" />
+        </span>
+      </span>
+      {image}
+    </a>
+  );
+}
+
 export default function InstagramLinks() {
   const channel = channelFromPath(window.location.pathname);
   const channelName = channelDetails[channel].name;
+  const [buyLocalOpen, setBuyLocalOpen] = useState(false);
   const links = {
     organicSoil: trackedLink(channel, "https://www.organicsoilwholesale.com/", "social_bio_2026", "organic_soil_wholesale"),
     soilSeedWater: trackedLink(channel, "https://soilseedandwater.com/", "social_bio_2026", "soil_seed_water_store"),
@@ -67,17 +126,36 @@ export default function InstagramLinks() {
         />
       </Helmet>
 
-      <div className="mx-auto w-full max-w-xl px-4 pb-10 pt-7 sm:px-6 sm:pt-10">
+      <div className="mx-auto w-full max-w-xl px-4 pb-10 pt-6 sm:px-6 sm:pt-10">
         <header className="text-center">
-          <p className="font-heading text-xl font-bold text-[#20251f] sm:text-2xl">Welcome to Soil Seed and Water</p>
-          <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#8b6940]">Welcome, {channelName} friends</p>
-          <h1 className="mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">What would you like to do?</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">There’s more growing here. Shop local, see what’s on, or come work with us.</p>
+          <img
+            src="/images/soil-seed-and-water-logo.png"
+            alt="Soil Seed & Water"
+            width={2083}
+            height={729}
+            decoding="async"
+            className="mx-auto -mb-1 h-[4.5rem] w-auto max-w-full object-contain sm:h-20"
+          />
+          <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b6940]">Welcome, {channelName} friends</p>
+          <h1 className="mt-2 font-heading text-[1.85rem] font-bold leading-[1.05] tracking-[-0.02em] text-[#133d2a] sm:text-4xl">
+            <span className="block">What would you</span>
+            <span className="block">like to do?</span>
+          </h1>
+          <p className="mt-3 text-sm leading-5 text-[#4f6255] sm:text-base sm:leading-6">
+            <span className="block">Shop local, see what’s on,</span>
+            <span className="block">or come work with us.</span>
+          </p>
         </header>
 
-        <section className="mt-7 space-y-3" aria-label="Featured links">
-          <details className="group/buy overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-[#fff8e8] shadow-[0_12px_32px_rgba(87,62,29,0.12)] transition-transform active:scale-[0.99]">
-            <summary className="cursor-pointer list-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] [&::-webkit-details-marker]:hidden">
+        <section className="mt-6 space-y-3" aria-label="Featured links">
+          <div className="overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-[#fff8e8] shadow-[0_12px_32px_rgba(87,62,29,0.12)]">
+            <button
+              type="button"
+              aria-expanded={buyLocalOpen}
+              aria-controls="buy-local-options"
+              onClick={() => setBuyLocalOpen((open) => !open)}
+              className={`block w-full text-left [-webkit-tap-highlight-color:transparent] active:bg-[#fff3dc] ${focusRing}`}
+            >
               <img
                 src="/images/community/garden-harvest-480.webp"
                 srcSet="/images/community/garden-harvest-480.webp 480w, /images/community/garden-harvest-800.webp 800w"
@@ -87,129 +165,137 @@ export default function InstagramLinks() {
                 alt="A ripe cucumber growing in dark garden soil"
                 decoding="async"
                 fetchPriority="high"
-                className="aspect-[16/10] w-full object-cover"
+                className="aspect-[2/1] w-full object-cover object-[18%_center]"
               />
-              <span className="flex flex-col p-5 sm:p-6">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#8b6940]">Phoenix yard or online</span>
-                <span className="mt-2 font-heading text-2xl font-bold leading-tight">Buy Local</span>
-                <span className="mt-2 text-sm leading-6 text-[#4f6255]">Pick up at the yard, or shop the online store.</span>
-                <span className="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[#264027] px-4 py-3 text-sm font-bold text-white">
+              <span className="flex flex-col px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8b6940]">Phoenix yard or online</span>
+                <span className="mt-1.5 font-heading text-[1.7rem] font-bold leading-none tracking-[-0.02em] text-[#133d2a] sm:text-[1.85rem]">Buy Local</span>
+                <span className="mt-2 text-pretty text-sm leading-5 text-[#4f6255]">Pick up at the yard, or shop the online store.</span>
+                <span className="mt-3.5 flex min-h-12 items-center justify-between gap-3 rounded-xl bg-[#264027] px-4 text-sm font-bold text-white shadow-[inset_0_-1px_0_rgba(0,0,0,0.15)] transition active:bg-[#1b301c]">
                   Choose where to buy
-                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-open/buy:rotate-180" aria-hidden="true" />
+                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-300 ease-out ${buyLocalOpen ? "rotate-180" : ""}`} aria-hidden="true" />
                 </span>
               </span>
-            </summary>
-            <div className="space-y-3 px-4 pb-5 sm:px-5">
-              <a
-                href={links.organicSoil}
-                onClick={() => recordClick("organic-soil-wholesale")}
-                aria-label="Shop Organic Soil Wholesale for local soil sales"
-                className="group/store flex min-h-24 items-center gap-4 rounded-2xl border-2 border-[#9fbb93] bg-[#dce8d6] px-5 py-4 shadow-[0_8px_22px_rgba(19,61,42,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(19,61,42,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] active:scale-[0.99]"
-              >
-                <span className="min-w-0 flex-1 leading-tight">
-                  <span className="block font-heading text-lg font-bold text-[#20251f] sm:text-xl">
-                    Organic <span className="text-primary">Soil</span>{" "}
-                    <span className="font-display italic text-[#8f7000]">Wholesale</span>
-                  </span>
-                  <span className="mt-0.5 block text-[8px] font-semibold uppercase tracking-[0.14em] text-[#6b746c]">by Soil Seed &amp; Water</span>
-                  <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-[#133d2a] shadow-sm">Local soil sales</span>
-                </span>
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#133d2a] text-white shadow-sm">
-                  <ArrowRight className="h-5 w-5 transition-transform group-hover/store:translate-x-1" aria-hidden="true" />
-                </span>
-              </a>
-              <a
-                href={links.soilSeedWater}
-                onClick={() => recordClick("soil-seed-and-water")}
-                aria-label="Visit the Soil Seed and Water e-commerce online store"
-                className="group/store flex min-h-24 items-center gap-4 rounded-2xl border-2 border-[#d6b470] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(87,62,29,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(87,62,29,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] active:scale-[0.99]"
-              >
-                <span className="min-w-0 flex-1">
-                  <img src="/images/soil-seed-and-water-logo.png" alt="Soil Seed and Water" width={2083} height={729} className="h-auto w-44 max-w-full object-contain object-left" />
-                  <span className="mt-2 inline-flex max-w-full rounded-full bg-[#f4e6c6] px-3 py-1 text-[11px] font-extrabold uppercase leading-4 tracking-[0.04em] text-[#6d4c25]">E-commerce / online store</span>
-                </span>
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#8b6940] text-white shadow-sm">
-                  <ExternalLink className="h-5 w-5 transition-transform group-hover/store:-translate-y-0.5 group-hover/store:translate-x-0.5" aria-hidden="true" />
-                </span>
-              </a>
-            </div>
-          </details>
+            </button>
 
-          <a
+            <div
+              id="buy-local-options"
+              className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${buyLocalOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            >
+              <div className={`overflow-hidden motion-reduce:transition-none ${buyLocalOpen ? "" : "pointer-events-none"}`} inert={!buyLocalOpen}>
+                <div className={`space-y-2.5 px-4 pb-4 transition-opacity duration-300 ease-out motion-reduce:transition-none sm:px-5 sm:pb-5 ${buyLocalOpen ? "opacity-100 delay-75" : "opacity-0"}`}>
+                  <a
+                    href={links.organicSoil}
+                    onClick={() => recordClick("organic-soil-wholesale")}
+                    aria-label="Shop Organic Soil Wholesale for local soil sales"
+                    className={`group/store flex min-h-[6.25rem] items-center gap-3 rounded-2xl border-2 border-[#9fbb93] bg-[#dce8d6] px-4 py-3 shadow-[0_8px_22px_rgba(19,61,42,0.08)] transition duration-200 [-webkit-tap-highlight-color:transparent] hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(19,61,42,0.14)] active:translate-y-0 active:bg-[#d3e3cc] ${focusRing}`}
+                  >
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <span className="block font-heading text-[1.05rem] font-bold leading-[1.15] text-[#20251f]">
+                        Organic <span className="text-[#215330]">Soil</span>
+                        <span className="mt-0.5 block font-heading text-[1.05rem] italic leading-none text-[#8f7000]">Wholesale</span>
+                      </span>
+                      <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.14em] text-[#6b746c]">by Soil Seed &amp; Water</span>
+                      <span className="mt-2 inline-flex rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#133d2a] shadow-sm">Local soil sales</span>
+                    </span>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#133d2a] text-white shadow-sm">
+                      <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover/store:translate-x-1" aria-hidden="true" />
+                    </span>
+                  </a>
+                  <a
+                    href={links.soilSeedWater}
+                    onClick={() => recordClick("soil-seed-and-water")}
+                    aria-label="Visit the Soil Seed and Water e-commerce online store"
+                    className={`group/store flex min-h-[6.25rem] items-center gap-3 rounded-2xl border-2 border-[#d6b470] bg-white px-4 py-3 shadow-[0_8px_22px_rgba(87,62,29,0.08)] transition duration-200 [-webkit-tap-highlight-color:transparent] hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(87,62,29,0.14)] active:translate-y-0 active:bg-[#fff8e8] ${focusRing}`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <img src="/images/soil-seed-and-water-logo.png" alt="" width={2083} height={729} className="h-12 w-auto max-w-[12.5rem] object-contain object-left" />
+                      <span className="mt-1.5 inline-flex rounded-full bg-[#f4e6c6] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#6d4c25]">E-commerce / online store</span>
+                    </span>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#8b6940] text-white shadow-sm">
+                      <ExternalLink className="h-5 w-5 transition-transform duration-200 group-hover/store:-translate-y-0.5 group-hover/store:translate-x-0.5" aria-hidden="true" />
+                    </span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <PhotoCard
             href={links.deals}
             onClick={() => recordClick("current-deals")}
-            className="group grid min-h-36 grid-cols-[1fr_112px] overflow-hidden rounded-3xl bg-[#133d2a] text-white shadow-[0_12px_32px_rgba(19,61,42,0.18)] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] active:scale-[0.99] sm:grid-cols-[1fr_155px]"
-          >
-            <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f0d498]">
-                <Gift className="h-4 w-4" aria-hidden="true" /> Current offers
-              </span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">See Current Deals</span>
-              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f8edcf]">
-                Shop deals <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-              </span>
-            </span>
-            <img
-              src="/images/performance/campaign-worm-thumb-384.webp"
-              alt="Hands holding rich worm castings"
-              width={384}
-              height={384}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          </a>
+            shellClass="bg-[#133d2a] text-white"
+            eyebrowClass="text-[#f0d498]"
+            icon={<Gift className="h-4 w-4 shrink-0" aria-hidden="true" />}
+            eyebrow="Current offers"
+            title="See Current Deals"
+            action="Shop deals"
+            actionClass="text-[#f8edcf]"
+            image={
+              <img
+                src="/images/performance/campaign-worm-thumb-384.webp"
+                alt=""
+                width={384}
+                height={384}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            }
+          />
 
-          <a
+          <PhotoCard
             href={links.newsletter}
             onClick={() => recordClick("newsletter")}
-            className="group grid min-h-40 grid-cols-[1fr_112px] overflow-hidden rounded-3xl bg-[#173d25] text-white shadow-[0_14px_34px_rgba(19,61,42,0.22)] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] active:scale-[0.99] sm:grid-cols-[1fr_155px]"
-          >
-            <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f5bb45]">
-                <Sprout className="h-4 w-4" aria-hidden="true" /> Stay in the loop
-              </span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Join our newsletter</span>
-              <span className="mt-2 text-sm font-semibold text-[#dce7de]">Sign up to see what&apos;s going on</span>
-              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f5d77d]">
-                Sign me up <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-              </span>
-            </span>
-            <img
-              src="/images/community/growing-garden-640.webp"
-              alt="A planted garden with beds and growing vegetables"
-              width={640}
-              height={480}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          </a>
+            shellClass="border-2 border-[#d6b470] bg-white text-[#133d2a] shadow-[0_10px_26px_rgba(87,62,29,0.1)]"
+            eyebrowClass="text-[#8b6940]"
+            icon={<Sprout className="h-4 w-4 shrink-0" aria-hidden="true" />}
+            eyebrow="Stay in the loop"
+            title="Join our newsletter"
+            detail="Sign up to see what's going on"
+            detailClass="font-medium text-[#526457]"
+            action="Sign me up"
+            actionClass="text-[#133d2a]"
+            image={
+              <img
+                src="/images/community/seedling-800.webp"
+                alt=""
+                width={800}
+                height={533}
+                loading="lazy"
+                className="h-full w-full object-cover object-[center_60%]"
+              />
+            }
+          />
 
-          <a
+          <PhotoCard
             href={links.careers}
             onClick={() => recordClick("careers")}
-            aria-label="Get hired. Apply to work with us."
-            className="group grid min-h-36 grid-cols-[1fr_112px] overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-gradient-to-br from-[#fff8e8] via-[#f3e0b5] to-[#dce8d6] text-[#133d2a] shadow-[0_12px_32px_rgba(87,62,29,0.16)] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] active:scale-[0.99] sm:grid-cols-[1fr_155px]"
-          >
-            <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#7a552c]">
-                <Briefcase className="h-4 w-4" aria-hidden="true" /> We&apos;re hiring
+            ariaLabel="Get hired. Apply to work with us."
+            shellClass="border-2 border-[#d6b470] bg-gradient-to-br from-[#fff8e8] via-[#f3e0b5] to-[#dce8d6] text-[#133d2a] shadow-[0_12px_32px_rgba(87,62,29,0.16)]"
+            eyebrowClass="text-[#7a552c]"
+            icon={<Briefcase className="h-4 w-4 shrink-0" aria-hidden="true" />}
+            eyebrow="We're hiring"
+            title="Get hired"
+            detail="Apply to work with us"
+            detailClass="font-medium text-[#526457]"
+            action="See open roles"
+            actionClass="text-[#133d2a]"
+            image={
+              <span className="relative block h-full min-h-full overflow-hidden">
+                <img
+                  src="/images/recruitment/sales-representative-hiring-square-2026.webp"
+                  alt=""
+                  width={1254}
+                  height={1254}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full origin-[92%_24%] scale-[2.15] object-cover object-[92%_24%]"
+                />
               </span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Get hired</span>
-              <span className="mt-1 text-sm font-semibold text-[#526457]">Apply to work with us</span>
-              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#133d2a]">
-                See open roles <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-              </span>
-            </span>
-            <span
-              role="img"
-              aria-label="A gardener holding soil in a planted bed"
-              className="block h-full min-h-36 w-full bg-[length:auto_230%] bg-[position:100%_22%] bg-no-repeat"
-              style={{ backgroundImage: "url(/images/recruitment/sales-representative-hiring-square-2026.webp)" }}
-            />
-          </a>
+            }
+          />
         </section>
 
-        <footer className="mt-7 text-center text-xs leading-5 text-[#637166]">
+        <footer className="mt-6 text-center text-xs leading-5 text-[#637166]">
           Phoenix, Arizona · Locally made for healthier soil
         </footer>
       </div>
