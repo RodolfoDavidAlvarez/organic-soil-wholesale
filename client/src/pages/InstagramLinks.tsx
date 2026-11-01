@@ -1,15 +1,15 @@
 import { useEffect } from "react";
-import { ArrowRight, BellRing, Briefcase, ExternalLink, Gift, Sprout } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { trackEvent } from "@/lib/analytics";
 
 type SocialChannel = "instagram" | "facebook" | "tiktok" | "youtube";
 
-const channelDetails: Record<SocialChannel, { name: string; utmSource: string }> = {
-  instagram: { name: "Instagram", utmSource: "instagram" },
-  facebook: { name: "Facebook", utmSource: "facebook" },
-  tiktok: { name: "TikTok", utmSource: "tiktok" },
-  youtube: { name: "YouTube", utmSource: "youtube" },
+const channelDetails: Record<SocialChannel, { utmSource: string }> = {
+  instagram: { utmSource: "instagram" },
+  facebook: { utmSource: "facebook" },
+  tiktok: { utmSource: "tiktok" },
+  youtube: { utmSource: "youtube" },
 };
 
 function channelFromPath(pathname: string): SocialChannel {
@@ -27,22 +27,44 @@ function trackedLink(channel: SocialChannel, target: string, campaign: string, c
   url.searchParams.set("utm_medium", "organic_social");
   url.searchParams.set("utm_campaign", campaign);
   url.searchParams.set("utm_content", content);
-  return url.origin === "https://www.organicsoilwholesale.com"
-    ? `${url.pathname}${url.search}${url.hash}`
-    : url.toString();
+  if (/^https?:\/\//i.test(target)) return url.toString();
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+const actionClass =
+  "flex min-h-14 w-full items-center justify-between gap-3 px-5 py-3.5 text-left text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] active:bg-[#0e2c1e] [@media(hover:hover)]:hover:bg-[#1b4d34]";
+
+type ActionLinkProps = {
+  href: string;
+  title: string;
+  detail?: string;
+  onClick: () => void;
+};
+
+function ActionLink({ href, title, detail, onClick }: ActionLinkProps) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      className={`${actionClass} rounded-2xl bg-[#133d2a] shadow-[0_8px_20px_rgba(19,61,42,0.12)]`}
+    >
+      <span className="min-w-0">
+        <span className="block font-heading text-lg font-bold leading-tight">{title}</span>
+        {detail ? <span className="mt-1 block text-sm font-medium leading-5 text-[#f3e6c4]">{detail}</span> : null}
+      </span>
+      <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+    </a>
+  );
 }
 
 export default function InstagramLinks() {
   const channel = channelFromPath(window.location.pathname);
-  const channelName = channelDetails[channel].name;
   const links = {
-    gardenBed: trackedLink(channel, "/garden-bed-offer.html", "garden_bed_bundle_2026", "garden_bed_bundle_offer"),
-    community: trackedLink(channel, "/keep-growing", "keep_growing", "community_signup"),
-    careers: trackedLink(channel, "/careers/sales", "sales_recruitment_2026", "sales_representative_careers"),
-    offers: trackedLink(channel, "/offers", "fall_garden_bundles_2026", "fall_garden_bundles"),
-    gardenClass: trackedLink(channel, "/classes#class-alert-signup", "fall_garden_classes_2026", "garden_class_alerts"),
-    organicSoil: trackedLink(channel, "/", "social_bio_2026", "organic_soil_wholesale"),
-    soilSeedWater: trackedLink(channel, "https://soilseedandwater.com/", "social_bio_2026", "soil_seed_water"),
+    organicSoil: trackedLink(channel, "https://www.organicsoilwholesale.com/", "social_bio_2026", "organic_soil_wholesale"),
+    soilSeedWater: trackedLink(channel, "https://soilseedandwater.com/", "social_bio_2026", "soil_seed_water_store"),
+    deals: trackedLink(channel, "/offers", "social_bio_2026", "current_deals"),
+    newsletter: trackedLink(channel, "/newsletter", "social_bio_2026", "newsletter"),
+    careers: trackedLink(channel, "/careers", "social_bio_2026", "careers"),
   };
 
   useEffect(() => {
@@ -61,136 +83,73 @@ export default function InstagramLinks() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f4f0e3] text-[#133d2a]">
+    <div className="min-h-screen bg-[#f4f0e3] text-[#133d2a]">
       <Helmet>
-        <title>Choose Your Next Step | Organic Soil Wholesale</title>
+        <title>Soil Seed &amp; Water</title>
         <meta
           name="description"
-          content="Keep growing with Soil Seed & Water: future giveaways, garden tips, new products, local events, and garden bundles."
+          content="Buy local, see current deals, join the newsletter, or apply to work with Soil Seed & Water."
         />
       </Helmet>
 
-      <div className="mx-auto w-full max-w-xl px-4 pb-10 pt-7 sm:px-6 sm:pt-10">
-        <header className="text-center">
-          <p className="font-heading text-xl font-bold text-[#20251f] sm:text-2xl">Welcome to Soil Seed and Water</p>
-          <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#8b6940]">Welcome, {channelName} friends</p>
-          <h1 className="mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">What would you like to do?</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">There’s more growing here. Stay connected, explore our garden bundles, or find your next opportunity.</p>
+      <div className="mx-auto flex w-full max-w-md flex-col px-5 pb-12 pt-10">
+        <header className="flex justify-center">
+          <h1>
+            <img
+              src="/images/soil-seed-and-water-logo.png"
+              alt="Soil Seed & Water"
+              width={2083}
+              height={729}
+              decoding="async"
+              className="h-auto w-52 max-w-full"
+            />
+          </h1>
         </header>
 
-        <section className="mt-7 space-y-3" aria-label="Featured links">
-          <a href={links.gardenBed} onClick={() => recordClick("garden-bed-bundle-offer")} aria-label="View the complete garden bed bundle and payment options" className="group block overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-[#fff8e8] shadow-[0_12px_32px_rgba(87,62,29,0.12)] transition-transform active:scale-[0.99]">
-            <img src="/garden-bed/bundle-480.webp" srcSet="/garden-bed/bundle-480.webp 480w, /garden-bed/bundle-960.webp 960w" sizes="(max-width: 575px) calc(100vw - 2rem), 528px" width={1200} height={800} alt="Illustration of the raised garden bed with soil bags, mulch, pea gravel and amendments" decoding="async" fetchPriority="high" className="aspect-[3/2] w-full object-contain" />
-            <span className="flex flex-col p-5 sm:p-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#8b6940]">The complete garden bed bundle</span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Your garden starts here.</span>
-              <span className="mt-2 text-sm leading-6">A 4 × 8 ft raised bed, 2 ft deep, with soil, mulch, pea gravel, amendments and setup instructions.</span>
-              <span className="mt-3 text-xl font-bold">$945.43 <span className="text-sm font-normal">pay in full, plus tax</span></span>
-              <span className="mt-3 rounded-lg bg-[#f2e2be] px-3 py-2 text-sm font-semibold text-[#75412e]">Free Arizona delivery in November 2026 only.</span>
-              <span className="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[#264027] px-4 py-3 text-sm font-bold text-white">View bundle &amp; payment options <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" /></span>
-              <span className="mt-3 text-xs leading-5 text-[#4f6255]">Giveaway community offer. A personal offer link is required to pay.</span>
-              <span className="mt-2 text-[11px] leading-4 text-[#637166]">Package illustration. Plants, assembly, irrigation and shade accessories are not included.</span>
-            </span>
-          </a>
-          <a
-            href={links.community}
-            onClick={() => recordClick("keep-growing")}
-            className="group grid min-h-40 grid-cols-[1fr_112px] overflow-hidden rounded-3xl bg-[#173d25] text-white shadow-[0_14px_34px_rgba(19,61,42,0.22)] transition-transform active:scale-[0.99] sm:grid-cols-[1fr_155px]"
-          >
-            <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f5bb45]"><Sprout className="h-4 w-4" /> Be part of what’s growing</span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Keep Growing With Us</span>
-              <span className="mt-2 text-sm font-semibold text-[#dce7de]">Future giveaways, garden tips, new products & local events</span>
-              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f5d77d]">Count me in <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
-            </span>
-            <img src="/images/giveaway/complete-fall-garden-hero-v9.png" alt="A thriving raised-bed vegetable garden" className="h-full w-full object-cover" />
-          </a>
+        <nav aria-label="What to do next" className="mt-8 flex flex-col gap-3">
+          <details className="group overflow-hidden rounded-2xl bg-[#133d2a] shadow-[0_8px_20px_rgba(19,61,42,0.12)]">
+            <summary className={`${actionClass} cursor-pointer list-none rounded-2xl [&::-webkit-details-marker]:hidden`}>
+              <span className="font-heading text-lg font-bold leading-tight">Buy Local</span>
+              <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <div className="space-y-2 bg-[#fff8e8] p-2.5">
+              <a
+                href={links.organicSoil}
+                onClick={() => recordClick("organic-soil-wholesale")}
+                className="flex min-h-12 items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 font-heading text-base font-bold text-[#133d2a] shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] active:bg-[#f4f0e3]"
+              >
+                Organic Soil Wholesale
+                <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+              </a>
+              <a
+                href={links.soilSeedWater}
+                onClick={() => recordClick("soil-seed-and-water")}
+                className="flex min-h-14 items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-[#133d2a] shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a15a] active:bg-[#f4f0e3]"
+              >
+                <span className="min-w-0">
+                  <span className="block font-heading text-base font-bold leading-tight">Soil Seed &amp; Water</span>
+                  <span className="mt-0.5 block text-sm font-semibold leading-5 text-[#8b6940]">E-commerce / online store</span>
+                </span>
+                <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+              </a>
+            </div>
+          </details>
 
-          <a
+          <ActionLink href={links.deals} title="See Current Deals" onClick={() => recordClick("current-deals")} />
+          <ActionLink
+            href={links.newsletter}
+            title="Join our newsletter"
+            detail="Sign up to see what's going on"
+            onClick={() => recordClick("newsletter")}
+          />
+          <ActionLink
             href={links.careers}
-            onClick={() => recordClick("sales-representative-careers")}
-            aria-label="Apply for the Soil Seed & Water Sales Representative position in Phoenix"
-            className="group grid min-h-36 grid-cols-[1fr_112px] overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-gradient-to-br from-[#fff8e8] via-[#f3e0b5] to-[#dce8d6] text-[#133d2a] shadow-[0_12px_32px_rgba(87,62,29,0.16)] transition-transform active:scale-[0.99] sm:grid-cols-[1fr_155px]"
-          >
-            <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#7a552c]"><Briefcase className="h-4 w-4" /> We’re hiring · Phoenix</span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Grow With Us</span>
-              <span className="mt-1 text-sm font-semibold text-[#526457]">Sales position open</span>
-              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#133d2a]">Apply to join SSW <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
-            </span>
-            <img
-              src="/images/recruitment/sales-representative-hiring-square-2026.webp"
-              alt="Soil Seed & Water sales representative opening in Phoenix"
-              className="h-full w-full object-cover object-center"
-              loading="lazy"
-            />
-          </a>
-
-          <a
-            href={links.offers}
-            onClick={() => recordClick("fall-garden-bundles")}
-            className="group grid min-h-36 grid-cols-[1fr_112px] overflow-hidden rounded-3xl bg-[#133d2a] text-white shadow-[0_12px_32px_rgba(19,61,42,0.18)] transition-transform active:scale-[0.99] sm:grid-cols-[1fr_155px]"
-          >
-            <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f0d498]"><Gift className="h-4 w-4" /> Fall garden bundles</span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Fall garden bundles $99 / $149 / $399</span>
-              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f8edcf]">See deals <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
-            </span>
-            <img src="/images/performance/campaign-worm-thumb-384.webp" alt="Mikey's Worm Poop worm castings" className="h-full w-full object-cover" />
-          </a>
-
-          <a
-            href={links.gardenClass}
-            onClick={() => recordClick("garden-class-waitlist")}
-            aria-label="Sign up to hear about the next garden class"
-            className="group flex min-h-36 items-center gap-4 rounded-3xl border-2 border-[#d6b470] bg-white p-5 shadow-[0_10px_26px_rgba(87,62,29,0.1)] transition-transform active:scale-[0.99] sm:p-6"
-          >
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#e8d3a8] text-[#133d2a]">
-              <BellRing className="h-8 w-8" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8b6940]">Garden class alerts</span>
-              <span className="mt-1 block font-heading text-xl font-bold leading-tight sm:text-2xl">Tell me about the next class</span>
-              <span className="mt-2 block text-sm font-semibold text-[#526457]">Sign me up for free alerts</span>
-            </span>
-            <ArrowRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1" />
-          </a>
-
-          <a
-            href={links.organicSoil}
-            onClick={() => recordClick("organic-soil-wholesale")}
-            aria-label="Shop Organic Soil Wholesale for local soil sales"
-            className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-[#9fbb93] bg-[#dce8d6] px-5 py-4 shadow-[0_8px_22px_rgba(19,61,42,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(19,61,42,0.16)] active:scale-[0.99]"
-          >
-            <span className="min-w-0 flex-1 leading-tight">
-              <span className="block font-heading text-lg font-bold text-[#20251f] sm:text-xl">
-                Organic <span className="text-primary">Soil</span>{" "}
-                <span className="font-display italic text-[#8f7000]">Wholesale</span>
-              </span>
-              <span className="mt-0.5 block text-[8px] font-semibold uppercase tracking-[0.14em] text-[#6b746c]">by Soil Seed &amp; Water</span>
-              <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-[#133d2a] shadow-sm">Local soil sales</span>
-            </span>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#133d2a] text-white shadow-sm"><ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" /></span>
-          </a>
-
-          <a
-            href={links.soilSeedWater}
-            onClick={() => recordClick("soil-seed-and-water")}
-            aria-label="Visit the Soil Seed and Water ecommerce retail store"
-            className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-[#d6b470] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(87,62,29,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(87,62,29,0.16)] active:scale-[0.99]"
-          >
-            <span className="min-w-0 flex-1">
-              <img src="/images/soil-seed-and-water-logo.png" alt="Soil Seed and Water" className="h-auto w-44 max-w-full object-contain object-left" />
-              <span className="mt-2 inline-flex rounded-full bg-[#f4e6c6] px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-[#6d4c25]">Ecommerce retail store</span>
-            </span>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#8b6940] text-white shadow-sm"><ExternalLink className="h-5 w-5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span>
-          </a>
-        </section>
-
-        <footer className="mt-7 text-center text-xs leading-5 text-[#637166]">
-          Phoenix, Arizona · Locally made for healthier soil
-        </footer>
+            title="Get hired"
+            detail="Apply to work with us"
+            onClick={() => recordClick("careers")}
+          />
+        </nav>
       </div>
-    </main>
+    </div>
   );
 }

@@ -777,9 +777,10 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.match(app, /path="\/survey\/garden-class"/);
   assert.match(app, /path="\/survey"/);
   assert.match(app, /path="\/admin\/surveys"/);
-  assert.match(ig, /Tell me about the next class/);
+  assert.doesNotMatch(ig, /Tell me about the next class/);
   assert.doesNotMatch(ig, /Register for The Garden Reset/);
   assert.doesNotMatch(ig, /Aug 22/);
+  assert.doesNotMatch(ig, /classes#class-alert-signup/);
   assert.match(yard, /Honest feedback\. Three quick taps/);
   assert.match(yard, /free 50 pound dairy compost/);
   assert.doesNotMatch(yard, /30% off/);
