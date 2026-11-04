@@ -57,7 +57,7 @@ class MemoryClient {
         email: params[0],
         email_normalized: email,
         first_name: params[2],
-        source_order_id: params[3],
+        source_pickup_order_id: params[3],
         paid_at: params[4],
         status: 'sending',
         claimed_at: NOW.toISOString(),
@@ -196,6 +196,18 @@ test('flag off dry-runs due rows and never calls Resend', async () => {
   assert.equal(resend.calls.length, 0);
   assert.equal(client.outbox.size, 0);
   assert.equal(client.queries.some((entry) => entry.sql.includes('portal_survey_letter:claim')), false);
+});
+
+test('pickup order claims use the pickup reference, not the legacy sales order reference', async () => {
+  const client = new MemoryClient({ due: [dueOrder({ order_id: 46 })] });
+  const resend = new FakeResend();
+  const result = await processPortalSurveyLetters(client, resend, { sendActive: true, since: SINCE, now: NOW });
+  const claim = client.queries.find((entry) => entry.sql.includes('portal_survey_letter:claim'));
+  assert.match(claim.sql, /source_pickup_order_id/);
+  assert.doesNotMatch(claim.sql, /\bsource_order_id\b/);
+  assert.equal(client.outbox.get('buyer@gmail.com').source_pickup_order_id, 46);
+  assert.equal(result.sent, 1);
+  assert.equal(resend.calls.length, 1);
 });
 
 test('unset SURVEY_LETTER_SEND_ACTIVE is a no-op for customer mail', async () => {

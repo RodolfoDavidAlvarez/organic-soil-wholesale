@@ -229,7 +229,7 @@ export async function claimPortalSurveyLetter(client, order) {
   const { rows } = await client.query(
     `/* portal_survey_letter:claim */
     INSERT INTO public.portal_survey_letter_outbox (
-      email, email_normalized, first_name, source_order_id, paid_at, status, claimed_at
+      email, email_normalized, first_name, source_pickup_order_id, paid_at, status, claimed_at
     )
     VALUES ($1, $2, $3, $4, $5, 'sending', now())
     ON CONFLICT (email_normalized) DO UPDATE
@@ -237,7 +237,7 @@ export async function claimPortalSurveyLetter(client, order) {
           claimed_at = now(),
           updated_at = now(),
           first_name = COALESCE(EXCLUDED.first_name, portal_survey_letter_outbox.first_name),
-          source_order_id = COALESCE(portal_survey_letter_outbox.source_order_id, EXCLUDED.source_order_id),
+          source_pickup_order_id = COALESCE(portal_survey_letter_outbox.source_pickup_order_id, EXCLUDED.source_pickup_order_id),
           paid_at = COALESCE(portal_survey_letter_outbox.paid_at, EXCLUDED.paid_at),
           skip_reason = NULL
       WHERE portal_survey_letter_outbox.status = 'pending'
