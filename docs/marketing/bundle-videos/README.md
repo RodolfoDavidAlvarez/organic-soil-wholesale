@@ -4,11 +4,11 @@ Updated 2026-11-05. Rodolfo approved Big Garden Setup and Garden Refresh Plus fo
 
 ## Video mapping
 
-| Page | Preserved master | Duration | Contents |
-| --- | --- | --- | --- |
-| `/offers/garden-refresh` | Garden Refresh Bundle Video - Vertical V1.mp4 | 81.400 s | 5 mulch, 3 dairy compost, 2 worm castings; $99 |
-| `/offers/garden-refresh-plus` | Garden Refresh Plus Bundle Video - Vertical V1.mp4 | 123.567 s | 10 PlantPal, 3 mulch, 3 worm castings; $149 |
-| `/offers/big-garden-setup` | Big Garden Setup Bundle Final Video - Vertical V3.mp4 | 91.433 s | 30 PlantPal, 4 dairy compost, 3 worm castings, 3 mulch; $399 |
+| Page | YouTube id | Preserved master | Duration | Contents |
+| --- | --- | --- | --- | --- |
+| `/offers/garden-refresh` | `w0XoOh8t5vQ` | Garden Refresh Bundle Video - Vertical V1.mp4 | 81.400 s | 5 mulch, 3 dairy compost, 2 worm castings; $99 |
+| `/offers/garden-refresh-plus` | `pTmJRLgJZYw` | Garden Refresh Plus Bundle Video - Vertical V1.mp4 | 123.567 s | 10 PlantPal, 3 mulch, 3 worm castings; $149 |
+| `/offers/big-garden-setup` | `kWwvyyMVqnk` | Big Garden Setup Bundle Final Video - Vertical V3.mp4 | 91.433 s | 30 PlantPal, 4 dairy compost, 3 worm castings, 3 mulch; $399 |
 
 Masters live in `Garden Bundles Edit/Final Videos` in the SSW workspace. The approved masters were **not changed**. `media-manifest.json` records both master and website-copy hashes. Website filename `vertical-v1` means first web delivery; Big Garden's underlying approved edit is V3.
 
@@ -32,7 +32,7 @@ ffmpeg -i MASTER.mp4 -vf scale=720:1280:flags=lanczos \
 
 Poster frames: Big Garden 5.5 s, Plus 4.0 s, Refresh 1.5 s; JPEG quality 3. Optional WebVTT tracks are converted from each project's `Captions.srt`. Captions are already visible in the video; do not enable the extra track by default and double them.
 
-`BundleVideo.tsx` loads the video only after a customer clicks the walkthrough button. Native controls, inline portrait playback, a keyboard-accessible Radix dialog and a 44 px close button are provided. Closing unmounts the video. Existing hero/product photos and checkout behavior are preserved.
+The three offer pages embed the matching unlisted Soil Seed & Water YouTube upload (`youtube-nocookie.com`). `BundleVideo.tsx` still waits for the walkthrough button, then mounts a portrait iframe and removes it when the dialog closes. The page does not request the local MP4 files. Those approved website copies, posters, and caption files stay in place and are unchanged. The same button, dialog, 44 px close control, hero photos, and checkout behavior remain. Captions stay burned into the picture. Reduced-motion users do not get autoplay.
 
 ## Product guidance
 
