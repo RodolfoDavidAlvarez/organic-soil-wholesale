@@ -34,6 +34,8 @@ import {
 } from "@shared/promoBundles.js";
 import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { bundleComparison, comparisonPrice, bundleGroupImages } from "@/data/bundlePresentation";
+import { BundleVideo } from "@/components/BundleVideo";
+import { getBundleUsage } from "@shared/bundleUsage.js";
 import "./BundleOffers.css";
 
 const legacyOfferAliases: Record<string, string> = {
@@ -312,12 +314,6 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
     addedTimer.current = window.setTimeout(() => setJustAdded(false), 1800);
   };
   if (!detail) return <OffersIndex />;
-  const refreshCopy: Record<string, string> = {
-    plantpal: "Ready-to-use growing mix for beds, containers and new planting areas. Add it where you need fresh soil, then water after planting.",
-    mulch: "Chocolate-colored mulch enhanced with dairy compost and worm castings. It helps hold moisture and gives your garden a finished look. Spread it on top, keeping stems clear.",
-    simons: "Dairy compost adds organic matter and slow-release nutrients. Mix it into garden beds, in-ground soil or around trees.",
-    mikeys: "Worm castings add nutrients to your soil. Mix them in before planting or topdress around established plants and water in.",
-  };
   return (
     <main className="bundle-page bo-detail">
       <Helmet>
@@ -381,6 +377,7 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
               {offer.slug === "garden-refresh" && <span>3 dairy compost bags free</span>}
               {offer.slug === "garden-refresh-plus" && <span>3 mulch bags free</span>}
             </div>
+            <BundleVideo slug={offer.slug} title={offer.title} />
           </div>
         </section>
         <section
@@ -394,10 +391,27 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
             </div>
             <p>What you get and how each material helps your garden.</p>
           </div>
-          <div className={`bo-refresh-products bo-refresh-products-${products.length}`}>{products.map((product) => <article className="bo-refresh-product" key={product.productKey}>
-            <img src={bagImage(product)} alt={`${product.name} bag`} loading="lazy" />
-            <div><span>{amountFor(offer, product).replace(" included", "")}</span><h3>{product.name}</h3><p>{refreshCopy[product.productKey]}</p><Link href={product.href}>Product details <ArrowRight size={15} aria-hidden="true" /></Link></div>
-          </article>)}</div>
+          <div className={`bo-refresh-products bo-refresh-products-${products.length}`}>
+            {products.map((product) => {
+              const usage = getBundleUsage(offer.items.find((item) => item.href === product.href));
+              return <article className="bo-refresh-product" key={product.productKey}>
+                <img src={bagImage(product)} alt={`${product.name} bag`} loading="lazy" />
+                <div>
+                  <span>{amountFor(offer, product).replace(" included", "")}</span>
+                  <h3>{product.name}</h3>
+                  <p>{usage?.purpose || product.purpose}</p>
+                  {usage && <div className="bo-product-usage">
+                    <small>{usage.perBag}</small>
+                    <strong>{usage.coverage}</strong>
+                    <p>{usage.application}</p>
+                    <p className="bo-product-topup">{usage.nextUse}</p>
+                  </div>}
+                  <Link href={product.href}>Product details <ArrowRight size={15} aria-hidden="true" /></Link>
+                </div>
+              </article>;
+            })}
+          </div>
+          <p className="bo-usage-footnote">Coverage is per product, before settling. A 4×8 bed is 32 sq ft. Depth and plant needs vary; bag weights vary with moisture.</p>
           <div className="bo-coverage-note">
             <Leaf size={23} aria-hidden="true" />
             <div>

@@ -1,0 +1,98 @@
+[
+  {
+    "slug": "big-garden-setup",
+    "master": "Big Garden Setup Bundle Final Video - Vertical V3.mp4",
+    "master_sha256": "0046cb04d9d655aba43c17ba1b604c8e1a535e988c653b1f09638b18961aaa18",
+    "web_file": "big-garden-setup-vertical-v1.mp4",
+    "sha256": "fcc381b576d8a0dab2d88ad61faf293a2e81142871e7039564db284cd0baa7ae",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "r_frame_rate": "30/1",
+          "duration": "91.433333",
+          "nb_frames": "2743"
+        },
+        {
+          "codec_type": "audio",
+          "r_frame_rate": "0/0",
+          "duration": "91.433000",
+          "nb_frames": "4284"
+        }
+      ],
+      "format": {
+        "duration": "91.433333",
+        "size": "12559304"
+      }
+    },
+    "decode": "passed"
+  },
+  {
+    "slug": "garden-refresh-plus",
+    "master": "Garden Refresh Plus Bundle Video - Vertical V1.mp4",
+    "master_sha256": "2cef2710d12a89131c68adde9193d08ea029d46642585d89bed8d3f1659133f9",
+    "web_file": "garden-refresh-plus-vertical-v1.mp4",
+    "sha256": "fffb7f2d18f1796aa05df00f963b8dfac00fb9936a1e0a5e9896e15261da8b90",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "r_frame_rate": "30/1",
+          "duration": "123.566667",
+          "nb_frames": "3707"
+        },
+        {
+          "codec_type": "audio",
+          "r_frame_rate": "0/0",
+          "duration": "123.566000",
+          "nb_frames": "5792"
+        }
+      ],
+      "format": {
+        "duration": "123.566667",
+        "size": "21004538"
+      }
+    },
+    "decode": "passed"
+  },
+  {
+    "slug": "garden-refresh",
+    "master": "Garden Refresh Bundle Video - Vertical V1.mp4",
+    "master_sha256": "c5176562c8be0197f07176ce68dfe4fbcf56cfff8ca06fd4490cb66ed95c21a6",
+    "web_file": "garden-refresh-vertical-v1.mp4",
+    "sha256": "327a2732398b72d49f8c658f55dc560eb5a9b07575421f2d593ab26d6d9e249b",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "r_frame_rate": "30/1",
+          "duration": "81.400000",
+          "nb_frames": "2442"
+        },
+        {
+          "codec_type": "audio",
+          "r_frame_rate": "0/0",
+          "duration": "81.400000",
+          "nb_frames": "3817"
+        }
+      ],
+      "format": {
+        "duration": "81.400000",
+        "size": "12657609"
+      }
+    },
+    "decode": "passed"
+  }
+]

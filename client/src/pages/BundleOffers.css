@@ -1766,3 +1766,46 @@
   .bo-index .bo-price-comparison { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; padding: 14px; }
   .bo-price-saving { grid-column: 1 / -1; flex-direction: row; gap: 6px; }
 }
+.bo-video-trigger {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 0 14px 0 0;
+  overflow: hidden;
+  border: 1px solid var(--bo-border);
+  border-radius: 10px;
+  background: #fffdf7;
+  color: var(--bo-green);
+  text-align: left;
+  cursor: pointer;
+}
+.bo-video-trigger > img { width: 48px; height: 72px; object-fit: cover; }
+.bo-video-trigger strong { display: block; font-size: 15px; }
+.bo-video-trigger small { display: block; margin-top: 3px; color: var(--bo-muted); font-size: 12px; }
+.bo-video-trigger:hover { border-color: var(--bo-green); }
+.bo-video-trigger:focus-visible { outline: 3px solid #b58b35; outline-offset: 3px; }
+.bo-video-play { display: grid; place-items: center; flex: 0 0 32px; }
+.bo-video-dialog {
+  width: min(92vw, 430px);
+  max-width: 430px;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #1f3a1f;
+  color: #fff8e7;
+}
+.bo-video-heading { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px 5px 18px; }
+.bo-video-heading h2 { font-size: 16px; }
+.bo-video-heading button { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 6px; }
+.bo-video-heading button:focus-visible { outline: 2px solid #f2b632; }
+.bo-video-dialog video { display: block; width: 100%; max-height: calc(90svh - 54px); background: #000; object-fit: contain; }
+.bo-refresh-product .bo-product-usage { margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--bo-border); }
+.bo-product-usage small { display: block; margin-bottom: 9px; font-size: 11px; line-height: 1.5; color: var(--bo-muted); }
+.bo-product-usage strong { display: block; font-size: 16px; line-height: 1.35; color: var(--bo-green); }
+.bo-refresh-product .bo-product-usage p { margin-top: 3px; font-size: 12px; line-height: 1.5; }
+.bo-refresh-product .bo-product-usage .bo-product-topup { margin-top: 10px; }
+.bundle-page .bo-usage-footnote { margin: 14px 0 0; font-size: 12px; line-height: 1.6; color: var(--bo-muted); }
