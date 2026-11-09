@@ -24,7 +24,7 @@ test("garden bundle pages map to the unlisted YouTube walkthroughs", () => {
     assert.equal(url.searchParams.get("autoplay"), "1");
     assert.equal(url.searchParams.get("playsinline"), "1");
     assert.equal(url.searchParams.get("rel"), "0");
-    assert.equal(url.searchParams.get("modestbranding"), "1");
+    assert.equal(url.searchParams.get("modestbranding"), null);
   }
 
   const quiet = new URL(bundleVideoEmbedUrl(expected["garden-refresh"], false));

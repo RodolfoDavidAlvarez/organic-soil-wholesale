@@ -34,7 +34,6 @@ export function bundleVideoEmbedUrl(youtubeId: string, autoplay = true): string 
   }
   const params = new URLSearchParams({
     rel: "0",
-    modestbranding: "1",
     playsinline: "1",
   });
   if (autoplay) params.set("autoplay", "1");

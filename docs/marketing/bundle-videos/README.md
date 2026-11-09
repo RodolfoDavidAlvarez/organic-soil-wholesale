@@ -66,4 +66,13 @@ Reapplication guidance is conditional: compost spring/fall as needed; castings a
 - `npm run test:phone-links`: source/build checks passed, browser portion could not run because its pinned Puppeteer Chrome is absent. Bundle-page phone links checked in the supported browser instead; no claim of a real-device call test.
 - Browser review: the three routes, corresponding portrait sources/durations, dialog close behavior, and mobile widths 375/390/414 px. No mobile horizontal overflow.
 
-Release through the existing `main-clean` Git → Vercel workflow. Verify the resulting commit is READY on project `organic-soil-wholesale`, then check all three public pages and byte-range video delivery. Do not deploy a dirty tree or modify the unrelated Product Showcase review draft.
+Release through the existing `main-clean` Git → Vercel workflow. Verify the resulting commit is READY on project `organic-soil-wholesale`, then check all three public pages, on-demand YouTube iframe loading, and removal of the iframe on close. Do not deploy a dirty tree or modify the unrelated Product Showcase review draft.
+
+
+## November 9 playback follow-up
+
+- Kept the three verified Soil Seed & Water YouTube uploads and click-to-load player.
+- Added an always-available, keyboard-accessible YouTube link in the dialog when embedding is blocked.
+- Reserved space for the fallback link on phones and enabled dialog scrolling on short landscape screens.
+- Added scroll margins so focused video buttons clear sticky page controls.
+- Removed the deprecated, ineffective modestbranding parameter. Captions remain burned into the approved videos.

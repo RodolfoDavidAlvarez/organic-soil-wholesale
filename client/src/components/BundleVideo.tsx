@@ -41,6 +41,9 @@ export function BundleVideo({ slug, title }: { slug: string; title: string }) {
             />
           </div>
         )}
+        <a className="bo-video-fallback" href={`https://www.youtube.com/watch?v=${video.youtubeId}`} target="_blank" rel="noopener noreferrer">
+          Trouble playing? Watch on YouTube <span className="sr-only">(opens in a new tab)</span>
+        </a>
       </DialogContent>
     </Dialog>
   );
