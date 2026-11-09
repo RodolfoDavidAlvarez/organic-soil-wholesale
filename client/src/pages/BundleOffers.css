@@ -1767,6 +1767,7 @@
   .bo-price-saving { grid-column: 1 / -1; flex-direction: row; gap: 6px; }
 }
 .bo-video-trigger {
+  scroll-margin-block: 110px;
   display: flex;
   align-items: center;
   gap: 13px;
@@ -1788,6 +1789,8 @@
 .bo-video-trigger:focus-visible { outline: 3px solid #b58b35; outline-offset: 3px; }
 .bo-video-play { display: grid; place-items: center; flex: 0 0 32px; }
 .bo-video-dialog {
+  display: flex;
+  flex-direction: column;
   width: min(92vw, 430px);
   max-width: 430px;
   gap: 0;
@@ -1802,10 +1805,25 @@
 .bo-video-heading h2 { font-size: 16px; }
 .bo-video-heading button { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 6px; }
 .bo-video-heading button:focus-visible { outline: 2px solid #f2b632; }
-.bo-video-dialog video { display: block; width: 100%; max-height: calc(90svh - 54px); background: #000; object-fit: contain; }
+.bo-video-frame {
+  position: relative;
+  width: min(100%, calc((90svh - 98px) * 9 / 16));
+  margin-inline: auto;
+  aspect-ratio: 9 / 16;
+  max-height: calc(90svh - 98px);
+  background: #000;
+}
+.bo-video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
 .bo-refresh-product .bo-product-usage { margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--bo-border); }
 .bo-product-usage small { display: block; margin-bottom: 9px; font-size: 11px; line-height: 1.5; color: var(--bo-muted); }
 .bo-product-usage strong { display: block; font-size: 16px; line-height: 1.35; color: var(--bo-green); }
 .bo-refresh-product .bo-product-usage p { margin-top: 3px; font-size: 12px; line-height: 1.5; }
 .bo-refresh-product .bo-product-usage .bo-product-topup { margin-top: 10px; }
 .bundle-page .bo-usage-footnote { margin: 14px 0 0; font-size: 12px; line-height: 1.6; color: var(--bo-muted); }
+
+.bo-video-fallback { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; color: inherit; font-size: 13px; text-align: center; text-decoration: underline; }
+.bo-video-fallback:focus-visible { outline: 2px solid #f2b632; outline-offset: -4px; }
+@media (max-height: 500px) {
+  .bo-video-dialog { max-height: 94svh; overflow-y: auto; }
+  .bo-video-frame { flex: 0 0 auto; width: 100%; max-height: none; }
+}

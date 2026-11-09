@@ -1,20 +1,41 @@
-export const bundleVideos: Record<string, { src: string; poster: string; captions: string; duration: string }> = {
+export interface BundleVideoSource {
+  youtubeId: string;
+  poster: string;
+  duration: string;
+}
+
+/**
+ * Unlisted Soil Seed & Water walkthroughs. The page embeds these ids;
+ * the local MP4 copies stay in public/ and are not requested.
+ */
+export const bundleVideos: Record<string, BundleVideoSource> = {
   "garden-refresh": {
-    src: "/videos/bundles/garden-refresh-vertical-v1.mp4",
+    youtubeId: "w0XoOh8t5vQ",
     poster: "/videos/bundles/garden-refresh-poster.jpg",
-    captions: "/videos/bundles/garden-refresh.en.vtt",
     duration: "1:21",
   },
   "garden-refresh-plus": {
-    src: "/videos/bundles/garden-refresh-plus-vertical-v1.mp4",
+    youtubeId: "pTmJRLgJZYw",
     poster: "/videos/bundles/garden-refresh-plus-poster.jpg",
-    captions: "/videos/bundles/garden-refresh-plus.en.vtt",
     duration: "2:04",
   },
   "big-garden-setup": {
-    src: "/videos/bundles/big-garden-setup-vertical-v1.mp4",
+    youtubeId: "kWwvyyMVqnk",
     poster: "/videos/bundles/big-garden-setup-poster.jpg",
-    captions: "/videos/bundles/big-garden-setup.en.vtt",
     duration: "1:31",
   },
 };
+
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+export function bundleVideoEmbedUrl(youtubeId: string, autoplay = true): string {
+  if (!YOUTUBE_ID.test(youtubeId)) {
+    throw new Error("Invalid YouTube video id");
+  }
+  const params = new URLSearchParams({
+    rel: "0",
+    playsinline: "1",
+  });
+  if (autoplay) params.set("autoplay", "1");
+  return `https://www.youtube-nocookie.com/embed/${youtubeId}?${params.toString()}`;
+}
