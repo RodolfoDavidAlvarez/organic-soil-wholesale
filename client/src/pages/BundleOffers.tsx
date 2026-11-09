@@ -370,14 +370,21 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
             <p className="bo-order-note">
               Pay online. Pick up at our Phoenix yard. Bed frame not included.
             </p>
+            <div className="bo-included-summary">
+              <div className="bo-included-heading"><strong>Included in your bundle</strong><span>{offer.volumeLabel}</span></div>
+              <ul>{products.map((product) => (
+                <li key={product.productKey}><span>{product.name}</span><strong>{amountFor(offer, product).replace(" included", "")}</strong></li>
+              ))}</ul>
+              <a href="#bundle-contents-heading">Explore the products <ArrowRight size={14} aria-hidden="true" /></a>
+            </div>
           </div>
           <div className="bo-detail-gallery">
+            <BundleVideo slug={offer.slug} title={offer.title} />
             <div className="bo-refresh-photo">
-              <img src={bundleGroupImages[offer.slug]} alt={`${offer.title} bundle of bagged garden materials`} fetchPriority="high" />
+              <img src={bundleGroupImages[offer.slug]} alt={`${offer.title} bundle of bagged garden materials`} loading="lazy" decoding="async" />
               {offer.slug === "garden-refresh" && <span>3 dairy compost bags free</span>}
               {offer.slug === "garden-refresh-plus" && <span>3 mulch bags free</span>}
             </div>
-            <BundleVideo slug={offer.slug} title={offer.title} />
           </div>
         </section>
         <section

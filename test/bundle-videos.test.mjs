@@ -23,6 +23,8 @@ test("garden bundle pages map to the unlisted YouTube walkthroughs", () => {
     assert.equal(url.pathname, `/embed/${youtubeId}`);
     assert.equal(url.searchParams.get("autoplay"), "1");
     assert.equal(url.searchParams.get("playsinline"), "1");
+    assert.equal(url.searchParams.get("mute"), "1");
+    assert.equal(url.searchParams.get("controls"), "1");
     assert.equal(url.searchParams.get("rel"), "0");
     assert.equal(url.searchParams.get("modestbranding"), null);
   }
@@ -38,6 +40,6 @@ test("garden bundle pages map to the unlisted YouTube walkthroughs", () => {
   assert.equal(player.includes("<video"), false);
   assert.equal(data.includes(".mp4"), false);
   assert.equal(offers.includes("vertical-v1.mp4"), false);
-  assert.match(player, /embedUrl &&/);
+  assert.match(player, /ready &&/);
   assert.match(offers, /<BundleVideo slug=\{offer\.slug\} title=\{offer\.title\} \/>/);
 });

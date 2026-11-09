@@ -35,6 +35,8 @@ export function bundleVideoEmbedUrl(youtubeId: string, autoplay = true): string 
   const params = new URLSearchParams({
     rel: "0",
     playsinline: "1",
+    mute: "1",
+    controls: "1",
   });
   if (autoplay) params.set("autoplay", "1");
   return `https://www.youtube-nocookie.com/embed/${youtubeId}?${params.toString()}`;
