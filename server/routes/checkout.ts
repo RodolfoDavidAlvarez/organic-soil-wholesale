@@ -5,6 +5,7 @@ import { supabase } from '../db/supabase.js';
 import { sendAdminOrderNotification, sendPurchaseThankYouEmail } from '../services/email.js';
 import { assignSswNumberForPurchase } from '../../shared/sswNumber.js';
 import { forwardPickupOrderToMos } from '../services/forwardPickupOrderToMos.js';
+import { purchasedOrderItems, resolvePickupProductName } from '../../shared/pickupProductName.js';
 import { quoteTrucking } from './quoteRequests.js';
 import {
   formatReadyLabel,
@@ -591,22 +592,14 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
     }
   }
 
-  // Get full order details for email
+  // Column select only. Embedding order_items(...) collides with the jsonb
+  // orders.order_items column, which is the copy that stores the purchased name.
   const { data: fullOrder, error: fullOrderError } = await supabase
     .from('orders')
-    .select(`
-      *,
-      order_items (
-        quantity,
-        unit_price,
-        total_price,
-        products (
-          name
-        )
-      )
-    `)
+    .select('*')
     .eq('id', orderId)
     .single();
+  const purchasedItems = purchasedOrderItems(fullOrder?.order_items);
 
   if (!fullOrderError && fullOrder) {
     try {
@@ -636,11 +629,11 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
         customerEmail: fullOrder.email || undefined,
         customerPhone: fullOrder.phone || 'Not provided',
         orderType: fullOrder.order_type || 'standard',
-        items: fullOrder.order_items.map((item: any) => ({
-          name: item.products.name,
+        items: purchasedItems.map((item: any, index: number) => ({
+          name: resolvePickupProductName(item, purchasedItems, index),
           quantity: item.quantity,
-          price: item.total_price,
-          size: item.size_option
+          price: item.total_price ?? item.total ?? 0,
+          size: item.size_option || item.size
         })),
         subtotal: fullOrder.subtotal || 0,
         tax: fullOrder.tax_amount || 0,
@@ -660,20 +653,20 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
   // Fan out to MOS so yard reps get a push notification with the full order detail.
   // Phase B will land the matching POST /api/pickup-orders endpoint; until then this
   // fire-and-forget call logs a 404 we can replay later.
-  if (fullOrder && Array.isArray(fullOrder.order_items)) {
+  if (fullOrder && purchasedItems.length) {
     forwardPickupOrderToMos({
       osw_order_id: orderId,
       osw_order_number: fullOrder.order_number || undefined,
       customer_name: fullOrder.business_name || 'Customer',
       customer_phone: fullOrder.phone || '',
       customer_email: fullOrder.email || undefined,
-      items: fullOrder.order_items.map((item: any) => ({
+      items: purchasedItems.map((item: any, index: number) => ({
         product_id: item.product_id,
-        product_name: item.products?.name || 'Product',
-        size_option: item.size_option || '',
+        product_name: resolvePickupProductName(item, purchasedItems, index),
+        size_option: item.size_option || item.size || '',
         quantity: item.quantity || 1,
-        unit_price_cents: Math.round((item.unit_price || 0) * 100),
-        total_price_cents: Math.round((item.total_price || 0) * 100),
+        unit_price_cents: Math.round((item.unit_price ?? item.price ?? 0) * 100),
+        total_price_cents: Math.round((item.total_price ?? item.total ?? 0) * 100),
       })),
       pickup_at: fullOrder.pickup_scheduled_at || new Date().toISOString(),
       slot_label: fullOrder.pickup_scheduled_at

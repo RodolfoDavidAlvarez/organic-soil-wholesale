@@ -39,6 +39,7 @@ import {
 } from '../shared/oswPricing.js';
 import { nonBundleProductSubtotal, resolvePromoBundle } from '../shared/promoBundles.js';
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
+import { resolvePickupProductName } from '../shared/pickupProductName.js';
 import {
   JOB_APPLICATION_BUCKET,
   JobApplicationError,
@@ -957,9 +958,10 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
     customer_name: order?.customer_name || order?.business_name || 'Customer',
     customer_phone: order?.phone || '',
     customer_email: order?.customer_email || order?.email || undefined,
-    items: (orderItems || []).map((item) => ({
+    items: (orderItems || []).map((item, index) => ({
       product_id: item.product_id,
-      product_name: 'Product',
+      // order_items rows have no name column. The purchased label is on orders.order_items.
+      product_name: resolvePickupProductName(item, order?.order_items, index),
       size_option: item.size_option || '',
       quantity: item.quantity || 1,
       unit_price_cents: Math.round((item.unit_price || 0) * 100),
