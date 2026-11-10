@@ -1,3 +1,5 @@
+import { sswFrom } from './sswEmailFrom.js';
+
 export const JOB_APPLICATION_BUCKET = 'job-applications';
 export const JOB_APPLICATION_POSITION_SLUG = 'sales-representative';
 export const JOB_APPLICATION_POSITION_TITLE = 'Sales Representative';
@@ -461,7 +463,7 @@ export function buildApplicantConfirmationEmail(record) {
     ? 'general application'
     : `application for the ${positionTitle} position`;
   return {
-    from: 'Soil Seed & Water <info@soilseedandwater.com>',
+    from: sswFrom('Soil Seed & Water'),
     replyTo: 'ralvarez@soilseedandwater.com',
     to: record.email,
     subject: applicantSubject,
@@ -501,7 +503,7 @@ export function buildAdminApplicationEmail(record, documentLinks) {
   ];
   const rows = [...commonRows, ...roleRows, ['Referral source', record.referral_source], ['LinkedIn / portfolio', record.linkedin_url], ['Application ID', record.id]];
   return {
-    from: 'Soil Seed & Water Careers <info@soilseedandwater.com>',
+    from: sswFrom('Soil Seed & Water Careers'),
     replyTo: record.email,
     subject: `New ${positionTitle} — ${applicantName}`,
     html: `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#24352a;max-width:760px;margin:auto"><h1 style="color:#183a23">New ${escapeJobApplicationHtml(positionTitle)}</h1><p><strong>${escapeJobApplicationHtml(applicantName)}</strong> submitted a complete application.</p><h2 style="color:#183a23">Private documents</h2><ul>${links}</ul>${detailsTable(rows)}<p style="color:#64748b">Submitted through ${escapeJobApplicationHtml(record.source || JOB_APPLICATION_SOURCE)}.</p></div>`,

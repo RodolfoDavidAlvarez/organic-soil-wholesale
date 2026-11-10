@@ -272,7 +272,7 @@ test('flag on claims then sends one Resend call per due email', async () => {
   assert.equal(resend.calls.length, 1);
   assert.equal(resend.calls[0].payload.subject, PORTAL_SURVEY_LETTER_SUBJECT);
   assert.deepEqual(resend.calls[0].payload.to, ['buyer@gmail.com']);
-  assert.equal(resend.calls[0].payload.from, 'Soil Seed & Water <info@soilseedandwater.com>');
+  assert.equal(resend.calls[0].payload.from, 'Soil Seed & Water <soilseedandwater@bettersystems.ai>');
   assert.equal(resend.calls[0].payload.replyTo, 'ralvarez@soilseedandwater.com');
   assert.equal(resend.calls[0].options.idempotencyKey, 'portal_survey_letter/buyer@gmail.com');
 });

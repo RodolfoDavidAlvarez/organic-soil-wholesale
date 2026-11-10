@@ -2,6 +2,7 @@ import {
   WORM_CASTINGS_CAMPAIGN_KEY,
   buildWormCastingsDay3ReminderEmail,
 } from './wormCastingsCampaign.js';
+import { resolveSswFrom, sswFrom } from './sswEmailFrom.js';
 
 export const DAY3_REMINDER_TEMPLATE = 'worm_castings_day3_reminder';
 export const DAY3_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000;
@@ -320,7 +321,7 @@ export async function sendNextReminder(client, resend, { fromAddress, sourceApp 
   let response;
   try {
     response = await resend.emails.send({
-      from: fromAddress,
+      from: resolveSswFrom(fromAddress, 'Soil Seed & Water'),
       replyTo: 'ralvarez@soilseedandwater.com',
       to: [item.email],
       subject: message.subject,
@@ -374,7 +375,8 @@ async function sendRunAlert(client, resend, runId, summary, { fromAddress }) {
   if (!runId || !resend || (summary.failed === 0 && summary.deadLettered === 0 && summary.recovered === 0)) return false;
   try {
     const response = await resend.emails.send({
-      from: fromAddress,
+      from: resolveSswFrom(fromAddress, 'OSW Alerts'),
+      replyTo: 'developer@bettersystems.ai',
       to: [REMINDER_ALERT_TO],
       subject: `OSW Day-3 reminder run needs attention (${summary.failed} failed, ${summary.deadLettered} dead)`,
       text: `Run ${runId}\n${JSON.stringify(summary, null, 2)}`,
@@ -401,7 +403,7 @@ export async function processDay3Reminders(client, resend, {
   apply = false,
   limit = 50,
   delayMs = DEFAULT_RATE_DELAY_MS,
-  fromAddress = process.env.WORM_CASTINGS_EMAIL_FROM || 'Soil Seed & Water <info@soilseedandwater.com>',
+  fromAddress = resolveSswFrom(process.env.WORM_CASTINGS_EMAIL_FROM, 'Soil Seed & Water'),
   sourceApp = 'organic_soil_wholesale_day3_reminder',
   maxAttempts = DEFAULT_MAX_ATTEMPTS,
   leaseMinutes = DEFAULT_LEASE_MINUTES,
@@ -443,12 +445,12 @@ export async function processDay3Reminders(client, resend, {
 
     const status = summary.failed || summary.deadLettered || summary.recovered ? 'degraded' : 'healthy';
     await finishRun(client, runId, status, summary);
-    summary.alerted = await sendRunAlert(client, resend, runId, summary, { fromAddress: 'OSW Alerts <info@soilseedandwater.com>' });
+    summary.alerted = await sendRunAlert(client, resend, runId, summary, { fromAddress: sswFrom('OSW Alerts') });
     return summary;
   } catch (error) {
     summary.failed += 1;
     await finishRun(client, runId, 'failed', summary, error?.message || String(error));
-    await sendRunAlert(client, resend, runId, summary, { fromAddress: 'OSW Alerts <info@soilseedandwater.com>' });
+    await sendRunAlert(client, resend, runId, summary, { fromAddress: sswFrom('OSW Alerts') });
     throw error;
   }
 }

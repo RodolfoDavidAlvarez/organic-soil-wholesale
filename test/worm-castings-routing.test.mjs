@@ -386,7 +386,7 @@ test('gift email shows the customer number large with the yard phone', () => {
   assert.match(coupon.html, /\(623\) 263-3386/);
 });
 
-test('purchase thank-you is short, from info@, and does not use Founder or em dashes', () => {
+test('purchase thank-you is short, from the verified SSW mailbox, and does not use Founder or em dashes', () => {
   const email = buildPurchaseThankYouEmail({
     fullName: 'Rodo',
     customerNumber: 'SSW-582-194',
@@ -394,7 +394,8 @@ test('purchase thank-you is short, from info@, and does not use Founder or em da
     location: '1634 N 19th Ave, Phoenix, AZ 85009',
   });
   assert.equal(email.from, PURCHASE_THANK_YOU_FROM);
-  assert.match(email.from, /info@soilseedandwater\.com/);
+  assert.match(email.from, /soilseedandwater@bettersystems\.ai/);
+  assert.doesNotMatch(email.from, /@soilseedandwater\.com/);
   assert.equal(email.subject, 'Thank you. Your number is SSW-582-194');
   assert.match(email.html, /Thank you for buying/);
   assert.match(email.html, /SSW-582-194/);

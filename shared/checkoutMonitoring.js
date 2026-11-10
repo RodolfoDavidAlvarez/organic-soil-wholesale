@@ -1,3 +1,5 @@
+import { resolveSswFrom } from './sswEmailFrom.js';
+
 const VALID_SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const CHECKOUT_ALERT_TO = process.env.CHECKOUT_ALERT_TO || 'developer@bettersystems.ai';
@@ -198,7 +200,7 @@ export async function sendCheckoutAlert(resendClient, {
     pickupLocation,
   });
   const result = await resendClient.emails.send({
-    from: process.env.CHECKOUT_ALERT_FROM || 'OSW Alerts <info@soilseedandwater.com>',
+    from: resolveSswFrom(process.env.CHECKOUT_ALERT_FROM, 'OSW Alerts'),
     replyTo: 'developer@bettersystems.ai',
     to: [CHECKOUT_ALERT_TO],
     subject: `[OSW checkout] ${subject}`,

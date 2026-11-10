@@ -6,6 +6,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { isOswDeveloperMode, DEV_ADMIN_EMAIL, devModeSubject, devModeSmsBody } from "./developerMode.js";
+import { resolveSswFrom, SSW_EMAIL_REPLY_TO } from "./sswEmailFrom.js";
 
 function getDb() {
   const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -58,7 +59,8 @@ async function sendEmail({ to, subject, html }) {
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: process.env.INTAKE_NOTIFY_FROM || "Organic Soil Wholesale <info@soilseedandwater.com>",
+      from: resolveSswFrom(process.env.INTAKE_NOTIFY_FROM, "Organic Soil Wholesale"),
+      replyTo: SSW_EMAIL_REPLY_TO,
       to,
       subject,
       html,

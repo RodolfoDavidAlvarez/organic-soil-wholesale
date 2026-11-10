@@ -1,9 +1,10 @@
 import { isWormCastingsCampaignSource } from './wormCastingsCampaign.js';
 import { labelForGardenStatus, nextActionLabel } from './wormCastingsRouting.js';
+import { sswFrom } from './sswEmailFrom.js';
 
 export const STAFF_SIGNUP_SUBJECT = 'SSW signup';
 export const STAFF_GARDEN_CLASS_SUBJECT = 'New Garden Class Registration';
-export const STAFF_ALERT_FROM = 'Soil Seed & Water <info@soilseedandwater.com>';
+export const STAFF_ALERT_FROM = sswFrom('Soil Seed & Water');
 export const STAFF_ALERT_REPLY_TO = 'ralvarez@soilseedandwater.com';
 export const STAFF_NEWSLETTER_THREAD_ID = '<ssw-staff-signup@soilseedandwater.com>';
 export const STAFF_GARDEN_CLASS_THREAD_ID = '<ssw-staff-garden-class@soilseedandwater.com>';

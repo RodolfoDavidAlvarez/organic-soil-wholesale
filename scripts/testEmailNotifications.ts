@@ -86,11 +86,11 @@ async function testEmails() {
 
   console.log('Email notification tests complete!');
   console.log(`All emails should have been sent to: ralvarez@soilseedandwater.com`);
-  console.log(`From: ralvarez@soilseedandwater.com`);
+  console.log('From: soilseedandwater@bettersystems.ai');
   console.log('\nIf you do not receive the emails, please check:');
   console.log('1. Spam/Junk folder');
-  console.log('2. That the domain soilseedandwater.com is properly configured in Resend');
-  console.log('3. That ralvarez@soilseedandwater.com is a verified sender in Resend');
+  console.log('2. That the domain bettersystems.ai is properly configured in Resend');
+  console.log('3. That soilseedandwater@bettersystems.ai is a verified sender in Resend');
   console.log('4. That RESEND_API_KEY environment variable is set with your new API key');
 }
 

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { guardResend, resolveSswFrom } from '../shared/sswEmailFrom.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -35,8 +36,8 @@ async function reportWebhookFailure(message) {
       .select('id', { count: 'exact', head: true })
       .eq('path', path).eq('alerted', true).gte('created_at', since);
     if ((count || 0) > 0 || !process.env.RESEND_API_KEY) return;
-    const result = await new Resend(process.env.RESEND_API_KEY).emails.send({
-      from: process.env.CHECKOUT_ALERT_FROM || 'OSW Alerts <info@soilseedandwater.com>',
+    const result = await guardResend(new Resend(process.env.RESEND_API_KEY)).emails.send({
+      from: resolveSswFrom(process.env.CHECKOUT_ALERT_FROM, 'OSW Alerts'),
       replyTo: 'developer@bettersystems.ai',
       to: [process.env.DEVELOPER_ALERT_TO || 'developer@bettersystems.ai'],
       subject: '[OSW checkout] Stripe webhook failure',

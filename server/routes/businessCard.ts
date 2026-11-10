@@ -14,8 +14,10 @@ import {
 } from "../services/aiEmailService";
 import { syncCRMContactToHubSpot } from "../services/hubspot";
 import { sendEmailViaGmail, isGmailConfigured } from "../services/gmailService";
+import { guardResend, sswFrom, SSW_BUSINESS_CARD_FROM_NAME, SSW_EMAIL_REPLY_TO } from "../../shared/sswEmailFrom.js";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = guardResend(new Resend(process.env.RESEND_API_KEY));
+const businessCardFrom = () => sswFrom(SSW_BUSINESS_CARD_FROM_NAME);
 
 const router = Router();
 
@@ -578,7 +580,7 @@ router.post("/generate-email", async (req, res) => {
  */
 router.post("/send-email", async (req, res) => {
   try {
-    const { contactId, to, subject, body, from, useGmail } = req.body;
+    const { contactId, to, subject, body, useGmail } = req.body;
 
     if (!to || !subject || !body) {
       return res.status(400).json({ error: "To, subject, and body required" });
@@ -594,7 +596,8 @@ router.post("/send-email", async (req, res) => {
           to,
           subject,
           body,
-          from: from || "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+          from: businessCardFrom(),
+          replyTo: SSW_EMAIL_REPLY_TO,
         });
         messageId = gmailResult.id;
         method = "gmail";
@@ -608,7 +611,8 @@ router.post("/send-email", async (req, res) => {
     // Fallback to Resend if Gmail didn't work
     if (!messageId) {
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: from || "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+        from: businessCardFrom(),
+        replyTo: SSW_EMAIL_REPLY_TO,
         to: [to],
         subject,
         text: body,
@@ -653,7 +657,7 @@ router.post("/send-email", async (req, res) => {
  */
 router.post("/schedule-email", async (req, res) => {
   try {
-    const { contactId, to, subject, body, from, scheduledAt } = req.body;
+    const { contactId, to, subject, body, scheduledAt } = req.body;
 
     if (!to || !subject || !body) {
       return res.status(400).json({ error: "To, subject, and body required" });
@@ -677,7 +681,8 @@ router.post("/schedule-email", async (req, res) => {
 
     // Schedule email via Resend with scheduled_at
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: from || "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+      from: businessCardFrom(),
+      replyTo: SSW_EMAIL_REPLY_TO,
       to: [to],
       subject,
       text: body,
@@ -892,7 +897,8 @@ router.post("/:slug/submit-business-card-enhanced", upload.single("image"), asyn
                 to: email,
                 subject: generatedEmail.subject,
                 body: generatedEmail.body,
-                from: "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+                from: businessCardFrom(),
+                replyTo: SSW_EMAIL_REPLY_TO,
               });
               messageId = gmailResult.id;
               messageSent = true;
@@ -905,7 +911,8 @@ router.post("/:slug/submit-business-card-enhanced", upload.single("image"), asyn
           // Fallback to Resend
           if (!messageSent) {
             const { data: sendData, error: sendError } = await resend.emails.send({
-              from: "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+              from: businessCardFrom(),
+              replyTo: SSW_EMAIL_REPLY_TO,
               to: [email],
               subject: generatedEmail.subject,
               text: generatedEmail.body,

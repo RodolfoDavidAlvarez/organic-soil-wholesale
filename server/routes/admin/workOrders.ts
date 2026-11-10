@@ -11,12 +11,15 @@ import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { resolveSswFrom, SSW_EMAIL_REPLY_TO } from "../../../shared/sswEmailFrom.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = Router();
-const FROM_EMAIL = process.env.WORK_ORDER_NOTIFICATION_FROM_EMAIL || "SSW Operations <operations@soilseedandwater.com>";
+function workOrderFromEmail() {
+  return resolveSswFrom(process.env.WORK_ORDER_NOTIFICATION_FROM_EMAIL, "SSW Operations");
+}
 const PUBLIC_SITE_BASE_URL = process.env.PUBLIC_SITE_BASE_URL || "https://www.organicsoilwholesale.com";
 
 const SIZE_CATEGORY_IMAGE_FALLBACKS: Record<string, string[]> = {
@@ -235,7 +238,7 @@ async function generateWorkOrderPdfById(
 
 /**
  * Send "new work order" notification emails to all recipients in Operations Settings.
- * Uses Resend; from: SSW Operations <operations@soilseedandwater.com>.
+ * Uses Resend; from: SSW Operations on the verified bettersystems.ai mailbox.
  * Does not throw — logs errors so creation still succeeds.
  */
 async function sendNewWorkOrderNotifications(wo: {
@@ -366,7 +369,8 @@ async function sendNewWorkOrderNotifications(wo: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: FROM_EMAIL,
+          from: workOrderFromEmail(),
+          reply_to: SSW_EMAIL_REPLY_TO,
           to: [to],
           subject,
           html: emailHtml,

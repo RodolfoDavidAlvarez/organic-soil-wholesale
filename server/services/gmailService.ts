@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { resolveSswFrom, SSW_BUSINESS_CARD_FROM_NAME, SSW_EMAIL_REPLY_TO } from '../../shared/sswEmailFrom.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -82,14 +83,15 @@ async function getAccessToken(): Promise<string> {
 function buildEmail(options: SendEmailOptions): string {
   const { to, subject, body, html, from, replyTo } = options;
   
-  const fromAddress = from || 'Rodo Alvarez <ralvarez@soilseedandwater.com>';
+  const fromAddress = resolveSswFrom(from, SSW_BUSINESS_CARD_FROM_NAME);
+  const replyAddress = replyTo || SSW_EMAIL_REPLY_TO;
   const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substr(2)}`;
   
   const headers = [
     `From: ${fromAddress}`,
     `To: ${to}`,
     `Subject: ${subject}`,
-    replyTo ? `Reply-To: ${replyTo}` : null,
+    `Reply-To: ${replyAddress}`,
     'MIME-Version: 1.0',
   ].filter(Boolean);
 

@@ -42,7 +42,7 @@ const wormProfiles = [
 test('giveaway Lead Reports are enabled explicitly and use batches of 30', () => {
   assert.equal(GIVEAWAY_LEAD_REPORT_BATCH_SIZE, 30);
   assert.equal(GIVEAWAY_LEAD_REPORT_FIRST_AUTOMATED_BATCH, 2);
-  assert.equal(GIVEAWAY_LEAD_REPORT_FROM, 'SSW Lead Report <reports@bettersystems.ai>');
+  assert.equal(GIVEAWAY_LEAD_REPORT_FROM, 'SSW Lead Report <soilseedandwater@bettersystems.ai>');
   assert.equal(giveawayLeadReportsEnabled({ GIVEAWAY_LEAD_REPORTS_ACTIVE: 'true' }), true);
   assert.equal(giveawayLeadReportsEnabled({ GIVEAWAY_LEAD_REPORTS_ACTIVE: 'false' }), false);
   assert.equal(giveawayLeadReportsEnabled({}), false);

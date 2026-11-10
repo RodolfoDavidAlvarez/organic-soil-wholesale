@@ -12,9 +12,10 @@ import {
   PHOENIX_METRO_BASEMAP_BASE64,
   PHOENIX_METRO_MAP_VIEWPORT,
 } from './giveawayLeadReportBasemap.js';
+import { sswFrom } from './sswEmailFrom.js';
 
 export const GIVEAWAY_LEAD_REPORT_BATCH_SIZE = 30;
-export const GIVEAWAY_LEAD_REPORT_FROM = 'SSW Lead Report <reports@bettersystems.ai>';
+export const GIVEAWAY_LEAD_REPORT_FROM = sswFrom('SSW Lead Report');
 export const GIVEAWAY_LEAD_REPORT_REPLY_TO = 'ralvarez@soilseedandwater.com';
 export const GIVEAWAY_LEAD_REPORT_THREAD_ID = '<ssw-giveaway-lead-report@bettersystems.ai>';
 export const GIVEAWAY_LEAD_REPORT_TABLE = 'sp_giveaway_lead_reports';

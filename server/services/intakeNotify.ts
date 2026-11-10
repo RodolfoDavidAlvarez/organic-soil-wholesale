@@ -16,6 +16,7 @@
  */
 
 import { supabase } from "../supabaseClient.js";
+import { resolveSswFrom, SSW_EMAIL_REPLY_TO } from "../../shared/sswEmailFrom.js";
 
 interface WorkOrder {
   id: number;
@@ -205,7 +206,7 @@ async function sendEmail(
     }
     return false;
   }
-  const from = process.env.INTAKE_NOTIFY_FROM || "Soil Seed & Water <info@soilseedandwater.com>";
+  const from = resolveSswFrom(process.env.INTAKE_NOTIFY_FROM, "Soil Seed & Water");
   try {
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -213,7 +214,7 @@ async function sendEmail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from, to, subject, html }),
+      body: JSON.stringify({ from, to, subject, html, reply_to: SSW_EMAIL_REPLY_TO }),
     });
     const ok = resp.ok;
     const data: any = await resp.json().catch(() => ({}));

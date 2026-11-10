@@ -1,8 +1,10 @@
+import { sswFrom } from './sswEmailFrom.js';
+
 export const PORTAL_SURVEY_LETTER_TEMPLATE = 'portal_survey_letter';
 export const PORTAL_SURVEY_LETTER_SUBJECT = 'How was pickup?';
 export const PORTAL_SURVEY_LETTER_SOURCE = 'pickup-plus-3';
 export const DEFAULT_PORTAL_SURVEY_LETTER_SINCE = '2026-10-29T00:00:00-07:00';
-export const PORTAL_SURVEY_LETTER_FROM = 'Soil Seed & Water <info@soilseedandwater.com>';
+export const PORTAL_SURVEY_LETTER_FROM = sswFrom('Soil Seed & Water');
 export const PORTAL_SURVEY_LETTER_REPLY_TO = 'ralvarez@soilseedandwater.com';
 export const SURVEY_LETTER_WAIT_INTERVAL = '3 days';
 

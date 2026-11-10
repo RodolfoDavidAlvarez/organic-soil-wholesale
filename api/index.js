@@ -19,6 +19,7 @@ import {
 } from '../shared/wormCastingsRouting.js';
 import { assignSswNumberForPurchase, ensureSswNumber } from '../shared/sswNumber.js';
 import { buildPurchaseThankYouEmail, PURCHASE_THANK_YOU_FROM } from '../shared/purchaseThankYou.js';
+import { guardResend, resolveSswFrom, sswFrom, SSW_BUSINESS_CARD_FROM_NAME, SSW_EMAIL_REPLY_TO } from '../shared/sswEmailFrom.js';
 import { normalizeReceiptRef, receiptQrImageUrl, renderReceiptQrPng } from '../shared/receiptQr.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 import { processPortalSurveyLetters } from '../shared/portalSurveyLetter.js';
@@ -81,7 +82,7 @@ async function getOpenAI() {
 async function getResend() {
   if (!resend) {
     const { Resend } = await import('resend');
-    resend = new Resend(process.env.RESEND_API_KEY);
+    resend = guardResend(new Resend(process.env.RESEND_API_KEY));
   }
   return resend;
 }
@@ -180,7 +181,7 @@ async function fulfillStripeDeposit(db, orderId, session) {
   if (customerEmail) {
     try {
       await (await getResend()).emails.send({
-        from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+        from: sswFrom('Organic Soil Wholesale'),
         replyTo: 'ralvarez@soilseedandwater.com',
         to: customerEmail,
         subject: `Deposit confirmed - Order #${claimed.order_number?.slice(0, 8) || claimed.id}`,
@@ -230,7 +231,8 @@ async function sendWormCastingsCoupon({ db, redemption, customerNumber }) {
 
   try {
     const result = await (await getResend()).emails.send({
-      from: process.env.WORM_CASTINGS_EMAIL_FROM || 'Soil Seed & Water <info@soilseedandwater.com>',
+      from: resolveSswFrom(process.env.WORM_CASTINGS_EMAIL_FROM, 'Soil Seed & Water'),
+      replyTo: SSW_EMAIL_REPLY_TO,
       to: [claimed.email],
       subject: email.subject,
       html: email.html,
@@ -752,7 +754,7 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
     const results = await Promise.allSettled(
       adminEmails.map(async (to) => {
         const result = await r.emails.send({
-          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          from: sswFrom('Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
           to,
           subject,
@@ -922,7 +924,7 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
         qrImageUrl: order?.order_number ? receiptQrImageUrl(order.order_number) : undefined,
       });
       const custResult = await r.emails.send({
-        from: thankYou.from || PURCHASE_THANK_YOU_FROM,
+        from: resolveSswFrom(thankYou.from || PURCHASE_THANK_YOU_FROM, 'Soil Seed & Water'),
         replyTo: 'ralvarez@soilseedandwater.com',
         to: dev.resolveCustomerEmail(customerEmail),
         subject: dev.devModeSubject(thankYou.subject),
@@ -1018,7 +1020,8 @@ async function reportFailure({ kind, path, method, status, message }) {
     if (!process.env.RESEND_API_KEY) return;
     const resendClient = await getResend();
     await resendClient.emails.send({
-      from: 'OSW Alerts <info@soilseedandwater.com>',
+      from: sswFrom('OSW Alerts'),
+      replyTo: 'developer@bettersystems.ai',
       to: FAILURE_ALERT_TO,
       subject: `⚠️ OSW input failure: ${method} ${path} (${status})`,
       text:
@@ -1277,7 +1280,7 @@ export default async function handler(req, res) {
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
       });
-      const resendClient = new Resend(process.env.RESEND_API_KEY);
+      const resendClient = guardResend(new Resend(process.env.RESEND_API_KEY));
       const limit = Math.min(Number(url.searchParams.get('limit') || 50), 100);
 
       await client.connect();
@@ -1319,7 +1322,7 @@ export default async function handler(req, res) {
         <td>${escapeHtml(entry.order_id || '—')}</td><td>${escapeHtml(entry.last_seen_at)}</td>
       </tr>`).join('');
       const emailResult = await (await getResend()).emails.send({
-        from: process.env.CHECKOUT_ALERT_FROM || 'OSW Alerts <info@soilseedandwater.com>',
+        from: resolveSswFrom(process.env.CHECKOUT_ALERT_FROM, 'OSW Alerts'),
         replyTo: 'developer@bettersystems.ai',
         to: [CHECKOUT_ALERT_TO],
         subject: `[OSW checkout] ${stale.length} shopper${stale.length === 1 ? '' : 's'} did not complete purchase`,
@@ -1359,7 +1362,7 @@ export default async function handler(req, res) {
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
       });
-      const resendClient = new Resend(process.env.RESEND_API_KEY);
+      const resendClient = guardResend(new Resend(process.env.RESEND_API_KEY));
       const limit = Math.min(Number(url.searchParams.get('limit') || 50), 100);
 
       await client.connect();
@@ -1689,7 +1692,8 @@ export default async function handler(req, res) {
         if (process.env.RESEND_API_KEY) {
           const resendClient = await getResend();
           await resendClient.emails.send({
-            from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+            from: sswFrom('Organic Soil Wholesale'),
+            replyTo: SSW_EMAIL_REPLY_TO,
             to: 'rodolfo@bettersystems.ai',
             subject: `New Credit Application: ${b.business_name}`,
             text:
@@ -1906,12 +1910,13 @@ Use "" for fields you cannot clearly read. NEVER guess.`
 
     // Send email
     if (path === '/api/representatives/send-email' && req.method === 'POST') {
-      const { contactId, to, subject, body, from } = req.body || {};
+      const { contactId, to, subject, body } = req.body || {};
       if (!to || !subject || !body) return res.status(400).json({ error: 'To, subject, and body required' });
 
       const emailClient = await getResend();
       const { data: emailData, error: emailError } = await emailClient.emails.send({
-        from: from || 'Rodo Alvarez <ralvarez@soilseedandwater.com>',
+        from: sswFrom(SSW_BUSINESS_CARD_FROM_NAME),
+        replyTo: SSW_EMAIL_REPLY_TO,
         to: [to],
         subject,
         text: body,
@@ -2002,7 +2007,8 @@ Use "" for fields you cannot clearly read. NEVER guess.`
           try {
             const emailClient = await getResend();
             const { data: sendData, error: sendError } = await emailClient.emails.send({
-              from: 'Rodo Alvarez <ralvarez@soilseedandwater.com>',
+              from: sswFrom(SSW_BUSINESS_CARD_FROM_NAME),
+              replyTo: SSW_EMAIL_REPLY_TO,
               to: [email],
               subject: generatedEmail.subject,
               text: generatedEmail.body,
@@ -2262,7 +2268,7 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         const vehicleLabel = arrivalDetails.vehicleInfo || 'Vehicle Info Not Provided';
         await Promise.allSettled(adminEmails.map((to) =>
           r.emails.send({
-            from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+            from: sswFrom('Organic Soil Wholesale'),
             replyTo: 'ralvarez@soilseedandwater.com',
             to,
             subject: `[URGENT] Customer Arrival: ${arrivalDetails.customerName} - ${vehicleLabel}`,
@@ -3510,7 +3516,8 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
           method: 'POST',
           headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            from: 'SSW Operations <operations@soilseedandwater.com>',
+            from: sswFrom('SSW Operations'),
+            reply_to: SSW_EMAIL_REPLY_TO,
             to: [recipientEmail],
             subject: `Bill of Lading - ${bol.bol_number} | ${bol.customer_name}`,
             html: emailHtml,
@@ -5282,7 +5289,7 @@ ${pages}
         const baseUrl = 'https://www.organicsoilwholesale.com';
         const verificationUrl = `${baseUrl}/verify-email/${verificationToken}`;
         await r.emails.send({
-          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          from: sswFrom('Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
           to: email,
           subject: 'Verify your email for Organic Soil Wholesale',
@@ -5296,7 +5303,7 @@ ${pages}
       try {
         const r = await getResend();
         await r.emails.send({
-          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          from: sswFrom('Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
           to: 'ralvarez@soilseedandwater.com',
           subject: `New ${accountType} signup: ${fullName || email}`,
@@ -5497,7 +5504,7 @@ ${pages}
       try {
         const r = await getResend();
         await r.emails.send({
-          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          from: sswFrom('Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
           to: 'ralvarez@soilseedandwater.com',
           subject: `New wholesale application: ${body.legal_entity_name || customer.profile.company_name || customer.email}`,
@@ -5593,7 +5600,7 @@ ${pages}
         const r = await getResend();
         const itemsList = items.map(i => `<li>${i.product_name} - ${i.format} x ${i.quantity} ($${(i.unit_price * i.quantity).toLocaleString()})</li>`).join('');
         await r.emails.send({
-          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          from: sswFrom('Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
           to: 'ralvarez@soilseedandwater.com',
           subject: `New wholesale order #${order.order_number} - $${totalAmount.toLocaleString()} - ${customer.profile.company_name || customer.email}`,
@@ -5861,7 +5868,7 @@ ${pages}
               const dev = await getDeveloperMode();
               const r = await getResend();
               await r.emails.send({
-                from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+                from: sswFrom('Organic Soil Wholesale'),
                 replyTo: 'ralvarez@soilseedandwater.com',
                 to: dev.resolveCustomerEmail(customerEmail),
                 subject: dev.devModeSubject(msg.subject),
@@ -6014,7 +6021,7 @@ ${pages}
         const adminEmails = (adminResult.data || []).map((row) => row.email).filter(Boolean);
         if (!adminEmails.length) adminEmails.push('ralvarez@soilseedandwater.com');
         await Promise.all(adminEmails.map((to) => r.emails.send({
-          from: `${isRlsBrand ? 'Regenerative Landscaper Supply' : 'Organic Soil Wholesale'} <info@soilseedandwater.com>`,
+          from: sswFrom(isRlsBrand ? 'Regenerative Landscaper Supply' : 'Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
           to,
           subject: isGardenBed ? `Garden bed order request from ${name}` : isOrderCallback
@@ -6024,7 +6031,7 @@ ${pages}
         })));
         if (isRlsBrand && emailRaw) {
           await r.emails.send({
-            from: 'Regenerative Landscaper Supply <info@soilseedandwater.com>',
+            from: sswFrom('Regenerative Landscaper Supply'),
             replyTo: 'ralvarez@soilseedandwater.com',
             to: emailRaw,
             subject: 'We received your request | Regenerative Landscaper Supply',
@@ -6221,7 +6228,7 @@ ${pages}
         if (customerEmail) {
           const r = await getResend();
           await r.emails.send({
-            from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+            from: sswFrom('Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
             to: customerEmail,
             subject: `Payment link for Order #${order.order_number?.slice(0, 8) || order.id}`,
@@ -6309,7 +6316,7 @@ ${pages}
               if (order) {
                 const r = await getResend();
                 await r.emails.send({
-                  from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+                  from: sswFrom('Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
                   to: order.customer_email || order.email,
                   subject: `Deposit confirmed - Order #${order.order_number?.slice(0, 8) || order.id}`,
@@ -6395,7 +6402,7 @@ ${pages}
         const r = await getResend();
         const dev = await getDeveloperMode();
         await r.emails.send({
-          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          from: sswFrom('Organic Soil Wholesale'),
           replyTo: 'ralvarez@soilseedandwater.com',
           to: dev.resolveCustomerEmail(customerEmail),
           subject: dev.devModeSubject(template.subject),

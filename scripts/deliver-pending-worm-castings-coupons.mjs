@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import pg from 'pg';
 import { Resend } from 'resend';
 import { buildWormCastingsCouponEmail, WORM_CASTINGS_CAMPAIGN_KEY } from '../shared/wormCastingsCampaign.js';
+import { resolveSswFrom, SSW_EMAIL_REPLY_TO } from '../shared/sswEmailFrom.js';
 
 dotenv.config({ path: '.env', quiet: true });
 
@@ -51,7 +52,8 @@ try {
     });
     try {
       const response = await resend.emails.send({
-        from: process.env.WORM_CASTINGS_EMAIL_FROM || 'Soil Seed & Water <info@soilseedandwater.com>',
+        from: resolveSswFrom(process.env.WORM_CASTINGS_EMAIL_FROM, 'Soil Seed & Water'),
+        replyTo: SSW_EMAIL_REPLY_TO,
         to: [coupon.email],
         subject: message.subject,
         html: message.html,
