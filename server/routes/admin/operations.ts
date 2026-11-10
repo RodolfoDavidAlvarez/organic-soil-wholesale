@@ -10,6 +10,7 @@ import puppeteer from "puppeteer";
 import path from "path";
 import { fileURLToPath } from "url";
 import workOrderRoutes from "./workOrders.js";
+import { sswFrom, SSW_EMAIL_REPLY_TO } from "../../../shared/sswEmailFrom.js";
 import taskRoutes from "./tasks.js";
 
 const router = Router();
@@ -735,7 +736,8 @@ router.post("/bols/:id/email", async (req: AdminRequest, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'SSW Operations <operations@soilseedandwater.com>',
+            from: sswFrom('SSW Operations'),
+            reply_to: SSW_EMAIL_REPLY_TO,
         to: [recipientEmail],
         subject: `Bill of Lading - ${bol.bol_number} | ${bol.customer_name}`,
         html: emailHtml,

@@ -12,6 +12,7 @@ import OperationsLayout from '@/components/admin/OperationsLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { sswFrom } from '@shared/sswEmailFrom.js';
 
 interface BOLDetails {
   id: number;
@@ -854,7 +855,7 @@ export default function ViewBOL() {
                   Send BOL via Email
                 </DialogTitle>
                 <DialogDescription>
-                  Send <span className="font-mono font-semibold">{bol.bol_number}</span> as a PDF attachment from <span className="font-medium">operations@soilseedandwater.com</span>
+                  Send <span className="font-mono font-semibold">{bol.bol_number}</span> as a PDF attachment from <span className="font-medium">{sswFrom('SSW Operations')}</span>
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSendEmail}>
@@ -894,7 +895,7 @@ export default function ViewBOL() {
                   <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
                     <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Email Preview</div>
                     <div className="space-y-1 text-xs text-gray-600">
-                      <div><span className="text-gray-400">From:</span> SSW Operations &lt;operations@soilseedandwater.com&gt;</div>
+                      <div><span className="text-gray-400">From:</span> {sswFrom('SSW Operations')}</div>
                       <div><span className="text-gray-400">To:</span> {emailForm.recipientEmail || '...'}</div>
                       <div><span className="text-gray-400">Subject:</span> Bill of Lading - {bol.bol_number} | {bol.customer_name}</div>
                       <div><span className="text-gray-400">Attachment:</span> {bol.bol_number}.pdf</div>

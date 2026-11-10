@@ -146,6 +146,7 @@ test('two concurrent workers make one provider request and one durable acceptanc
   ]);
   assert.deepEqual(results.map((result) => result.status).sort(), ['empty', 'sent']);
   assert.equal(resend.calls.length, 1);
+  assert.equal(resend.calls[0].payload.from, 'Soil Seed & Water <soilseedandwater@bettersystems.ai>');
   assert.equal(client.state, 'sent');
 });
 

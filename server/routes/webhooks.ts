@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabase } from '../supabaseClient.js';
 import Stripe from 'stripe';
 import { Resend } from 'resend';
+import { guardResend, sswFrom } from '../../shared/sswEmailFrom.js';
 
 const router = Router();
 
@@ -68,9 +69,9 @@ router.post('/stripe', async (req, res) => {
         try {
           const { data: order } = await supabase.from('orders').select('*').eq('id', parseInt(orderId)).single();
           if (order) {
-            const resend = new Resend(process.env.RESEND_API_KEY);
+            const resend = guardResend(new Resend(process.env.RESEND_API_KEY));
             await resend.emails.send({
-              from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+              from: sswFrom('Organic Soil Wholesale'),
               replyTo: 'ralvarez@soilseedandwater.com',
               to: order.customer_email || order.email,
               subject: `Deposit confirmed - Order #${order.order_number?.slice(0, 8) || order.id}`,

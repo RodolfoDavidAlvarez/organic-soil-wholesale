@@ -19,12 +19,12 @@ async function testWelcomeEmail() {
     console.log('\n📝 To set it up:');
     console.log('1. Create a .env file in the root directory');
     console.log('2. Add: RESEND_API_KEY=your_api_key_here');
-    console.log('3. Make sure the API key is for the verified domain: soilseedandwater.com');
+    console.log('3. Make sure the API key is for the verified domain: bettersystems.ai');
     process.exit(1);
   }
 
   console.log('✅ RESEND_API_KEY is set');
-  console.log('✅ FROM email: ralvarez@soilseedandwater.com\n');
+  console.log('✅ FROM email: soilseedandwater@bettersystems.ai\n');
 
   // Test recipients
   const testRecipients = [
@@ -55,8 +55,8 @@ async function testWelcomeEmail() {
     console.error('\n❌ Failed to send welcome email:', error.message);
     console.log('\n🔍 Troubleshooting:');
     console.log('1. Verify RESEND_API_KEY is correct in your .env file');
-    console.log('2. Check that soilseedandwater.com domain is verified in Resend');
-    console.log('3. Ensure ralvarez@soilseedandwater.com is added as a verified sender');
+    console.log('2. Check that bettersystems.ai domain is verified in Resend');
+    console.log('3. Ensure soilseedandwater@bettersystems.ai is added as a verified sender');
     console.log('4. Check Resend dashboard for any domain verification issues');
     console.log('5. Verify recipient email addresses are valid');
     process.exit(1);

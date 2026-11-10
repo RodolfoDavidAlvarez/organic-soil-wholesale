@@ -1,7 +1,8 @@
 import { escapeHtml, normalizeCouponGreetingName } from './wormCastingsCampaign.js';
 import { normalizeSswNumber } from './sswNumber.js';
+import { sswFrom } from './sswEmailFrom.js';
 
-export const PURCHASE_THANK_YOU_FROM = 'Soil Seed & Water <info@soilseedandwater.com>';
+export const PURCHASE_THANK_YOU_FROM = sswFrom('Soil Seed & Water');
 
 export function buildPurchaseThankYouEmail({
   fullName,
@@ -41,7 +42,7 @@ export function buildPurchaseThankYouEmail({
 
   return {
     subject: number ? `Thank you. Your ${customerBrand} number is ${number}` : `Thank you for buying from ${customerBrand}`,
-    from: isRlsBrand ? 'Regenerative Landscaper Supply <info@soilseedandwater.com>' : PURCHASE_THANK_YOU_FROM,
+    from: sswFrom(isRlsBrand ? 'Regenerative Landscaper Supply' : 'Soil Seed & Water'),
     html: `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Thank you for buying</title></head>
 <body style="margin:0;background:#264027;font-family:Arial,Helvetica,sans-serif;color:#263527;">

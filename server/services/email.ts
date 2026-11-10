@@ -6,12 +6,13 @@ import {
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
   CUSTOMER_SUPPORT_PHONE_TEL,
 } from "../config/contact.js";
+import { guardResend, sswFrom } from "../../shared/sswEmailFrom.js";
 
 // Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = guardResend(new Resend(process.env.RESEND_API_KEY));
 
 // Email configuration
-const FROM_EMAIL = "Organic Soil Wholesale <info@soilseedandwater.com>";
+const FROM_EMAIL = sswFrom("Organic Soil Wholesale");
 const REPLY_TO_EMAIL = "ralvarez@soilseedandwater.com";
 const COMPANY_PHONE = CUSTOMER_SUPPORT_PHONE_DISPLAY;
 const COMPANY_PHONE_TEL = CUSTOMER_SUPPORT_PHONE_TEL;
@@ -354,7 +355,7 @@ export async function sendPurchaseThankYouEmail(
   const { buildPurchaseThankYouEmail, PURCHASE_THANK_YOU_FROM } = await import("../../shared/purchaseThankYou.js");
   const message = buildPurchaseThankYouEmail(details);
   const { data, error } = await resend.emails.send({
-    from: PURCHASE_THANK_YOU_FROM,
+    from: message.from || PURCHASE_THANK_YOU_FROM,
     replyTo: REPLY_TO_EMAIL,
     to: email,
     subject: message.subject,

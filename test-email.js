@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
 
 // Test email sending
 const mailOptions = {
-  from: "Organic Soil Wholesale <ralvarez@bettersystems.ai>",
+  from: "Organic Soil Wholesale <soilseedandwater@bettersystems.ai>",
   to: "ralvarez@soilseedandwater.com",
   subject: "Test Email - Organic Soil Wholesale Lead Notification",
   html: `

@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { sswFrom } from './sswEmailFrom.js';
 
 export const GIVEAWAY_REMINDER_KEY = 'phoenix-fall-garden-2026';
 const CONTENT_SOURCE = readFileSync(new URL('./giveawayReminderContent.json', import.meta.url), 'utf8');
 const CONTENT = JSON.parse(CONTENT_SOURCE);
 const CONTENT_HASH = crypto.createHash('sha256').update(CONTENT_SOURCE).digest('hex');
 const PUBLIC_ORIGIN = 'https://www.organicsoilwholesale.com';
-const FROM = 'Soil Seed & Water <info@soilseedandwater.com>';
+const FROM = sswFrom('Soil Seed & Water');
 
 export function buildReminderPayload(job, { now = Date.now(), env = process.env } = {}) {
   const template = CONTENT[job.content_key];

@@ -19,12 +19,12 @@ async function testEmailSetup() {
     console.log('\n📝 To set it up:');
     console.log('1. Create a .env file in the root directory (or server/.env)');
     console.log('2. Add: RESEND_API_KEY=your_new_api_key_here');
-    console.log('3. Make sure the API key is for the verified domain: soilseedandwater.com');
+    console.log('3. Make sure the API key is for the verified domain: bettersystems.ai');
     process.exit(1);
   }
   
   console.log('✅ RESEND_API_KEY is set');
-  console.log(`✅ FROM email: ralvarez@soilseedandwater.com\n`);
+  console.log('✅ FROM email: soilseedandwater@bettersystems.ai\n');
   
   try {
     console.log('📧 Sending test email...');
@@ -57,8 +57,8 @@ async function testEmailSetup() {
               <p>This is a test email to verify that automated email notifications are set up correctly.</p>
               <p><strong>Configuration Details:</strong></p>
               <ul>
-                <li>From: ralvarez@soilseedandwater.com</li>
-                <li>Domain: soilseedandwater.com</li>
+                <li>From: soilseedandwater@bettersystems.ai</li>
+                <li>Domain: bettersystems.ai</li>
                 <li>Service: Resend</li>
               </ul>
               <p>All automated notifications (orders, arrivals, leads, etc.) will now be sent from this address.</p>
@@ -68,7 +68,7 @@ async function testEmailSetup() {
         </body>
         </html>
       `,
-      text: 'Email Configuration Test - Your email system is properly configured and working. All automated notifications will now be sent from ralvarez@soilseedandwater.com',
+      text: 'Email Configuration Test - Your email system is properly configured and working. All automated notifications will now be sent from soilseedandwater@bettersystems.ai',
     });
     
     console.log('✅ Test email sent successfully!\n');
@@ -80,8 +80,8 @@ async function testEmailSetup() {
     console.error('❌ Failed to send test email:', error.message);
     console.log('\n🔍 Troubleshooting:');
     console.log('1. Verify RESEND_API_KEY is correct in your .env file');
-    console.log('2. Check that soilseedandwater.com domain is verified in Resend');
-    console.log('3. Ensure ralvarez@soilseedandwater.com is added as a verified sender');
+    console.log('2. Check that bettersystems.ai domain is verified in Resend');
+    console.log('3. Ensure soilseedandwater@bettersystems.ai is a verified sender');
     console.log('4. Check Resend dashboard for any domain verification issues');
     process.exit(1);
   }

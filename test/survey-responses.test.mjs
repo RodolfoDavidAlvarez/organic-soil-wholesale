@@ -1063,7 +1063,7 @@ test("yard survey submit pings staff, never the customer, never Nowell", async (
     assert.notEqual(payload.headers["In-Reply-To"], STAFF_GARDEN_CLASS_THREAD_ID);
     assert.notEqual(payload.subject, STAFF_SIGNUP_SUBJECT);
     assert.notEqual(payload.subject, STAFF_GARDEN_CLASS_SUBJECT);
-    assert.equal(payload.from, "Soil Seed & Water <info@soilseedandwater.com>");
+    assert.equal(payload.from, "Soil Seed & Water <soilseedandwater@bettersystems.ai>");
     assert.equal(payload.replyTo, "ralvarez@soilseedandwater.com");
     assert.match(payload.html, /Jordan/);
     assert.match(payload.html, /jordan@example.com/);
