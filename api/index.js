@@ -1,3 +1,4 @@
+import { handleSampleRequest } from '../shared/sampleProgram.js';
 import { applyDeliveryPriceMinimums, bulkDeliveryPlan, calculateDeliveryCharge, deliveryPriceChanged, deliveryRateDescription, DELIVERY_PRICING_VERSION } from '../shared/deliveryPricing.js';
 import { normalizeGardenBedRequest, enrichMirroredGardenBedLead } from '../shared/gardenBedOrders.js';
 // Vercel Serverless Function with CRM Business Card Capture
@@ -1228,6 +1229,8 @@ export default async function handler(req, res) {
   if (isLeadSubmission) res.setHeader('X-OSW-Request-ID', requestId);
 
   try {
+    if (path === '/api/sample-requests') return await handleSampleRequest(req, res);
+
     // Health check
     if (path === '/api/health') {
       return res.json({ status: 'ok', timestamp: new Date().toISOString() });
