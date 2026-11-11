@@ -247,6 +247,14 @@
   ],
   "rewrites": [
     {
+      "source": "/free-sample",
+      "destination": "/free-sample.html"
+    },
+    {
+      "source": "/sample-feedback",
+      "destination": "/sample-feedback.html"
+    },
+    {
       "source": "/api/garden-bed",
       "destination": "/api/garden-offer"
     },
