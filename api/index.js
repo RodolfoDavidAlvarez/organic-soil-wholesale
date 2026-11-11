@@ -922,7 +922,7 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
         location: order?.pickup_location,
         brandName: order?.brand_id === 'regenerative_landscaper_supply' ? 'Regenerative Landscaper Supply' : undefined,
         orderNumber: order?.order_number,
-        qrImageUrl: order?.order_number ? receiptQrImageUrl(order.order_number) : undefined,
+        qrImageUrl: order?.order_number && !isDeliveryOrder ? receiptQrImageUrl(order.order_number) : undefined,
       });
       const custResult = await r.emails.send({
         from: resolveSswFrom(thankYou.from || PURCHASE_THANK_YOU_FROM, 'Soil Seed & Water'),
