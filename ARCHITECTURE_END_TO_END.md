@@ -165,11 +165,14 @@ API payload includes:
 | `sp_leads` | OSW lead/quote forms (via `/api/leads`) | Mobile app (Leads tab), web admin (`/admin/leads`), shop dashboard |
 | `sp_customers` | Lead accept flow + manual create | Mobile (Contacts tab), web admin |
 | `sp_pickup_orders` | OSW pickup checkout (via `/api/pickup-orders`) | Mobile (Pickup tab), shop dashboard, web admin |
-| `sp_orders` | Mobile MOS rep flow (`/api/orders`) + invoice/quote send | Mobile (Orders tab), web admin, shop dashboard, Stripe webhook |
+| `sp_orders` | Mobile MOS rep flow (`/api/orders`) + invoice/quote send, and paid website `public.orders` via `sync_osw_web_order_to_sp` | Mobile (Orders tab), web admin, shop dashboard, Stripe webhook |
 | `sp_order_items` | Same as sp_orders | Same — joined for line item rendering |
+| `osw_web_order_sync_log` | `sync_osw_web_order_to_sp` (synced, skipped, or error) | Operators checking why a website order did or did not appear in the sales app |
 | `sp_commissions` | Auto-inserted by `recordCommissionIfNeeded()` when an order is delivered | Mobile (Earnings tab), web admin |
 | `sp_settings` | Pi tunnel watcher | MOS backend (looks up `print_tunnel_url`) |
 | `notification_log` | Every SMS/email/push send | Web admin Notifications page |
+
+Paid website checkout writes `public.orders`. SSW World and the mobile sales app read `sp_orders`. Since 2026-11-12, `trg_orders_sync_to_sp_orders` copies a paid row into `sp_orders`, `sp_order_items`, and `sp_order_payments` through `sync_osw_web_order_to_sp`. The copy is idempotent (Stripe payment intent, or internal label `OSW web #<id>`), does not create commissions, and a trigger error is logged and must not block checkout. Migrations: `20261112235722_sync_website_orders_to_sp_orders.sql` and `20261112235801_sync_website_orders_to_sp_orders_functions.sql`.
 
 ---
 
