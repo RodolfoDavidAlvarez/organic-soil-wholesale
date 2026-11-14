@@ -1228,6 +1228,13 @@ export default async function handler(req, res) {
   if (isLeadSubmission) res.setHeader('X-OSW-Request-ID', requestId);
 
   try {
+    if (path === '/api/admin/outreach' || path.startsWith('/api/admin/outreach/')) {
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      const { handleOutreachRequest } = await import('../shared/outreachManager.js');
+      await handleOutreachRequest(req, res, { path, url });
+      return;
+    }
+
     // Health check
     if (path === '/api/health') {
       return res.json({ status: 'ok', timestamp: new Date().toISOString() });

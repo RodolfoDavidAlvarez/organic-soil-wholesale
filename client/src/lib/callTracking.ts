@@ -93,7 +93,8 @@ export function isCallTrackingExcludedPath(
     path === "/checkout" ||
     path === "/order-confirmation" ||
     path.startsWith("/pay-and-pickup") ||
-    path.startsWith("/drive-through")
+    path.startsWith("/drive-through") ||
+    path.startsWith("/admin/outreach")
   );
 }
 

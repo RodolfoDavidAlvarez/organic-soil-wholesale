@@ -17,7 +17,8 @@ function isCallTrackingExcludedPath(pathname, search = "") {
     path === "/checkout" ||
     path === "/order-confirmation" ||
     path.startsWith("/pay-and-pickup") ||
-    path.startsWith("/drive-through")
+    path.startsWith("/drive-through") ||
+    path.startsWith("/admin/outreach")
   );
 }
 
@@ -33,5 +34,6 @@ assert.equal(isCallTrackingExcludedPath("/newsletter", "?source=july-community-g
 assert.equal(isCallTrackingExcludedPath("/free-worm-castings"), true);
 assert.equal(isCallTrackingExcludedPath("/survey"), true);
 assert.equal(isCallTrackingExcludedPath("/survey/garden-class"), true);
+assert.equal(isCallTrackingExcludedPath("/admin/outreach"), true);
 
 console.log("call-tracking path exclusions: ok");
