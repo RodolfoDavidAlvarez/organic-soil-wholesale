@@ -78,6 +78,7 @@ const BigGardenGiveaway = lazy(() => import("@/pages/BigGardenGiveaway"));
 const Register = lazy(() => import("@/pages/Register"));
 const AdminLogin = lazy(() => import("@/pages/admin/Login"));
 const AdminDashboard = lazy(() => import("@/pages/admin/Dashboard"));
+const OutreachDesk = lazy(() => import("@/pages/admin/OutreachDesk"));
 const AdminProducts = lazy(() => import("@/pages/admin/Products"));
 const AdminProductDetail = lazy(() => import("@/pages/admin/ProductDetail"));
 const AdminOrders = lazy(() => import("@/pages/admin/Orders"));
@@ -281,6 +282,7 @@ function Router() {
         <Route path="/register" component={Register} />
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin/invite/:token" component={AcceptInvitation} />
+        <Route path="/admin/outreach" component={OutreachDesk} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products/:productId" component={AdminProductDetail} />
         <Route path="/admin/products" component={AdminProducts} />
@@ -337,6 +339,7 @@ function App() {
     location.startsWith("/promo/");
   const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
   const isAdminPanel = location.startsWith("/admin");
+  const isOutreachDesk = location === "/admin/outreach" || location.startsWith("/admin/outreach/");
   const isRepresentativeLanding = location.startsWith("/rep/");
   const isCRMCapture = location.startsWith("/crm");
   const isUnsubscribe = location.startsWith("/unsubscribe");
@@ -400,7 +403,7 @@ function App() {
                     <Analytics />
                     {showStandardLayout && !isQuoteFlow && !isProductFlow && !isOfferFlow && !isCareers && <FloatingCTA />}
                     {showStandardLayout && <QuoteCartDrawer />}
-                    {GROK_ASSISTANT_ENABLED && <GrokWidget />}
+                    {GROK_ASSISTANT_ENABLED && !isOutreachDesk && <GrokWidget />}
                   </div>
                 </TooltipProvider>
               </AdminAuthProvider>

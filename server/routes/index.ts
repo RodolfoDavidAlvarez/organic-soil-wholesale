@@ -15,6 +15,7 @@ import payAndPickupRoutes from "./payAndPickup.js";
 import triviaLeadsRoutes from "./triviaLeads.js";
 import driveThruAdminRoutes from "./driveThruAdmin.js";
 import adminAuthRoutes from "./admin/auth.js";
+import outreachRoutes from "./admin/outreach.js";
 import adminDashboardRoutes from "./admin/dashboard.js";
 import adminProductRoutes from "./admin/products.js";
 import adminOrderRoutes from "./admin/orders.js";
@@ -77,6 +78,7 @@ export function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/drive-through", payAndPickupRoutes);
   app.use("/api/drive-thru/admin", driveThruAdminRoutes);
   app.use("/api/admin/auth", adminAuthRoutes);
+  app.use("/api/admin/outreach", outreachRoutes);
   app.use("/api/admin/simple", simpleAuthRoutes);
   app.use("/api/admin/dashboard", adminDashboardRoutes);
   app.use("/api/admin/products", adminProductRoutes);

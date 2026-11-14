@@ -22,6 +22,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "client", "src"),
       "@shared": path.resolve(__dirname, "shared"),
+      "@app-entry": path.resolve(__dirname, "client", "src", "AppEntry.tsx"),
       "@assets": path.resolve(__dirname, "attached_assets"),
     },
   },
