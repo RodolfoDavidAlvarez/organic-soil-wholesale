@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import handler from "../api/outreach-desk.js";
 import {
   classifyStatus,
   deriveColdMetrics,
@@ -7,6 +8,7 @@ import {
   planSuppressionInsert,
   quoteIdent,
   readyMembership,
+  resolveOutreachTarget,
   rowIsReady,
   safeOutreachRedirect,
   suppressionIndex,
@@ -130,5 +132,85 @@ assert.match(migration, /ralvarez@soilseedandwater.com/);
 assert.match(migration, /vanessa@soilseedandwater.com/);
 
 assert.equal(normalizeEmail("  A@B.com "), "a@b.com");
+
+assert.equal(resolveOutreachTarget({ url: "/api/admin/outreach/me" }).path, "/api/admin/outreach/me");
+assert.equal(resolveOutreachTarget({ url: "/api/outreach-desk?route=rows&tab=leads" }).path, "/api/admin/outreach/rows");
+assert.equal(resolveOutreachTarget({ url: "/api/outreach-desk?route=rows&tab=leads" }).url.searchParams.get("tab"), "leads");
+assert.equal(resolveOutreachTarget({ url: "/api/outreach-desk?route=views/delete" }).path, "/api/admin/outreach/views/delete");
+assert.equal(
+  resolveOutreachTarget({
+    url: "/api/outreach-desk",
+    headers: { "x-forwarded-uri": "/api/admin/outreach/notes?entityType=outbound_lead&entityId=1" },
+  }).path,
+  "/api/admin/outreach/notes",
+);
+
+function mockRes() {
+  return {
+    statusCode: 200,
+    headers: {},
+    body: undefined,
+    setHeader(name, value) { this.headers[String(name).toLowerCase()] = value; },
+    status(code) { this.statusCode = code; return this; },
+    json(payload) { this.body = payload; return this; },
+    end() { return this; },
+  };
+}
+
+function rewritten(fullPath) {
+  const url = new URL(fullPath, "https://desk.local");
+  const route = url.pathname.replace(/^\/api\/admin\/outreach\/?/, "");
+  const next = new URL("/api/outreach-desk", "https://desk.local");
+  if (route) next.searchParams.set("route", route);
+  url.searchParams.forEach((value, key) => next.searchParams.append(key, value));
+  return `${next.pathname}${next.search}`;
+}
+
+const routed = [
+  ["GET", "/api/admin/outreach/me", 401],
+  ["POST", "/api/admin/outreach/login", 401],
+  ["POST", "/api/admin/outreach/request-link", 200],
+  ["POST", "/api/admin/outreach/session", 401],
+  ["GET", "/api/admin/outreach/rows?tab=leads", 401],
+  ["GET", "/api/admin/outreach/rows?tab=waiting", 401],
+  ["GET", "/api/admin/outreach/rows?tab=replies", 401],
+  ["GET", "/api/admin/outreach/rows?tab=metrics", 401],
+  ["POST", "/api/admin/outreach/cell", 401],
+  ["POST", "/api/admin/outreach/bulk", 401],
+  ["POST", "/api/admin/outreach/note", 401],
+  ["GET", "/api/admin/outreach/notes?entityType=outbound_lead&entityId=1", 401],
+  ["GET", "/api/admin/outreach/views", 401],
+  ["POST", "/api/admin/outreach/views", 401],
+  ["POST", "/api/admin/outreach/views/delete", 401],
+  ["POST", "/api/admin/outreach/decision", 401],
+];
+
+for (const [method, fullPath, status] of routed) {
+  for (const url of [fullPath, rewritten(fullPath)]) {
+    const res = mockRes();
+    await handler({ method, url, headers: { host: "www.organicsoilwholesale.com" }, body: {} }, res);
+    assert.equal(res.statusCode, status, `${method} ${url} -> ${res.statusCode} ${JSON.stringify(res.body)}`);
+    assert.notEqual(res.body?.error, "API endpoint not found");
+  }
+}
+
+const missing = mockRes();
+await handler({ method: "GET", url: "/api/outreach-desk?route=nope", headers: {}, body: {} }, missing);
+assert.equal(missing.statusCode, 404);
+assert.equal(missing.body.error, "Not found");
+
+const preflight = mockRes();
+await handler({ method: "OPTIONS", url: "/api/outreach-desk?route=me", headers: {} }, preflight);
+assert.equal(preflight.statusCode, 200);
+assert.match(preflight.headers["access-control-allow-headers"], /Authorization/);
+
+const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
+const sources = vercel.rewrites.map((rule) => rule.source);
+const catchAll = sources.indexOf("/api/:path*");
+assert.ok(sources.indexOf("/api/admin/outreach") < catchAll);
+assert.ok(sources.indexOf("/api/admin/outreach/:path*") < catchAll);
+assert.equal(vercel.rewrites.find((rule) => rule.source === "/api/admin/outreach/:path*").destination, "/api/outreach-desk?route=:path*");
+const api = readFileSync(new URL("../api/index.js", import.meta.url), "utf8");
+assert.match(api, /path === '\/api\/admin\/outreach' \|\| path\.startsWith\('\/api\/admin\/outreach\/'\)/);
 
 console.log("outreach manager checks: ok");

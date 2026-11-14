@@ -74,6 +74,51 @@ export function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+const OUTREACH_API_PREFIX = "/api/admin/outreach";
+
+function headerValue(req, name) {
+  const value = req?.headers?.[name] ?? req?.headers?.[name.toLowerCase()];
+  if (Array.isArray(value)) return value[0] || "";
+  return value ? String(value) : "";
+}
+
+function asRequestUrl(value, host) {
+  if (!value) return null;
+  const text = String(value);
+  try {
+    if (text.startsWith("http://") || text.startsWith("https://")) return new URL(text);
+    return new URL(text.startsWith("/") ? text : `/${text}`, `https://${host}`);
+  } catch {
+    return null;
+  }
+}
+
+export function resolveOutreachTarget(req) {
+  const host = headerValue(req, "x-forwarded-host") || headerValue(req, "host") || "localhost";
+  const candidates = [
+    headerValue(req, "x-forwarded-uri"),
+    headerValue(req, "x-vercel-original-url"),
+    headerValue(req, "x-invoke-path"),
+    headerValue(req, "x-matched-path"),
+    req?.url,
+  ];
+  for (const candidate of candidates) {
+    const url = asRequestUrl(candidate, host);
+    if (!url) continue;
+    const path = url.pathname.replace(/\/+$/, "") || "/";
+    if (path === OUTREACH_API_PREFIX || path.startsWith(`${OUTREACH_API_PREFIX}/`)) {
+      return { path, url };
+    }
+  }
+  const desk = asRequestUrl(req?.url || "/", host) || new URL(`https://${host}/`);
+  const route = (desk.searchParams.get("route") || "").replace(/^\/+/, "").replace(/\/+$/, "");
+  desk.searchParams.delete("route");
+  const path = route ? `${OUTREACH_API_PREFIX}/${route}` : OUTREACH_API_PREFIX;
+  const url = new URL(`https://${host}${path}`);
+  desk.searchParams.forEach((value, key) => url.searchParams.append(key, value));
+  return { path, url };
+}
+
 export function safeOutreachRedirect(value) {
   if (!value || typeof value !== "string") return null;
   let url;
