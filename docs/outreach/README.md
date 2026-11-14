@@ -4,6 +4,8 @@ Internal page: `/admin/outreach`.
 
 It manages cold outreach. It does not send email, text, or calls.
 
+`/api/admin/outreach` and `/api/admin/outreach/*` are rewritten to the Vercel function `api/outreach-desk.js` before the `/api` catch-all. That function is what answers the desk. `api/index.js` still has the same dispatch as a fallback.
+
 Apply `supabase/migrations/20261114053000_outreach_manager.sql` before the first sign-in. The migration only adds `sp_outreach_allowlist`, `sp_rodo_notes`, `sp_outreach_saved_views`, and the read-only view `sp_outreach_sandy_notes`. It does not change `sp_outbound_ready` or the `public.orders` to `sp_orders` sync.
 
 ## Sign-in
