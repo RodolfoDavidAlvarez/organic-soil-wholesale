@@ -51,6 +51,15 @@
   },
   "headers": [
     {
+      "source": "/products/garden-craft-blend",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
       "source": "/garden-bed/:path*",
       "headers": [
         {
@@ -246,6 +255,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/products/garden-craft-blend",
+      "destination": "/products/garden-craft-blend/index.html"
+    },
     {
       "source": "/free-sample",
       "destination": "/free-sample.html"

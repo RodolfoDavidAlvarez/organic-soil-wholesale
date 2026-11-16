@@ -175,6 +175,9 @@ const RedirectTo = ({ href }: { href: string }) => {
   return null;
 };
 
+const GardenCraftBlend = lazy(() => import("@/pages/GardenCraftBlend"));
+const SuperBoosterPreview = import.meta.env.DEV ? lazy(() => import("@/pages/SuperBoosterPreview")) : null;
+
 const GardenBedKit = lazy(() => import("@/pages/GardenBedKit"));
 
 function Router() {
@@ -200,6 +203,8 @@ function Router() {
         <Route path="/products/mulch/:id" component={MulchDetail} />
         <Route path="/products/garden-bed-kit" component={GardenBedKit} />
         <Route path="/garden-bed" component={GardenBedKit} />
+        <Route path="/products/garden-craft-blend" component={GardenCraftBlend} />
+        {SuperBoosterPreview && <Route path="/__preview/super-booster" component={SuperBoosterPreview} />}
         <Route path="/products/:slug" component={ProductDetail} />
         <Route path="/products" component={Products} />
         <Route path="/about" component={About} />

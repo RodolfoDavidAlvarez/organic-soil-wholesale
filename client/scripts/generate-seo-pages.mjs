@@ -103,6 +103,7 @@ const itemListSchema = {
 };
 
 const routes = [
+  { path: "/products/garden-craft-blend", title: "Garden Craft Blend — Potting Soil | Organic Soil Wholesale", description: "Our signature garden soil mix for raised beds and containers. Ingredients, directions and size options from Soil Seed & Water.", canonical: "https://www.organicsoilwholesale.com/products/garden-craft-blend", image: "https://www.organicsoilwholesale.com/images/garden-craft/garden-craft-1-5-cu-ft.webp", robots: "noindex, follow", schemas: [] },
   ...Object.entries(JSON.parse(await readFile(path.join(clientRoot, 'src/pages/representative-card-data.json'), 'utf8'))).map(([slug, rep]) => ({
     path: '/rep/' + slug,
     title: rep.name + ' | Soil Seed & Water',
