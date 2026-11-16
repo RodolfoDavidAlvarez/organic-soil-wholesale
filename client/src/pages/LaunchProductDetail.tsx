@@ -10,6 +10,7 @@ import { PayPickupProductFacts } from '@/components/PayPickupProductFacts';
 export interface LaunchProduct {
   name: string; type: string; subtitle: string; description: string; slug: string;
   image: string; imageAlt: string; imageCaption?: string;
+  additionalImages?: { src: string; alt: string; caption: string }[];
   includes: string[]; benefits: string[]; ingredients: string;
   uses: string; directions?: string; sizes: { label: string; detail: string }[];
   safety?: string; draft?: boolean;
@@ -19,6 +20,9 @@ export interface LaunchProduct {
 export default function LaunchProductDetail({ product }: { product: LaunchProduct }) {
   const [selected, setSelected] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
+  const images = [{ src: product.image, alt: product.imageAlt, caption: product.imageCaption }, ...(product.additionalImages || [])];
+  const activeImage = images[imageIndex] || images[0];
   const size = product.sizes[selected];
   const inquiry = `mailto:info@soilseedandwater.com?subject=${encodeURIComponent(`${product.name} — ${size?.label || 'product information'}`)}&body=${encodeURIComponent(`Hello, I'd like pricing and availability for ${product.name}${size ? ` in the ${size.label} format` : ''}.\n\nQuantity:\nPickup or delivery:\nZIP code:\n`)}`;
   return <>
@@ -31,10 +35,11 @@ export default function LaunchProductDetail({ product }: { product: LaunchProduc
           <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
             <figure className="bg-gradient-to-br from-[#f4f7f2] via-white to-[#f8f1e7] p-3 sm:p-4 lg:self-start">
               <button type="button" onClick={() => setGalleryOpen(true)} aria-label={`Enlarge ${product.name} image`} className="group relative block h-[310px] w-full rounded-xl bg-white sm:h-[420px] lg:h-[520px]">
-                <img src={product.image} alt={product.imageAlt} className="h-full w-full object-contain p-3 sm:p-5" fetchPriority="high" />
+                <img src={activeImage.src} alt={activeImage.alt} className="h-full w-full object-contain p-3 sm:p-5" fetchPriority="high" />
                 <span className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white"><Maximize2 className="h-4 w-4" /></span>
               </button>
-              {product.imageCaption && <figcaption className="px-2 pt-3 text-center text-xs leading-relaxed text-muted-foreground">{product.imageCaption}</figcaption>}
+              {images.length > 1 && <div className="mt-3 flex gap-2">{images.map((image, index) => <button key={image.src} type="button" onClick={() => setImageIndex(index)} aria-label={`Show ${image.alt}`} aria-pressed={index === imageIndex} className={`h-20 w-20 overflow-hidden rounded-lg border bg-white p-1 ${index === imageIndex ? "border-[#264027] ring-2 ring-[#264027]/30" : "border-stone-200"}`}><img src={image.src} alt="" className="h-full w-full object-contain" /></button>)}</div>}
+              {activeImage.caption && <figcaption className="px-2 pt-3 text-center text-xs leading-relaxed text-muted-foreground">{activeImage.caption}</figcaption>}
             </figure>
             <div className="p-4 sm:p-6">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[.16em] text-[#56754c]">{product.type}</p>
@@ -54,6 +59,6 @@ export default function LaunchProductDetail({ product }: { product: LaunchProduc
         </div>
       </div>
     </section>
-    <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}><DialogContent className="max-h-[95dvh] max-w-3xl overflow-y-auto"><DialogTitle>{product.name}</DialogTitle><DialogDescription>{product.imageCaption || product.imageAlt}</DialogDescription><img src={product.image} alt={product.imageAlt} className="max-h-[70dvh] w-full object-contain" /></DialogContent></Dialog>
+    <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}><DialogContent className="max-h-[95dvh] max-w-3xl overflow-y-auto"><DialogTitle>{product.name}</DialogTitle><DialogDescription>{activeImage.caption || activeImage.alt}</DialogDescription><img src={activeImage.src} alt={activeImage.alt} className="max-h-[70dvh] w-full object-contain" /></DialogContent></Dialog>
   </>;
 }

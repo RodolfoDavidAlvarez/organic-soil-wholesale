@@ -3,7 +3,7 @@ import LaunchProductDetail, { type LaunchProduct } from './LaunchProductDetail';
 export const gardenCraft: LaunchProduct = {
   name: 'Garden Craft Blend', type: 'Potting soil · Garden soil mix', subtitle: 'Our Signature Blend', slug: 'garden-craft-blend',
   description: 'Premium mix for raised beds & containers. Ready to use. Just open the bag and plant.',
-  image: '/images/garden-craft/garden-craft-1-5-cu-ft.webp',
+  image: '/images/garden-craft/garden-craft-1-5-cu-ft-label-v2.webp',
   imageAlt: 'Garden Craft Blend 1.5 cu ft bag mockup with green Soil Seed & Water label',
   imageCaption: '1.5 cu ft bag shown. AI-generated packaging preview; final packaging may vary.',
   includes: ['Clean wood fiber', 'Organic dairy compost', 'Coco peat', 'Worm castings', 'Super Booster organic concentrate'],
