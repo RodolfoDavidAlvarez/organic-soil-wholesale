@@ -14,6 +14,8 @@ type FlatbedLoadMeterProps = {
   compact?: boolean;
   /** Progress + copy only — use when a parent section already shows the truck photo */
   meterOnly?: boolean;
+  /** Hide the 10% full-load offer when another code replaces it. */
+  suppressVolumeDiscount?: boolean;
 };
 
 const MIXED_FLATBED_IMAGE = "/images/size-formats/mixed-truckload.webp";
@@ -23,6 +25,7 @@ export function FlatbedLoadMeter({
   className,
   compact = false,
   meterOnly = false,
+  suppressVolumeDiscount = false,
 }: FlatbedLoadMeterProps) {
   if (spots <= 0) return null;
 
@@ -61,20 +64,22 @@ export function FlatbedLoadMeter({
       <p className={cn("mt-1.5 leading-snug text-stone-600", compact || meterOnly ? "text-[11px]" : "text-xs")}>
         {full ? (
           <span className="font-semibold text-emerald-800">
-            Full truckload — {discountPct}% off products
+            {suppressVolumeDiscount
+              ? "Full truckload — the 10% discount is not combined with your code"
+              : `Full truckload — ${discountPct}% off products`}
           </span>
         ) : over ? (
           <span className="font-medium text-amber-900">
             This needs {loads} flatbed loads ({spots} spots)
           </span>
         ) : meterOnly ? (
-          spots < capacity ? (
+          spots < capacity && !suppressVolumeDiscount ? (
             <span className="text-stone-500">{capacity - spots} spots left for 10% off.</span>
           ) : null
         ) : (
           <>
             Pallets &amp; totes ride a flatbed with onboard forklift (Moffett).
-            {spots < capacity ? (
+            {spots < capacity && !suppressVolumeDiscount ? (
               <span className="text-stone-500"> {capacity - spots} spots left for 10% off.</span>
             ) : null}
           </>

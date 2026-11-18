@@ -124,6 +124,8 @@ export function isCallTrackingExcludedPath(
     path === "/qr" ||
     path === "/check-in" ||
     path === "/yard-map" ||
+    path === "/schools" ||
+    path.startsWith("/schools/") ||
     path === "/checkout" ||
     path === "/order-confirmation" ||
     path.startsWith("/pay-and-pickup") ||
