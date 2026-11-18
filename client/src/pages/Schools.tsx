@@ -70,6 +70,10 @@ export default function Schools() {
     if (confirmation) successRef.current?.focus();
   }, [confirmation]);
 
+  useEffect(() => {
+    if (formError || Object.keys(errors).length > 0) errorRef.current?.focus();
+  }, [errors, formError]);
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError(null);
@@ -85,10 +89,7 @@ export default function Schools() {
       file,
     });
     setErrors(validation.errors);
-    if (!validation.ok || !file || (pickupOrPhone !== "online_pickup" && pickupOrPhone !== "phone")) {
-      errorRef.current?.focus();
-      return;
-    }
+    if (!validation.ok || !file || (pickupOrPhone !== "online_pickup" && pickupOrPhone !== "phone")) return;
 
     setSubmitting(true);
     try {
@@ -106,7 +107,6 @@ export default function Schools() {
       setFile(null);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "We couldn't save the verification. Please try again.");
-      errorRef.current?.focus();
     } finally {
       setSubmitting(false);
     }

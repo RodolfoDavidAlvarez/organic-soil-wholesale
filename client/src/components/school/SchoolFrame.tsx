@@ -30,6 +30,7 @@ export function SchoolFrame({ children, utm = {} }: SchoolFrameProps) {
             data-callrail-ignore="true"
             data-dynamic-number-ignore="true"
             data-call-tracking-ignore="true"
+            data-calltrk-noswap="true"
             className="no-call-tracking inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#183a23] px-5 text-base font-bold text-white"
             aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
           >
