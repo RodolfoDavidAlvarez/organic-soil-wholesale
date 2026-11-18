@@ -7,6 +7,11 @@
  * discount_cents. Line prices stay the catalog sale price, in integer cents,
  * with compare_at_cents (list) or discount_percent 20 on pallet lines.
  * Do not multiply the current pallet price by 0.70.
+ * A quote without order_reference only prices the cart. After the order row
+ * exists, quote again with order_reference `osw-{order id}`. That holds the
+ * code for 24 hours. Do not create a Stripe session unless that quote is
+ * valid. The same reference can refresh the hold and redeem it. Another
+ * checkout is refused. A 503 means the verification service is not ready.
  * The card is only authorized until that code is claimed. Capture happens
  * after redeem. A second authorization is voided, or refunded if it was
  * already captured.
@@ -139,12 +144,20 @@ export function schoolLineSaleCents(lineItems) {
   }, 0);
 }
 
-export function buildSchoolQuoteBody(code, contactEmail, items) {
-  return {
+export function buildSchoolQuoteBody(code, contactEmail, items, orderReference) {
+  const body = {
     discount_code: normalizeDiscountCode(code),
     contact_email: normalizeSchoolContactEmail(contactEmail),
     line_items: (Array.isArray(items) ? items : []).map(buildSchoolQuoteLine),
   };
+  const reference = String(orderReference || '').trim();
+  if (reference) body.order_reference = reference;
+  return body;
+}
+
+export function schoolQuoteFailureStatus(status) {
+  if (status === 503 || status === 429 || status === 409) return status;
+  return 400;
 }
 
 export function schoolLineCaption(item) {
@@ -197,8 +210,8 @@ function publicQuoteError(payload, fallback) {
   return message;
 }
 
-export async function fetchSchoolQuote({ code, contactEmail, items }, { env = process.env, fetchImpl = globalThis.fetch } = {}) {
-  const body = buildSchoolQuoteBody(code, contactEmail, items);
+export async function fetchSchoolQuote({ code, contactEmail, items, orderReference }, { env = process.env, fetchImpl = globalThis.fetch } = {}) {
+  const body = buildSchoolQuoteBody(code, contactEmail, items, orderReference);
   if (!body.contact_email || !isSchoolDiscountCode(body.discount_code)) {
     return { ok: false, status: 400, error: 'Enter the school code and the email from the verification.' };
   }
@@ -236,8 +249,31 @@ export async function fetchSchoolQuote({ code, contactEmail, items }, { env = pr
     email: body.contact_email,
     discountCents,
     expiresAt: payload.discount_expires_at || null,
+    reservedUntil: payload.reserved_until || null,
+    orderReference: body.order_reference || null,
     lineItems: body.line_items,
   };
+}
+
+/**
+ * Place the 24-hour hold for this order. A preview quote does not do this.
+ * The Stripe session is created only when this returns ok.
+ */
+export async function reserveSchoolCheckoutQuote(quote, items, orderId, options) {
+  if (!quote?.ok) {
+    return { ok: false, status: 400, error: "That code isn't valid" };
+  }
+  const held = await fetchSchoolQuote({
+    code: quote.code,
+    contactEmail: quote.email,
+    items,
+    orderReference: schoolOrderReference(orderId),
+  }, options);
+  if (!held.ok) return held;
+  if (held.discountCents !== quote.discountCents) {
+    return { ok: false, status: 409, error: 'The school price changed. Please apply the code again.' };
+  }
+  return held;
 }
 
 export function resolveDiscountCode(raw, { now = new Date() } = {}) {
