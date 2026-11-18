@@ -65,12 +65,19 @@ export function withUtm(path, utm = {}) {
   return `${pathname}${qs ? `?${qs}` : ''}${hash ? `#${hash}` : ''}`;
 }
 
+const HEIC_TYPES = new Set(['image/heic', 'image/heif']);
+
 export function schoolIdContentType(file) {
   const name = String(file?.name || '');
   const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
   const fromExt = CONTENT_TYPES_BY_EXT[ext] || null;
   const type = String(file?.type || '').toLowerCase();
   if (type === 'image/jpg') return fromExt === 'image/jpeg' || !fromExt ? 'image/jpeg' : null;
+  // iPhones label the same HEIC file as image/heic or image/heif. The verification
+  // service accepts either mime for either extension.
+  if (fromExt && HEIC_TYPES.has(fromExt) && (!type || type === 'application/octet-stream' || HEIC_TYPES.has(type))) {
+    return fromExt;
+  }
   if (fromExt && (!type || type === 'application/octet-stream' || type === fromExt)) return fromExt;
   if (ALLOWED_CONTENT_TYPES.has(type) && (!fromExt || fromExt === type)) return type;
   return null;
@@ -148,6 +155,11 @@ export function buildSchoolSubmissionBody(input, idDocumentPath, utm = {}) {
  * token on the query string. The storage client sends the file as multipart
  * form data and does not put the token in a header.
  */
+function isSchoolUploadHost(hostname) {
+  const host = String(hostname || '').toLowerCase();
+  return host === 'supabase.co' || host.endsWith('.supabase.co');
+}
+
 export function schoolSignedUploadTarget(signedUrl, token) {
   let url;
   try {
@@ -155,7 +167,8 @@ export function schoolSignedUploadTarget(signedUrl, token) {
   } catch {
     return null;
   }
-  if (url.protocol !== 'https:') return null;
+  if (url.protocol !== 'https:' || url.username || url.password) return null;
+  if (!isSchoolUploadHost(url.hostname)) return null;
   if (token) url.searchParams.set('token', String(token));
   if (!url.searchParams.get('token')) return null;
   return url.toString();

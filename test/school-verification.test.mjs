@@ -36,6 +36,8 @@ test('verification API base defaults to myorganicsoil.com', () => {
 
 test('school ID files are limited to jpg, png, heic, and pdf under 10 MB', () => {
   assert.equal(schoolIdContentType({ name: 'card.HEIC', type: '' }), 'image/heic');
+  assert.equal(schoolIdContentType({ name: 'card.heic', type: 'image/heif' }), 'image/heic');
+  assert.equal(schoolIdContentType({ name: 'card.heif', type: 'image/heic' }), 'image/heif');
   assert.equal(schoolIdContentType({ name: 'card.jpg', type: 'image/jpeg' }), 'image/jpeg');
   assert.equal(validateSchoolIdFile({ name: 'notes.txt', type: 'text/plain', size: 10 }), 'Upload a JPG, PNG, HEIC, or PDF.');
   assert.equal(validateSchoolIdFile({ name: 'big.pdf', type: 'application/pdf', size: 10 * 1024 * 1024 + 1 }), 'That file is larger than 10 MB.');
@@ -65,11 +67,13 @@ test('submission body matches the shared contract and keeps UTM fields', () => {
   assert.equal(check.errors.consent.includes('eligibility'), true);
 });
 
-test('signed uploads put the token on the storage URL', () => {
-  const target = schoolSignedUploadTarget('https://uploads.example.test/object/upload/sign/pending/id.png', 'upload-token');
-  assert.equal(target, 'https://uploads.example.test/object/upload/sign/pending/id.png?token=upload-token');
-  assert.equal(schoolSignedUploadTarget('http://uploads.example.test/file', 'upload-token'), null);
-  assert.equal(schoolSignedUploadTarget('https://uploads.example.test/file', ''), null);
+test('signed uploads put the token on a Supabase storage URL', () => {
+  const target = schoolSignedUploadTarget('https://project.supabase.co/storage/v1/object/upload/sign/school-verification-ids/pending/id.png', 'upload-token');
+  assert.equal(target, 'https://project.supabase.co/storage/v1/object/upload/sign/school-verification-ids/pending/id.png?token=upload-token');
+  assert.equal(schoolSignedUploadTarget('https://uploads.example.test/object/upload/sign/pending/id.png', 'upload-token'), null);
+  assert.equal(schoolSignedUploadTarget('http://project.supabase.co/storage/v1/object/id.png', 'upload-token'), null);
+  assert.equal(schoolSignedUploadTarget('https://project.supabase.co/storage/v1/object/id.png', ''), null);
+  assert.equal(schoolSignedUploadTarget('https://user:pass@project.supabase.co/storage/v1/object/id.png', 'upload-token'), null);
 });
 
 test('status lookup and in-flow links keep the campaign query', () => {

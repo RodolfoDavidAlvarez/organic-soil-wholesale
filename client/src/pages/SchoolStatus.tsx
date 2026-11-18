@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import SEO from "@/components/layout/SEO";
 import { SchoolFrame } from "@/components/school/SchoolFrame";
@@ -33,6 +33,9 @@ export default function SchoolStatus() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SchoolStatusResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const idRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setUtm(loadSchoolUtms(window.location.search));
@@ -43,13 +46,20 @@ export default function SchoolStatus() {
     if (remembered && (!queryId || remembered.id === queryId)) setEmail(remembered.email);
   }, [location]);
 
+  useEffect(() => {
+    if (formError) errorRef.current?.focus();
+  }, [formError]);
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError(null);
     setResult(null);
     const validation = validateStatusLookup({ id, email });
     setErrors(validation.errors);
-    if (!validation.ok) return;
+    if (!validation.ok) {
+      (validation.errors.id ? idRef : emailRef).current?.focus();
+      return;
+    }
     setLoading(true);
     try {
       const status = await fetchSchoolStatus(validation.id, validation.email);
@@ -92,15 +102,15 @@ export default function SchoolStatus() {
         <form className="mt-6 space-y-4 rounded-2xl bg-white p-4 sm:p-5" onSubmit={onSubmit} noValidate>
           <div>
             <label htmlFor="school-status-id" className="text-sm font-bold text-[#183a23]">Reference</label>
-            <input id="school-status-id" value={id} onChange={(event) => setId(event.target.value)} autoComplete="off" className="mt-1 min-h-12 w-full rounded-xl border border-[#183a23]/15 px-3 text-base" aria-invalid={Boolean(errors.id)} />
-            {errors.id && <p className="mt-1 text-sm text-red-700">{errors.id}</p>}
+            <input ref={idRef} id="school-status-id" value={id} onChange={(event) => setId(event.target.value)} autoComplete="off" className="mt-1 min-h-12 w-full rounded-xl border border-[#183a23]/15 px-3 text-base" aria-invalid={Boolean(errors.id)} aria-describedby={errors.id ? "school-status-id-error" : undefined} />
+            {errors.id && <p id="school-status-id-error" className="mt-1 text-sm text-red-700">{errors.id}</p>}
           </div>
           <div>
             <label htmlFor="school-status-email" className="text-sm font-bold text-[#183a23]">Email</label>
-            <input id="school-status-email" type="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="mt-1 min-h-12 w-full rounded-xl border border-[#183a23]/15 px-3 text-base" aria-invalid={Boolean(errors.email)} />
-            {errors.email && <p className="mt-1 text-sm text-red-700">{errors.email}</p>}
+            <input ref={emailRef} id="school-status-email" type="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="mt-1 min-h-12 w-full rounded-xl border border-[#183a23]/15 px-3 text-base" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "school-status-email-error" : undefined} />
+            {errors.email && <p id="school-status-email-error" className="mt-1 text-sm text-red-700">{errors.email}</p>}
           </div>
-          {formError && <p role="alert" className="rounded-xl bg-red-50 px-3 py-3 text-sm text-red-800">{formError}</p>}
+          {formError && <p ref={errorRef} tabIndex={-1} role="alert" className="rounded-xl bg-red-50 px-3 py-3 text-sm text-red-800 outline-none">{formError}</p>}
           <button type="submit" disabled={loading} className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[#183a23] px-5 text-base font-bold text-white disabled:opacity-60">
             {loading ? "Checking…" : "Check status"}
           </button>
@@ -148,7 +158,7 @@ export default function SchoolStatus() {
         )}
 
         <p className="mt-4 text-sm">
-          <Link href={withUtm("/schools", utm)} className="font-bold text-[#183a23] underline">Back to the school offer</Link>
+          <Link href={withUtm("/schools", utm)} className="inline-flex min-h-11 items-center font-bold text-[#183a23] underline">Back to the school offer</Link>
         </p>
       </SchoolFrame>
     </>

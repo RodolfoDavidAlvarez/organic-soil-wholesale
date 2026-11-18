@@ -7,9 +7,13 @@
  * discount_cents. Line prices stay the catalog sale price, in integer cents,
  * with compare_at_cents (list) or discount_percent 20 on pallet lines.
  * Do not multiply the current pallet price by 0.70.
+ * The card is only authorized until that code is claimed. Capture happens
+ * after redeem. A second authorization is voided, or refunded if it was
+ * already captured.
  */
 
 import { cartFlatbedSpots, hasFullFlatbedDiscount } from './flatbedSpots.js';
+import { normalizeV5CheckoutItems, resolveV5CartPricing } from './oswPricing.js';
 import { resolvePromoBundle } from './promoBundles.js';
 import { schoolVerificationApiBase } from './schoolVerification.js';
 
@@ -18,6 +22,9 @@ export const SCHOOL_DISCOUNT_PERCENT = 30;
 export const SCHOOL_CODE_PATTERN = /^SCHOOL30-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
 /** 2027-05-31 23:59:59 America/Phoenix. */
 export const SCHOOL_OFFER_ENDS_AT = '2027-05-31T23:59:59-07:00';
+/** Stripe metadata that marks a school checkout as authorize-only until redeem succeeds. */
+export const SCHOOL_HOLD_METADATA_KEY = 'school_hold';
+export const SCHOOL_HOLD_METADATA_VALUE = '1';
 
 const PROMO_BUNDLE_IDS = new Set([4100, 4101, 4102]);
 
@@ -100,6 +107,38 @@ export function buildSchoolQuoteLine(item) {
   return line;
 }
 
+/**
+ * Catalog prices only. A browser price, list price, or unknown product
+ * cannot change what the school quote charges.
+ */
+export function prepareSchoolCheckoutItems(rawItems) {
+  let items;
+  try {
+    items = normalizeV5CheckoutItems(rawItems);
+  } catch (error) {
+    const wrapped = new Error(error?.message || 'Unsupported product format');
+    wrapped.status = 400;
+    throw wrapped;
+  }
+  for (const item of items) {
+    if (resolvePromoBundle(item)) continue;
+    if (!resolveV5CartPricing(item)) {
+      const error = new Error('That product is not available for the school rate.');
+      error.status = 400;
+      throw error;
+    }
+  }
+  return items;
+}
+
+export function schoolLineSaleCents(lineItems) {
+  return (Array.isArray(lineItems) ? lineItems : []).reduce((sum, line) => {
+    const quantity = Math.max(0, Number(line?.quantity) || 0);
+    const unit = Math.max(0, Math.round(Number(line?.unit_price) || 0));
+    return sum + unit * quantity;
+  }, 0);
+}
+
 export function buildSchoolQuoteBody(code, contactEmail, items) {
   return {
     discount_code: normalizeDiscountCode(code),
@@ -178,6 +217,10 @@ export async function fetchSchoolQuote({ code, contactEmail, items }, { env = pr
   }
   const payload = await response.json().catch(() => ({}));
   const discountCents = Math.round(Number(payload?.discount_cents) || 0);
+  const saleCents = schoolLineSaleCents(body.line_items);
+  if (response.ok && payload?.valid === true && discountCents >= saleCents) {
+    return { ok: false, status: 400, error: "We couldn't price that school code. Please call us.", lineItems: body.line_items };
+  }
   if (!response.ok || payload?.valid !== true || discountCents <= 0) {
     return {
       ok: false,
@@ -237,10 +280,15 @@ export function readSchoolCheckoutNote(notes) {
   if (text.includes('school_redeemed=yes')) {
     return { redeemed: true };
   }
+  const released = text.match(/school_checkout_released=(voided|refunded)/)?.[1];
+  if (released) {
+    const status = Number(text.match(/school_redeem_status=(\d{3})/)?.[1]);
+    return { released, status: status === 400 || status === 409 ? status : 409 };
+  }
   const code = text.match(/school_discount_code=(SCHOOL30-[A-Z0-9]+)/)?.[1];
   const email = normalizeSchoolContactEmail(text.match(/school_contact_email=([^\s]+)/)?.[1]);
   const cents = text.match(/school_discount_cents=(\d+)/)?.[1];
-  const rawLines = text.match(/school_quote_lines=(\[.*\])/)?.[1];
+  const rawLines = text.match(/school_quote_lines=(\[[^\n]*\])/)?.[1];
   if (!isSchoolDiscountCode(code) || !email || cents == null || !rawLines) return null;
   try {
     const lineItems = JSON.parse(rawLines);
@@ -251,12 +299,44 @@ export function readSchoolCheckoutNote(notes) {
   }
 }
 
-export function schoolStripeCouponParams(discountCents) {
+export function schoolStripeCouponParams(discountCents, now = Date.now()) {
+  const amount = Math.round(Number(discountCents) || 0);
+  const redeemBy = Math.floor(Date.parse(SCHOOL_OFFER_ENDS_AT) / 1000);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    const error = new Error('School discount is not available for this order.');
+    error.status = 400;
+    throw error;
+  }
+  if (!Number.isFinite(redeemBy) || redeemBy <= Math.floor(Number(now) / 1000)) {
+    const error = new Error('This school code expired on May 31, 2027.');
+    error.status = 400;
+    throw error;
+  }
   return {
-    amount_off: Math.round(Number(discountCents) || 0),
+    amount_off: amount,
     currency: 'usd',
     duration: 'once',
     max_redemptions: 1,
+    redeem_by: redeemBy,
     name: 'School rate',
+    metadata: { purpose: 'school_rate' },
+  };
+}
+
+/** Authorize the card. Capture only after the one-time code is claimed. */
+export function schoolCheckoutCharge(metadata = {}, paymentIntentData = {}) {
+  return {
+    metadata: {
+      ...metadata,
+      [SCHOOL_HOLD_METADATA_KEY]: SCHOOL_HOLD_METADATA_VALUE,
+    },
+    payment_intent_data: {
+      ...paymentIntentData,
+      capture_method: 'manual',
+      metadata: {
+        ...(paymentIntentData.metadata || {}),
+        [SCHOOL_HOLD_METADATA_KEY]: SCHOOL_HOLD_METADATA_VALUE,
+      },
+    },
   };
 }
