@@ -1,8 +1,8 @@
 /**
  * Checkout discount rules for Organic Soil Wholesale.
  *
- * TEST is a local QA code. It is refused when NODE_ENV or VERCEL_ENV is
- * production. SCHOOL30 codes are not priced here. The server asks
+ * TEST is the existing checkout QA code: 100% off, including in production.
+ * SCHOOL30 codes are not priced here. The server asks
  * myorganicsoil.com POST /api/school-verifications/quote and uses that
  * discount_cents. Line prices stay the catalog sale price, in integer cents,
  * with compare_at_cents (list) or discount_percent 20 on pallet lines.
@@ -32,12 +32,6 @@ export function normalizeDiscountCode(code) {
 export function normalizeSchoolContactEmail(value) {
   const email = String(value || '').trim().toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254 ? email : null;
-}
-
-export function testDiscountAllowed(env = process.env) {
-  if (String(env?.VERCEL_ENV || '') === 'production') return false;
-  if (String(env?.NODE_ENV || '') === 'production') return false;
-  return true;
 }
 
 export function isSchoolDiscountCode(code) {
@@ -203,13 +197,10 @@ export async function fetchSchoolQuote({ code, contactEmail, items }, { env = pr
   };
 }
 
-export function resolveDiscountCode(raw, { env = process.env, now = new Date() } = {}) {
+export function resolveDiscountCode(raw, { now = new Date() } = {}) {
   const code = normalizeDiscountCode(raw);
   if (!code) return { ok: true, kind: 'none', code: null, percent: 0 };
   if (code === 'TEST') {
-    if (!testDiscountAllowed(env)) {
-      return { ok: false, error: "That code isn't valid" };
-    }
     return { ok: true, kind: 'test', code: 'TEST', percent: 100 };
   }
   if (isSchoolDiscountCode(code)) {

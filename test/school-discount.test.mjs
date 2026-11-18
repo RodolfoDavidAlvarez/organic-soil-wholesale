@@ -10,7 +10,6 @@ import {
   readSchoolCheckoutNote,
   resolveDiscountCode,
   schoolOfferEnded,
-  testDiscountAllowed,
 } from '../shared/checkoutDiscount.js';
 import { redeemSchoolOrder } from '../shared/schoolRedeem.js';
 
@@ -40,14 +39,16 @@ const pallet = () => ({
   discountPercent: 20,
 });
 
-test('TEST is refused in production and accepted only outside it', () => {
-  assert.equal(testDiscountAllowed({ NODE_ENV: 'production' }), false);
-  assert.equal(testDiscountAllowed({ NODE_ENV: 'development', VERCEL_ENV: 'production' }), false);
-  assert.equal(testDiscountAllowed({ NODE_ENV: 'development' }), true);
-  assert.equal(resolveDiscountCode('TEST', { env: { NODE_ENV: 'production' } }).ok, false);
-  assert.equal(resolveDiscountCode('test', { env: { NODE_ENV: 'development' } }).kind, 'test');
+test('TEST stays 100% off in production, the same as main', () => {
+  const production = resolveDiscountCode('TEST', { now: '2026-11-18T00:00:00.000Z' });
+  assert.equal(production.ok, true);
+  assert.equal(production.kind, 'test');
+  assert.equal(production.percent, 100);
+  assert.equal(resolveDiscountCode('test').code, 'TEST');
   assert.equal(resolveDiscountCode('SAVE10').ok, false);
   assert.equal(resolveDiscountCode('').kind, 'none');
+  const client = readFileSync(new URL('../client/src/pages/Checkout.tsx', import.meta.url), 'utf8');
+  assert.equal(client.includes('import.meta.env.PROD'), false);
 });
 
 test('school codes match the issued pattern and the Phoenix expiry', () => {

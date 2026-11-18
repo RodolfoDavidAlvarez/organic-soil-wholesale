@@ -177,7 +177,7 @@ router.post('/create-session', async (req, res) => {
       pickupTime = resolved.pickupAtIso;
     }
 
-    // TEST is 100% off outside production only. School codes are priced above.
+    // TEST is 100% off, including in production. School codes are priced above.
     let truckingQuote: Awaited<ReturnType<typeof quoteTrucking>> | null = null;
     const preferredDeliveryDate = isDelivery && typeof deliveryAddress?.preferredDate === 'string'
       ? deliveryAddress.preferredDate.trim()

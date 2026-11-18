@@ -537,12 +537,7 @@ const Checkout: React.FC = () => {
 
   const applyDiscount = async () => {
     setDiscountError(null);
-    const decision = resolveDiscountCode(discountInput, {
-      env: {
-        NODE_ENV: import.meta.env.PROD ? "production" : "development",
-        VERCEL_ENV: import.meta.env.PROD ? "production" : "development",
-      },
-    });
+    const decision = resolveDiscountCode(discountInput);
     if (!decision.ok) {
       setDiscountError(decision.error);
       return;
