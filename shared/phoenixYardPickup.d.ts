@@ -1,7 +1,10 @@
 export const PHOENIX_YARD_PICKUP_PRODUCT_IDS: readonly number[];
 export const PHOENIX_YARD_PICKUP_GRID_IDS: readonly number[];
 export const PAY_ONLINE_PRODUCT_IDS: readonly number[];
+export const CONGRESS_ONLY_BULK_PICKUP_PRODUCT_IDS: readonly number[];
 export const PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE: string;
+
+export function isCongressOnlyBulkPickupProduct(productId?: number | string | null): boolean;
 
 export function isPhoenixYardPickupProduct(productId?: number | string | null): boolean;
 export function isPayOnlineProduct(productId?: number | string | null): boolean;
