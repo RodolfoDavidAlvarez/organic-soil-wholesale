@@ -18,11 +18,14 @@ import { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } from '../../sh
 import {
   checkoutDiscountNotes,
   fetchSchoolQuote,
+  prepareSchoolCheckoutItems,
+  readSchoolCheckoutNote,
   resolveDiscountCode,
   schoolCartNotices,
+  schoolCheckoutCharge,
   schoolStripeCouponParams,
 } from '../../shared/checkoutDiscount.js';
-import { redeemPaidSchoolOrder } from '../../shared/schoolRedeem.js';
+import { settleSchoolCheckout } from '../../shared/schoolRedeem.js';
 import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 import { nonBundleProductSubtotal, resolvePromoBundle } from '../../shared/promoBundles.js';
 import {
@@ -56,9 +59,9 @@ router.post('/school-quote', async (req, res) => {
     }
     let canonicalItems;
     try {
-      canonicalItems = normalizeV5CheckoutItems(rawItems);
+      canonicalItems = prepareSchoolCheckoutItems(rawItems);
     } catch (pricingError: any) {
-      return res.status(400).json({ valid: false, error: pricingError?.message || 'Unsupported product format' });
+      return res.status(pricingError?.status === 400 ? 400 : 500).json({ valid: false, error: pricingError?.message || 'Unsupported product format' });
     }
     const quote = await fetchSchoolQuote({
       code: req.body?.discountCode,
@@ -82,6 +85,9 @@ router.post('/school-quote', async (req, res) => {
 
 // Create checkout session
 router.post('/create-session', async (req, res) => {
+  let schoolCoupon: { id: string } | null = null;
+  let schoolSession: { id: string } | null = null;
+  let stripeForCleanup: Stripe | null = null;
   try {
     const {
       items: rawItems,
@@ -117,15 +123,19 @@ router.post('/create-session', async (req, res) => {
     let flatbedPricing: { items: any[]; spots?: number; applied: boolean; discountAmount: number };
     let items: any[];
     if (discountDecision.kind === 'school') {
+      try {
+        items = prepareSchoolCheckoutItems(rawItems);
+      } catch (pricingError: any) {
+        return res.status(400).json({ error: pricingError?.message || 'Unsupported product format' });
+      }
       schoolQuote = await fetchSchoolQuote({
         code: discountDecision.code,
         contactEmail: customerInfo?.schoolContactEmail,
-        items: canonicalItems,
+        items,
       });
       if (!schoolQuote.ok) {
         return res.status(schoolQuote.status === 503 ? 503 : 400).json({ error: schoolQuote.error });
       }
-      items = canonicalItems;
       flatbedPricing = { items, applied: false, discountAmount: 0 };
     } else {
       flatbedPricing = applyFullFlatbedProductDiscount(canonicalItems);
@@ -482,12 +492,27 @@ router.post('/create-session', async (req, res) => {
       || 'https://organicsoilwholesale.com';
 
     const stripe = getStripe();
-    const schoolCoupon = schoolDiscountCents > 0
+    stripeForCleanup = stripe;
+    schoolCoupon = schoolDiscountCents > 0
       ? await stripe.coupons.create(schoolStripeCouponParams(schoolDiscountCents))
       : null;
+    const baseMetadata = {
+      order_id: order.id.toString(),
+      pickup_time: isDelivery ? '' : pickupTime,
+      fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+      delivery_zip: isDelivery ? deliveryAddress?.zip || '' : '',
+      preferred_delivery_date: isDelivery ? preferredDeliveryDate : '',
+      preferred_delivery_date_end: isDelivery ? preferredDeliveryDateEnd : '',
+      preferred_delivery_window: isDelivery ? preferredDeliveryWindow : '',
+      customer_type: customerInfo.customerCategory || '',
+      company: customerInfo.company || '',
+      marketing_opt_in: typeof customerInfo.marketingOptIn === 'boolean' ? String(customerInfo.marketingOptIn) : '',
+    };
+    const schoolHold = schoolCoupon ? schoolCheckoutCharge(baseMetadata) : null;
 
     // Create Stripe checkout session. The school coupon takes discount_cents
-    // off the sale prices. Line amounts stay the catalog price.
+    // off the sale prices. Line amounts stay the catalog price. A school
+    // checkout only authorizes the card until the code is claimed.
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
@@ -495,20 +520,11 @@ router.post('/create-session', async (req, res) => {
       ...(schoolCoupon ? { discounts: [{ coupon: schoolCoupon.id }] } : {}),
       success_url: `${stripeOrigin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
       cancel_url: `${stripeOrigin}/checkout?canceled=true`,
-      metadata: {
-        order_id: order.id.toString(),
-        pickup_time: isDelivery ? '' : pickupTime,
-        fulfillment_type: isDelivery ? 'delivery' : 'pickup',
-        delivery_zip: isDelivery ? deliveryAddress?.zip || '' : '',
-        preferred_delivery_date: isDelivery ? preferredDeliveryDate : '',
-        preferred_delivery_date_end: isDelivery ? preferredDeliveryDateEnd : '',
-        preferred_delivery_window: isDelivery ? preferredDeliveryWindow : '',
-        customer_type: customerInfo.customerCategory || '',
-        company: customerInfo.company || '',
-        marketing_opt_in: typeof customerInfo.marketingOptIn === 'boolean' ? String(customerInfo.marketingOptIn) : '',
-      },
+      metadata: schoolHold ? schoolHold.metadata : baseMetadata,
+      ...(schoolHold ? { payment_intent_data: schoolHold.payment_intent_data } : {}),
       customer_email: customerInfo.email || undefined,
     });
+    schoolSession = session;
 
     // Update order with Stripe session ID
     await supabase
@@ -524,6 +540,9 @@ router.post('/create-session', async (req, res) => {
     });
   } catch (error) {
     console.error('Checkout error:', error);
+    if (schoolCoupon?.id && !schoolSession && stripeForCleanup) {
+      await stripeForCleanup.coupons.del(schoolCoupon.id).catch(() => {});
+    }
     res.status(500).json({ error: 'Failed to create checkout session' });
   }
 });
@@ -542,20 +561,26 @@ router.post('/webhook', async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err}`);
   }
 
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object as Stripe.Checkout.Session;
-      await handlePaymentSuccess(session);
-      break;
+  // A school hold that cannot reach the verification service throws so Stripe
+  // retries. A void or refund returns normally and is not retried.
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handlePaymentSuccess(session);
+        break;
 
-    case 'payment_intent.payment_failed':
-      const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      await handlePaymentFailure(paymentIntent);
-      break;
+      case 'payment_intent.payment_failed':
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        await handlePaymentFailure(paymentIntent);
+        break;
 
-    default:
-      console.log(`Unhandled event type ${event.type}`);
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+  } catch (error) {
+    console.error('Webhook processing failed:', error);
+    return res.status(500).json({ error: 'Webhook processing failed' });
   }
 
   res.json({ received: true });
@@ -570,14 +595,41 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
     return;
   }
 
-  // Update order status
+  const { data: existing, error: existingError } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+
+  if (existingError || !existing) {
+    console.error('Error fetching order data:', existingError);
+    return;
+  }
+
+  const schoolNote = readSchoolCheckoutNote(existing.notes);
+  const settlement = await settleSchoolCheckout(supabase, existing, {
+    session,
+    stripe: schoolNote && !schoolNote.redeemed && !schoolNote.released ? getStripe() : null,
+  });
+  if (settlement.stop) {
+    console.error('[school checkout] released after authorization', orderId, settlement.released);
+    return;
+  }
+  if (session.metadata?.school_hold === '1' && session.payment_status !== 'paid' && !settlement.captured && !settlement.already) {
+    throw new Error('School payment was not captured.');
+  }
+
+  // Update order status only after a school code, when one was used, is claimed
+  // and the authorization is captured.
   const { error: orderError } = await supabase
     .from('orders')
     .update({
       status: 'paid',
       payment_status: 'paid',
       paid_at: new Date().toISOString(),
-      stripe_payment_intent_id: session.payment_intent as string
+      stripe_payment_intent_id: typeof session.payment_intent === 'string'
+        ? session.payment_intent
+        : existing.stripe_payment_intent_id,
     })
     .eq('id', orderId);
 
@@ -586,16 +638,11 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
     return;
   }
 
-  // Get order details including location_id
   const { data: orderData, error: orderDataError } = await supabase
     .from('orders')
     .select('*')
     .eq('id', orderId)
     .single();
-
-  if (orderData) {
-    await redeemPaidSchoolOrder(supabase, orderData);
-  }
 
   if (orderDataError || !orderData) {
     console.error('Error fetching order data:', orderDataError);

@@ -2000,7 +2000,7 @@ const Checkout: React.FC = () => {
                       Discount code
                     </Label>
                     <div className="mt-1 flex gap-2">
-                      <Input id="discount" value={discountInput} onChange={(e) => setDiscountInput(e.target.value)} placeholder="Enter code" className="flex-1 h-11 text-base" autoCapitalize="characters" />
+                      <Input id="discount" value={discountInput} onChange={(e) => setDiscountInput(e.target.value)} placeholder="Enter code" className="flex-1 h-11 text-base" autoCapitalize="characters" aria-invalid={Boolean(discountError)} aria-describedby={discountError ? "discount-error" : undefined} />
                       <Button type="button" variant="outline" onClick={applyDiscount} disabled={discountChecking} className="h-11 px-4">
                         {discountChecking ? "Checking…" : "Apply"}
                       </Button>
@@ -2022,7 +2022,7 @@ const Checkout: React.FC = () => {
                         />
                       </div>
                     )}
-                    {discountError && <p className="mt-1 text-xs text-red-600">{discountError}</p>}
+                    {discountError && <p id="discount-error" role="alert" className="mt-1 text-xs text-red-600">{discountError}</p>}
                   </div>
                 )}
               </CardContent>
@@ -2030,7 +2030,7 @@ const Checkout: React.FC = () => {
             )}
 
             {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm font-medium text-red-700">
+              <div role="alert" className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm font-medium text-red-700">
                 {error}
               </div>
             )}

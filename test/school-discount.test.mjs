@@ -7,11 +7,14 @@ import {
   checkoutDiscountNotes,
   fetchSchoolQuote,
   isBaggedProductLine,
+  prepareSchoolCheckoutItems,
   readSchoolCheckoutNote,
   resolveDiscountCode,
+  schoolCheckoutCharge,
   schoolOfferEnded,
+  schoolStripeCouponParams,
 } from '../shared/checkoutDiscount.js';
-import { redeemSchoolOrder } from '../shared/schoolRedeem.js';
+import { redeemSchoolOrder, schoolInternalKey } from '../shared/schoolRedeem.js';
 
 const bag = (price = 8.99, quantity = 2) => ({
   productId: 134,
@@ -172,4 +175,83 @@ test('redeem sends the internal key only from the server', async () => {
   assert.equal(client.includes('MOS_LEAD_INGEST_SECRET'), false);
   assert.equal(client.includes('* 0.7'), false);
   assert.equal(client.includes('* 0.70'), false);
+});
+
+test('a school quote cannot exceed the catalog sale, and the browser price is ignored', async () => {
+  const priced = prepareSchoolCheckoutItems([{
+    productId: 137,
+    format: '1.5CF Bag',
+    quantity: 1,
+    price: 0.01,
+    unitPrice: 0.01,
+  }]);
+  assert.equal(priced[0].price, 15.99);
+  assert.equal(priced[0].unitPrice, 15.99);
+  assert.throws(
+    () => prepareSchoolCheckoutItems([{ productId: 999001, format: 'Bag', quantity: 1, price: 0.01 }]),
+    (error) => error.status === 400,
+  );
+
+  const quote = await fetchSchoolQuote({
+    code: 'SCHOOL30-AB2C',
+    contactEmail: 'ada@school.example',
+    items: priced,
+  }, {
+    env: { SCHOOL_VERIFICATION_API_BASE: 'https://quotes.test' },
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ valid: true, discount_cents: 1599 }),
+    }),
+  });
+  assert.equal(quote.ok, false);
+  assert.equal(quote.status, 400);
+});
+
+test('the Stripe school coupon is one amount, single use, and expires with the offer', () => {
+  const now = Date.parse('2026-11-18T00:00:00.000Z');
+  const params = schoolStripeCouponParams(480, now);
+  assert.equal(params.amount_off, 480);
+  assert.equal(params.currency, 'usd');
+  assert.equal(params.duration, 'once');
+  assert.equal(params.max_redemptions, 1);
+  assert.equal(params.redeem_by, Math.floor(Date.parse(SCHOOL_OFFER_ENDS_AT) / 1000));
+  assert.equal(params.name, 'School rate');
+  assert.equal(params.metadata.purpose, 'school_rate');
+  assert.equal(Object.hasOwn(params, 'percent_off'), false);
+  assert.throws(() => schoolStripeCouponParams(0, now), (error) => error.status === 400);
+  assert.throws(
+    () => schoolStripeCouponParams(480, Date.parse('2027-06-01T07:00:00.000Z')),
+    (error) => error.status === 400,
+  );
+
+  const hold = schoolCheckoutCharge({ order_id: '9' }, { metadata: { order_id: '9' } });
+  assert.equal(hold.metadata.school_hold, '1');
+  assert.equal(hold.payment_intent_data.capture_method, 'manual');
+  assert.equal(hold.payment_intent_data.metadata.order_id, '9');
+  assert.equal(hold.payment_intent_data.metadata.school_hold, '1');
+});
+
+test('manual capture is only attached to a school checkout, and TEST stays a normal free order', () => {
+  const api = readFileSync(new URL('../api/index.js', import.meta.url), 'utf8');
+  const express = readFileSync(new URL('../server/routes/checkout.ts', import.meta.url), 'utf8');
+  for (const source of [api, express]) {
+    assert.equal(source.includes('prepareSchoolCheckoutItems'), true);
+    assert.equal(source.includes('schoolCheckoutCharge'), true);
+    assert.equal(source.includes("capture_method: 'manual'"), false);
+    assert.equal(source.includes("capture_method: 'automatic'"), false);
+    assert.match(source, /discountDecision\.kind === 'test' \? 100 : 0/);
+  }
+  assert.equal(
+    schoolInternalKey({
+      INTERNAL_TRIGGER_SECRET: 'trigger-secret',
+      MOS_LEAD_INGEST_SECRET: 'mos-secret',
+      LEAD_INGEST_SECRET: 'lead-secret',
+    }),
+    'trigger-secret',
+  );
+  assert.equal(
+    schoolInternalKey({ MOS_LEAD_INGEST_SECRET: 'mos-secret', LEAD_INGEST_SECRET: 'lead-secret' }),
+    'mos-secret',
+  );
 });

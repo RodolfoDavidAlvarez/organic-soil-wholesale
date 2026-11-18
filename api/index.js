@@ -43,11 +43,14 @@ import { nonBundleProductSubtotal, resolvePromoBundle } from '../shared/promoBun
 import {
   checkoutDiscountNotes,
   fetchSchoolQuote,
+  prepareSchoolCheckoutItems,
+  readSchoolCheckoutNote,
   resolveDiscountCode,
   schoolCartNotices,
+  schoolCheckoutCharge,
   schoolStripeCouponParams,
 } from '../shared/checkoutDiscount.js';
-import { redeemPaidSchoolOrder } from '../shared/schoolRedeem.js';
+import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRedeem.js';
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import { resolvePickupProductName } from '../shared/pickupProductName.js';
 import {
@@ -842,8 +845,39 @@ async function forwardOswPickupToMos(payload) {
 /** Mark OSW checkout order paid, notify team, forward to MOS. Idempotent if already paid. */
 async function fulfillOswCheckoutOrder(orderId, session = null) {
   const db = await getSupabase();
-  const { data: existing } = await db.from('orders').select('payment_status').eq('id', orderId).single();
-  const alreadyPaid = existing?.payment_status === 'paid';
+  const { data: existing } = await db.from('orders').select('*').eq('id', orderId).single();
+  if (!existing) return { ok: false, reason: 'order_not_found' };
+
+  const schoolNote = readSchoolCheckoutNote(existing.notes);
+  let stripeClient = null;
+  if (schoolNote && !schoolNote.redeemed && !schoolNote.released) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      const error = new Error('Stripe is not configured for the school payment.');
+      error.status = 503;
+      throw error;
+    }
+    const Stripe = (await import('stripe')).default;
+    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      httpClient: Stripe.createFetchHttpClient(),
+    });
+  }
+  const settlement = await settleSchoolCheckout(db, existing, { session, stripe: stripeClient });
+  if (settlement.stop) {
+    return {
+      ok: false,
+      voided: settlement.released === 'voided',
+      refunded: settlement.released === 'refunded',
+      error: settlement.error,
+    };
+  }
+  if (session?.metadata?.school_hold === '1' && session.payment_status !== 'paid' && !settlement.captured && !settlement.already) {
+    const error = new Error('School payment was not captured.');
+    error.status = 503;
+    throw error;
+  }
+
+  const { data: paymentRow } = await db.from('orders').select('payment_status').eq('id', orderId).single();
+  const alreadyPaid = paymentRow?.payment_status === 'paid';
 
   if (!alreadyPaid) {
     await db
@@ -852,15 +886,13 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
         status: 'paid',
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
-        stripe_payment_intent_id: session?.payment_intent || null,
+        stripe_payment_intent_id: schoolPaymentIntentId(session, existing),
       })
       .eq('id', orderId);
   }
 
   const { data: order } = await db.from('orders').select('*').eq('id', orderId).single();
   if (!order) return { ok: false, reason: 'order_not_found' };
-
-  await redeemPaidSchoolOrder(db, order);
 
   const { data: orderItems } = await db
     .from('order_items')
@@ -1518,9 +1550,9 @@ export default async function handler(req, res) {
         if (orderId && session?.metadata?.type === 'deposit') {
           await fulfillStripeDeposit(db, orderId, session);
         } else if (orderId) {
-          await fulfillOswCheckoutOrder(orderId, session);
+          const fulfilled = await fulfillOswCheckoutOrder(orderId, session);
           const monitorId = session?.metadata?.checkout_monitor_id;
-          if (isCheckoutMonitorSessionId(monitorId)) {
+          if (fulfilled?.ok && isCheckoutMonitorSessionId(monitorId)) {
             await safeRecordCheckoutEvent(db, {
               sessionId: monitorId,
               event: 'payment_completed',
@@ -6916,6 +6948,14 @@ ${pages}
         if (err instanceof CheckoutConfirmationError) {
           return res.status(err.status).json({ error: err.message });
         }
+        if (err?.status === 503) {
+          console.error('[checkout confirm-paid] retryable:', err?.message || err);
+          return res.status(503).json({
+            ok: false,
+            pending: true,
+            error: 'Payment confirmation is still in progress. Please check again.',
+          });
+        }
         console.error('[checkout confirm-paid] error:', err?.message || err);
         return res.status(500).json({ error: 'Failed to confirm order payment' });
       }
@@ -6929,9 +6969,9 @@ ${pages}
         }
         let canonicalItems;
         try {
-          canonicalItems = normalizeV5CheckoutItems(rawItems);
+          canonicalItems = prepareSchoolCheckoutItems(rawItems);
         } catch (pricingError) {
-          return res.status(400).json({ valid: false, error: pricingError?.message || 'Unsupported product format' });
+          return res.status(pricingError?.status === 400 ? 400 : 500).json({ valid: false, error: pricingError?.message || 'Unsupported product format' });
         }
         const quote = await fetchSchoolQuote({
           code: req.body?.discountCode,
@@ -6958,6 +6998,9 @@ ${pages}
     // (TEST discount code = 100% off) or (b) returns a Stripe Checkout URL.
     if (path === '/api/checkout/create-session' && req.method === 'POST') {
       const monitorSessionId = req.body?.monitorSessionId;
+      let schoolCoupon = null;
+      let schoolSession = null;
+      let stripeClient = null;
       try {
         const {
           items: rawItems, customerInfo, locationId, discountCode,
@@ -7007,15 +7050,19 @@ ${pages}
         let flatbedPricing;
         let items;
         if (discountDecision.kind === 'school') {
+          try {
+            items = prepareSchoolCheckoutItems(rawItems);
+          } catch (pricingError) {
+            return res.status(400).json({ error: pricingError?.message || 'Unsupported product format' });
+          }
           schoolQuote = await fetchSchoolQuote({
             code: discountDecision.code,
             contactEmail: customerInfo?.schoolContactEmail,
-            items: canonicalItems,
+            items,
           });
           if (!schoolQuote.ok) {
             return res.status(schoolQuote.status === 503 ? 503 : 400).json({ error: schoolQuote.error });
           }
-          items = canonicalItems;
           flatbedPricing = { items, applied: false, discountAmount: 0 };
         } else {
           flatbedPricing = applyFullFlatbedProductDiscount(canonicalItems);
@@ -7315,7 +7362,7 @@ ${pages}
         if (!stripeKey) {
           return res.status(500).json({ error: 'Stripe is not configured on the server' });
         }
-        const stripeClient = new Stripe(stripeKey, {
+        stripeClient = new Stripe(stripeKey, {
           httpClient: Stripe.createFetchHttpClient(),
           maxNetworkRetries: 2,
         });
@@ -7362,8 +7409,29 @@ ${pages}
           });
         }
 
-        const schoolCoupon = schoolDiscountCents > 0
+        schoolCoupon = schoolDiscountCents > 0
           ? await stripeClient.coupons.create(schoolStripeCouponParams(schoolDiscountCents))
+          : null;
+        const schoolHold = schoolCoupon
+          ? schoolCheckoutCharge({
+            order_id: String(order.id),
+            brand_id: orderBrandId,
+            checkout_monitor_id: isCheckoutMonitorSessionId(monitorSessionId) ? monitorSessionId : '',
+            pickup_time: pickupTime || '',
+            fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+            preferred_delivery_date: isDelivery ? preferredDeliveryDate : '',
+            preferred_delivery_date_end: isDelivery ? preferredDeliveryDateEnd : '',
+            preferred_delivery_window: isDelivery ? preferredDeliveryWindow : '',
+            customer_type: customerInfo?.customerCategory || '',
+            company: customerInfo?.company || '',
+          }, {
+            metadata: {
+              order_id: String(order.id),
+              brand_id: orderBrandId,
+              checkout_monitor_id: isCheckoutMonitorSessionId(monitorSessionId) ? monitorSessionId : '',
+              fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+            },
+          })
           : null;
 
         const session = await stripeClient.checkout.sessions.create({
@@ -7373,7 +7441,7 @@ ${pages}
           ...(schoolCoupon ? { discounts: [{ coupon: schoolCoupon.id }] } : {}),
           success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
           cancel_url: `${origin}/checkout?canceled=true${isCheckoutMonitorSessionId(monitorSessionId) ? `&monitor_id=${encodeURIComponent(monitorSessionId)}` : ''}`,
-          metadata: {
+          metadata: schoolHold ? schoolHold.metadata : {
             order_id: String(order.id),
             brand_id: orderBrandId,
             checkout_monitor_id: isCheckoutMonitorSessionId(monitorSessionId) ? monitorSessionId : '',
@@ -7385,7 +7453,7 @@ ${pages}
             customer_type: customerInfo?.customerCategory || '',
             company: customerInfo?.company || '',
           },
-          payment_intent_data: {
+          payment_intent_data: schoolHold ? schoolHold.payment_intent_data : {
             metadata: {
               order_id: String(order.id),
               brand_id: orderBrandId,
@@ -7395,6 +7463,7 @@ ${pages}
           },
           customer_email: customerInfo?.email || undefined,
         });
+        schoolSession = session;
 
         await db
           .from('orders')
@@ -7421,6 +7490,9 @@ ${pages}
         });
       } catch (err) {
         console.error('Checkout error:', err);
+        if (schoolCoupon?.id && !schoolSession && stripeClient) {
+          await stripeClient.coupons.del(schoolCoupon.id).catch(() => {});
+        }
         if (isCheckoutMonitorSessionId(monitorSessionId)) {
           try {
             const monitor = await safeRecordCheckoutEvent(db, {

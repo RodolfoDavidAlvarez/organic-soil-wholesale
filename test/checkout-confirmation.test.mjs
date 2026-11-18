@@ -159,6 +159,58 @@ test('read or fulfillment failures do not report a successful purchase', async (
   await assert.rejects(fixture({ sessionOverride: { amount_total: null } }).confirm(), /paid amount/);
 });
 
+test('a completed school authorization is fulfilled while Stripe still says unpaid', async () => {
+  const f = fixture({
+    orderOverride: { payment_status: 'pending' },
+    sessionOverride: {
+      payment_status: 'unpaid',
+      status: 'complete',
+      metadata: { order_id: '41', school_hold: '1' },
+    },
+  });
+  const { payload } = await f.confirm();
+  assert.equal(f.calls.fulfillments.length, 1);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.value, 21.98);
+});
+
+test('an open school authorization is not fulfilled', async () => {
+  const f = fixture({
+    orderOverride: { payment_status: 'pending' },
+    sessionOverride: {
+      payment_status: 'unpaid',
+      status: 'open',
+      metadata: { order_id: '41', school_hold: '1' },
+    },
+  });
+  const { payload } = await f.confirm();
+  assert.deepEqual(payload, { ok: false, pending: true, paymentStatus: 'unpaid' });
+  assert.equal(f.calls.fulfillments.length, 0);
+});
+
+test('a voided school authorization is not reported as a purchase', async () => {
+  const f = fixture({
+    orderOverride: { payment_status: 'pending' },
+    sessionOverride: {
+      payment_status: 'unpaid',
+      status: 'complete',
+      metadata: { order_id: '41', school_hold: '1' },
+    },
+  });
+  const { payload } = await f.confirm({
+    fulfillOrder: async () => ({
+      ok: false,
+      voided: true,
+      error: 'This school code was already used. Your card was not charged.',
+    }),
+  });
+  assert.equal(payload.ok, false);
+  assert.equal(payload.voided, true);
+  assert.equal(payload.refunded, false);
+  assert.equal(payload.value, undefined);
+  assert.equal(payload.order, undefined);
+});
+
 test('invalid order IDs fail before a database or Stripe read', async () => {
   const f = fixture();
   for (const orderId of [undefined, 0, -41, '41junk', 41.5]) {
