@@ -9,6 +9,7 @@ import {
   isBaggedProductLine,
   prepareSchoolCheckoutItems,
   readSchoolCheckoutNote,
+  reserveSchoolCheckoutQuote,
   resolveDiscountCode,
   schoolCheckoutCharge,
   schoolOfferEnded,
@@ -140,6 +141,7 @@ test('quote uses the verification service and does not price the cart locally', 
   assert.equal(calls[0].url, 'https://quotes.test/api/school-verifications/quote');
   const body = JSON.parse(calls[0].options.body);
   assert.equal(body.contact_email, 'ada@school.example');
+  assert.equal(Object.hasOwn(body, 'order_reference'), false);
   assert.equal(body.line_items[1].unit_price, 17980);
   assert.equal(body.line_items[1].compare_at_cents, 22475);
   assert.equal(Object.hasOwn(calls[0].options.headers, 'x-internal-key'), false);
@@ -232,11 +234,76 @@ test('the Stripe school coupon is one amount, single use, and expires with the o
   assert.equal(hold.payment_intent_data.metadata.school_hold, '1');
 });
 
+test('the order quote holds SCHOOL30 for osw-{id} and a second checkout is refused', async () => {
+  const calls = [];
+  const quote = {
+    ok: true,
+    code: 'SCHOOL30-AB2C',
+    email: 'ada@school.example',
+    discountCents: 480,
+  };
+  const held = await reserveSchoolCheckoutQuote(quote, [bag(15.99, 1)], 41, {
+    env: { SCHOOL_VERIFICATION_API_BASE: 'https://quotes.test' },
+    fetchImpl: async (url, options) => {
+      calls.push(JSON.parse(options.body));
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          valid: true,
+          discount_cents: 480,
+          reserved_until: '2026-11-19T00:00:00.000Z',
+        }),
+      };
+    },
+  });
+  assert.equal(held.ok, true);
+  assert.equal(held.orderReference, 'osw-41');
+  assert.equal(calls[0].order_reference, 'osw-41');
+  assert.equal(calls[0].line_items[0].unit_price, 1599);
+
+  const refused = await reserveSchoolCheckoutQuote(quote, [bag(15.99, 1)], 42, {
+    env: { SCHOOL_VERIFICATION_API_BASE: 'https://quotes.test' },
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        valid: false,
+        code: 'code_held',
+        error: 'This school code is already in another checkout. It can be used on one order.',
+      }),
+    }),
+  });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.status, 400);
+  assert.match(refused.error, /another checkout/);
+
+  const notReady = await fetchSchoolQuote({
+    code: 'SCHOOL30-AB2C',
+    contactEmail: 'ada@school.example',
+    items: [bag(15.99, 1)],
+    orderReference: 'osw-43',
+  }, {
+    env: { SCHOOL_VERIFICATION_API_BASE: 'https://quotes.test' },
+    fetchImpl: async () => ({
+      ok: false,
+      status: 503,
+      json: async () => ({ error: 'School discounts are not available yet.' }),
+    }),
+  });
+  assert.equal(notReady.ok, false);
+  assert.equal(notReady.status, 503);
+  assert.equal(notReady.error, 'School discounts are not available yet.');
+});
+
 test('manual capture is only attached to a school checkout, and TEST stays a normal free order', () => {
   const api = readFileSync(new URL('../api/index.js', import.meta.url), 'utf8');
   const express = readFileSync(new URL('../server/routes/checkout.ts', import.meta.url), 'utf8');
   for (const source of [api, express]) {
     assert.equal(source.includes('prepareSchoolCheckoutItems'), true);
+    const holdCall = source.indexOf('await reserveSchoolCheckoutQuote');
+    assert.ok(holdCall > source.indexOf('isFreeOrder'));
+    assert.ok(holdCall < source.indexOf('coupons.create'));
     assert.equal(source.includes('schoolCheckoutCharge'), true);
     assert.equal(source.includes("capture_method: 'manual'"), false);
     assert.equal(source.includes("capture_method: 'automatic'"), false);

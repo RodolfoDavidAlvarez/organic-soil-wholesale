@@ -45,9 +45,11 @@ import {
   fetchSchoolQuote,
   prepareSchoolCheckoutItems,
   readSchoolCheckoutNote,
+  reserveSchoolCheckoutQuote,
   resolveDiscountCode,
   schoolCartNotices,
   schoolCheckoutCharge,
+  schoolQuoteFailureStatus,
   schoolStripeCouponParams,
 } from '../shared/checkoutDiscount.js';
 import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRedeem.js';
@@ -7407,6 +7409,13 @@ ${pages}
             },
             quantity: 1,
           });
+        }
+
+        if (schoolQuote?.ok) {
+          const heldQuote = await reserveSchoolCheckoutQuote(schoolQuote, items, order.id);
+          if (!heldQuote.ok) {
+            return res.status(schoolQuoteFailureStatus(heldQuote.status)).json({ error: heldQuote.error });
+          }
         }
 
         schoolCoupon = schoolDiscountCents > 0
