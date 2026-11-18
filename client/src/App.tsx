@@ -73,6 +73,8 @@ const SurveyEntry = lazy(() => import("@/pages/SurveyEntry"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
 const InstagramLinks = lazy(() => import("@/pages/InstagramLinks"));
 const BigGardenGiveaway = lazy(() => import("@/pages/BigGardenGiveaway"));
+const Schools = lazy(() => import("@/pages/Schools"));
+const SchoolStatus = lazy(() => import("@/pages/SchoolStatus"));
 
 // Admin Pages
 const Register = lazy(() => import("@/pages/Register"));
@@ -256,6 +258,8 @@ function Router() {
         <Route path="/survey" component={SurveyEntry} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
+        <Route path="/schools/status" component={SchoolStatus} />
+        <Route path="/schools" component={Schools} />
         <Route path="/garden-refresh">{() => <RedirectTo href="/offers/garden-refresh" />}</Route>
         <Route path="/garden-refresh-plus">{() => <RedirectTo href="/offers/garden-refresh-plus" />}</Route>
         <Route path="/deals/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
@@ -353,6 +357,7 @@ function App() {
   ].includes(location);
   const isGiveawayCampaign = location === "/win" || location === "/big-garden-giveaway";
   const isCareers = location.startsWith("/careers") || location === "/jobs";
+  const isSchools = location === "/schools" || location.startsWith("/schools/");
   const isLandscaperSupply = isLandscaperSupplyProject || location.startsWith("/landscaper-supply");
   const showStandardLayout = !isLandscaperSupply && !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
 
@@ -401,7 +406,7 @@ function App() {
                     <ScrollToTop />
                     <CallTrackingRouteSync />
                     <Analytics />
-                    {showStandardLayout && !isQuoteFlow && !isProductFlow && !isOfferFlow && !isCareers && <FloatingCTA />}
+                    {showStandardLayout && !isQuoteFlow && !isProductFlow && !isOfferFlow && !isCareers && !isSchools && <FloatingCTA />}
                     {showStandardLayout && <QuoteCartDrawer />}
                     {GROK_ASSISTANT_ENABLED && !isOutreachDesk && <GrokWidget />}
                   </div>

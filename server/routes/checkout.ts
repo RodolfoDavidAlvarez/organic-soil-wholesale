@@ -15,6 +15,14 @@ import {
   TONS_PER_CU_YD,
 } from '../../shared/pickupSchedule.js';
 import { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } from '../../shared/flatbedSpots.js';
+import {
+  checkoutDiscountNotes,
+  fetchSchoolQuote,
+  resolveDiscountCode,
+  schoolCartNotices,
+  schoolStripeCouponParams,
+} from '../../shared/checkoutDiscount.js';
+import { redeemPaidSchoolOrder } from '../../shared/schoolRedeem.js';
 import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 import { nonBundleProductSubtotal, resolvePromoBundle } from '../../shared/promoBundles.js';
 import {
@@ -39,6 +47,38 @@ function getStripe() {
   }
   return stripe;
 }
+
+router.post('/school-quote', async (req, res) => {
+  try {
+    const rawItems = req.body?.items;
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      return res.status(400).json({ valid: false, error: 'No items to check out' });
+    }
+    let canonicalItems;
+    try {
+      canonicalItems = normalizeV5CheckoutItems(rawItems);
+    } catch (pricingError: any) {
+      return res.status(400).json({ valid: false, error: pricingError?.message || 'Unsupported product format' });
+    }
+    const quote = await fetchSchoolQuote({
+      code: req.body?.discountCode,
+      contactEmail: req.body?.contactEmail,
+      items: canonicalItems,
+    });
+    if (!quote.ok) {
+      return res.status(quote.status === 503 ? 503 : 400).json({ valid: false, error: quote.error });
+    }
+    return res.json({
+      valid: true,
+      discount_cents: quote.discountCents,
+      discount_expires_at: quote.expiresAt,
+      notices: schoolCartNotices(canonicalItems),
+    });
+  } catch (error) {
+    console.error('[school quote]', error);
+    return res.status(500).json({ valid: false, error: "We couldn't check that school code. Please call us." });
+  }
+});
 
 // Create checkout session
 router.post('/create-session', async (req, res) => {
@@ -69,8 +109,29 @@ router.post('/create-session', async (req, res) => {
     } catch (pricingError: any) {
       return res.status(400).json({ error: pricingError?.message || 'Unsupported product format' });
     }
-    const flatbedPricing = applyFullFlatbedProductDiscount(canonicalItems);
-    const items = flatbedPricing.items;
+    const discountDecision = resolveDiscountCode(discountCode);
+    if (!discountDecision.ok) {
+      return res.status(400).json({ error: discountDecision.error });
+    }
+    let schoolQuote: Awaited<ReturnType<typeof fetchSchoolQuote>> | null = null;
+    let flatbedPricing: { items: any[]; spots?: number; applied: boolean; discountAmount: number };
+    let items: any[];
+    if (discountDecision.kind === 'school') {
+      schoolQuote = await fetchSchoolQuote({
+        code: discountDecision.code,
+        contactEmail: customerInfo?.schoolContactEmail,
+        items: canonicalItems,
+      });
+      if (!schoolQuote.ok) {
+        return res.status(schoolQuote.status === 503 ? 503 : 400).json({ error: schoolQuote.error });
+      }
+      items = canonicalItems;
+      flatbedPricing = { items, applied: false, discountAmount: 0 };
+    } else {
+      flatbedPricing = applyFullFlatbedProductDiscount(canonicalItems);
+      items = flatbedPricing.items;
+    }
+    const discountPercent = discountDecision.kind === 'test' ? 100 : 0;
 
     const isDelivery = fulfillmentType === 'delivery';
     const checkoutLocationId = locationId || 1;
@@ -116,12 +177,7 @@ router.post('/create-session', async (req, res) => {
       pickupTime = resolved.pickupAtIso;
     }
 
-    // Discount handling — extend here as real codes get added.
-    // TEST = 100% off (free order, skips Stripe). Reserved for QA only.
-    const normalizedDiscount = typeof discountCode === 'string' ? discountCode.trim().toUpperCase() : null;
-    let discountPercent = 0;
-    if (normalizedDiscount === 'TEST') discountPercent = 100;
-
+    // TEST is 100% off outside production only. School codes are priced above.
     let truckingQuote: Awaited<ReturnType<typeof quoteTrucking>> | null = null;
     const preferredDeliveryDate = isDelivery && typeof deliveryAddress?.preferredDate === 'string'
       ? deliveryAddress.preferredDate.trim()
@@ -164,7 +220,7 @@ router.post('/create-session', async (req, res) => {
       customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
       customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
       typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
-      normalizedDiscount && discountPercent > 0 ? `Discount applied: ${normalizedDiscount} (-${discountPercent}%)` : null,
+      ...checkoutDiscountNotes(discountDecision, schoolQuote),
       flatbedPricing.applied
         ? `Full flatbed (22 spots): 10% product discount (−$${flatbedPricing.discountAmount.toFixed(2)})`
         : null,
@@ -230,7 +286,8 @@ router.post('/create-session', async (req, res) => {
     const discountBase = discountPercent === 100
       ? rawSubtotal
       : nonBundleProductSubtotal(items);
-    const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100));
+    const schoolDiscountCents = schoolQuote && schoolQuote.ok ? schoolQuote.discountCents : 0;
+    const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100) - schoolDiscountCents / 100);
     const totalCents = Math.round(totalDollars * 100);
     const isFreeOrder = totalCents === 0 && discountPercent > 0;
 
@@ -424,11 +481,18 @@ router.post('/create-session', async (req, res) => {
       || process.env.PUBLIC_SITE_ORIGIN
       || 'https://organicsoilwholesale.com';
 
-    // Create Stripe checkout session
-    const session = await getStripe().checkout.sessions.create({
+    const stripe = getStripe();
+    const schoolCoupon = schoolDiscountCents > 0
+      ? await stripe.coupons.create(schoolStripeCouponParams(schoolDiscountCents))
+      : null;
+
+    // Create Stripe checkout session. The school coupon takes discount_cents
+    // off the sale prices. Line amounts stay the catalog price.
+    const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
+      ...(schoolCoupon ? { discounts: [{ coupon: schoolCoupon.id }] } : {}),
       success_url: `${stripeOrigin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
       cancel_url: `${stripeOrigin}/checkout?canceled=true`,
       metadata: {
@@ -525,9 +589,13 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
   // Get order details including location_id
   const { data: orderData, error: orderDataError } = await supabase
     .from('orders')
-    .select('location_id')
+    .select('*')
     .eq('id', orderId)
     .single();
+
+  if (orderData) {
+    await redeemPaidSchoolOrder(supabase, orderData);
+  }
 
   if (orderDataError || !orderData) {
     console.error('Error fetching order data:', orderDataError);

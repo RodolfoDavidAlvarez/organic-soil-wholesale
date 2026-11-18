@@ -26,7 +26,8 @@ import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkoutMonitor";
 import { computeAsapPickup, validatePickupIso, PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
-import { nonBundleProductSubtotal, getPromoBundleByProductId } from "@shared/promoBundles.js";
+import { getPromoBundleByProductId } from "@shared/promoBundles.js";
+import { isSchoolDiscountCode, resolveDiscountCode, schoolLineCaption } from "@shared/checkoutDiscount.js";
 import {
   cartAllowsPhoenixYardPickup,
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
@@ -318,7 +319,16 @@ const Checkout: React.FC = () => {
 
   // Discount
   const [discountInput, setDiscountInput] = useState("");
-  const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; percent: number } | null>(null);
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string;
+    percent: number;
+    kind: "test" | "school";
+    discountCents?: number;
+    contactEmail?: string;
+    notices?: string[];
+  } | null>(null);
+  const [schoolEmail, setSchoolEmail] = useState("");
+  const [discountChecking, setDiscountChecking] = useState(false);
   const [discountError, setDiscountError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -443,19 +453,18 @@ const Checkout: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const schoolApplied = appliedDiscount?.kind === "school" && (appliedDiscount.discountCents || 0) > 0;
   const productSubtotalGross = useMemo(
     () => payItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0),
     [payItems]
   );
-  /** After full-flatbed 10% (server applies the same on create-session). */
-  const productSubtotal = productSubtotalGross - fullFlatbedDiscount;
+  const schoolOff = schoolApplied ? (appliedDiscount?.discountCents || 0) / 100 : 0;
+  /** Flatbed 10% is skipped while a school code is applied. The server does the same. */
+  const flatbedOff = schoolApplied ? 0 : fullFlatbedDiscount;
+  const productSubtotal = productSubtotalGross - flatbedOff - schoolOff;
   const deliveryFee = fulfillment === "delivery" && deliveryQuote ? deliveryQuote.costDollars : 0;
   const subtotal = productSubtotal + deliveryFee;
-  const discountAmount = appliedDiscount
-    ? appliedDiscount.percent === 100
-      ? subtotal
-      : nonBundleProductSubtotal(payItems) * (appliedDiscount.percent / 100)
-    : 0;
+  const discountAmount = appliedDiscount?.kind === "test" ? subtotal : 0;
   const total = Math.max(0, subtotal - discountAmount);
 
   useEffect(() => {
@@ -495,20 +504,103 @@ const Checkout: React.FC = () => {
     });
   }, [activeStep, fulfillment]);
 
-  const applyDiscount = () => {
+  const checkoutItemsPayload = () => payItems.map((item) => ({
+    productId: item.productId,
+    name: item.productName,
+    sizeOption: item.format,
+    quantity: item.quantity,
+    price: item.unitPrice,
+    unit: item.unit,
+    imageUrl: item.imageUrl,
+    listUnitPrice: item.listUnitPrice,
+    savingsPerUnit: item.savingsPerUnit,
+    discountPercent: item.discountPercent,
+    unitsPerPallet: item.unitsPerPallet,
+  }));
+
+  const requestSchoolQuote = async (code: string, contactEmail: string) => {
+    const res = await fetch("/api/checkout/school-quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        discountCode: code,
+        contactEmail,
+        items: checkoutItemsPayload(),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.valid !== true || !(Number(data.discount_cents) > 0)) {
+      throw new Error(data.error || "That code isn't valid");
+    }
+    return data as { discount_cents: number; notices?: string[] };
+  };
+
+  const applyDiscount = async () => {
     setDiscountError(null);
-    const code = discountInput.trim().toUpperCase();
-    if (!code) {
+    const decision = resolveDiscountCode(discountInput, {
+      env: {
+        NODE_ENV: import.meta.env.PROD ? "production" : "development",
+        VERCEL_ENV: import.meta.env.PROD ? "production" : "development",
+      },
+    });
+    if (!decision.ok) {
+      setDiscountError(decision.error);
+      return;
+    }
+    if (decision.kind === "none" || !decision.code) {
       setDiscountError("Enter a code first");
       return;
     }
-    if (code === "TEST") {
-      setAppliedDiscount({ code: "TEST", percent: 100 });
-      setDiscountInput("");
+    if (decision.kind === "school") {
+      const contactEmail = (schoolEmail || email).trim();
+      if (!contactEmail) {
+        setDiscountError("Enter the email from your school verification.");
+        return;
+      }
+      setDiscountChecking(true);
+      try {
+        const quote = await requestSchoolQuote(decision.code, contactEmail);
+        setSchoolEmail(contactEmail);
+        setAppliedDiscount({
+          code: decision.code,
+          percent: decision.percent,
+          kind: "school",
+          discountCents: quote.discount_cents,
+          contactEmail,
+          notices: quote.notices || [],
+        });
+        setDiscountInput("");
+      } catch (quoteError) {
+        setDiscountError(quoteError instanceof Error ? quoteError.message : "That code isn't valid");
+      } finally {
+        setDiscountChecking(false);
+      }
       return;
     }
-    setDiscountError("That code isn't valid");
+    setAppliedDiscount({ code: decision.code, percent: decision.percent, kind: decision.kind });
+    setDiscountInput("");
   };
+
+  const schoolCartKey = payItems.map((item) => `${item.productId}:${item.format}:${item.quantity}:${item.unitPrice}`).join("|");
+  useEffect(() => {
+    if (appliedDiscount?.kind !== "school" || !appliedDiscount.contactEmail) return;
+    let cancelled = false;
+    requestSchoolQuote(appliedDiscount.code, appliedDiscount.contactEmail)
+      .then((quote) => {
+        if (cancelled) return;
+        setAppliedDiscount((current) => current && current.kind === "school"
+          ? { ...current, discountCents: quote.discount_cents, notices: quote.notices || [] }
+          : current);
+      })
+      .catch((quoteError) => {
+        if (cancelled) return;
+        setAppliedDiscount(null);
+        setDiscountError(quoteError instanceof Error ? quoteError.message : "That code isn't valid");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [schoolCartKey, appliedDiscount?.code, appliedDiscount?.contactEmail]);
 
   const removeDiscount = () => {
     setAppliedDiscount(null);
@@ -629,6 +721,7 @@ const Checkout: React.FC = () => {
           customerInfo: {
             name, company, customerCategory, email, phone, notes,
             marketingOptIn: true,
+            schoolContactEmail: appliedDiscount?.kind === "school" ? appliedDiscount.contactEmail : null,
           },
           // Pickup-only fields
           pickupMode: fulfillment === "pickup" ? (pickupReady?.pickupMode ?? "asap") : null,
@@ -1140,7 +1233,9 @@ const Checkout: React.FC = () => {
                           </p>
                         ) : null}
                         <p className="mt-1 text-xs text-stone-500">{fmt(item.unitPrice)} each</p>
-                        {item.discountPercent ? <p className="mt-1 text-xs font-bold text-green-700">{item.discountPercent}% pallet savings · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</p> : null}
+                        {schoolApplied && schoolLineCaption(item) ? (
+                          <p className="mt-1 text-xs font-bold text-green-700">{schoolLineCaption(item)}</p>
+                        ) : item.discountPercent ? <p className="mt-1 text-xs font-bold text-green-700">{item.discountPercent}% pallet savings · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</p> : null}
                       </div>
                       <div className="whitespace-nowrap text-right">
                         {item.listUnitPrice && item.listUnitPrice > item.unitPrice ? <p className="text-xs text-stone-400 line-through">{fmt(item.listUnitPrice * item.quantity)}</p> : null}
@@ -1641,15 +1736,21 @@ const Checkout: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 px-4 py-3">
-                {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} compact className="mb-1" />}
+                {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} compact className="mb-1" suppressVolumeDiscount={schoolApplied} />}
                 <div className="flex items-center justify-between text-sm text-stone-600">
                   <span>Products</span>
                   <span>{fmt(productSubtotalGross)}</span>
                 </div>
-                {fullFlatbedDiscount > 0 && (
+                {flatbedOff > 0 && (
                   <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
                     <span>Full flatbed (10% off)</span>
-                    <span>−{fmt(fullFlatbedDiscount)}</span>
+                    <span>−{fmt(flatbedOff)}</span>
+                  </div>
+                )}
+                {schoolOff > 0 && (
+                  <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
+                    <span>School code (bagged only)</span>
+                    <span>−{fmt(schoolOff)}</span>
                   </div>
                 )}
                 {fulfillment === "delivery" && (
@@ -1799,7 +1900,9 @@ const Checkout: React.FC = () => {
                               )}
                               {lineSpots > 0 && hasFlatbedSpots ? (
                                 <p className="mt-1 text-[11px] font-medium text-stone-500">
-                                  {hasFullFlatbedDiscount(flatbedSpots)
+                                  {schoolApplied
+                                    ? "School rate replaces other discounts"
+                                    : hasFullFlatbedDiscount(flatbedSpots)
                                     ? "Full load · 10% off"
                                     : flatbedSpots > FLATBED_CAPACITY
                                       ? "Over one flatbed"
@@ -1839,15 +1942,21 @@ const Checkout: React.FC = () => {
               <CardContent className="space-y-4 p-4 sm:p-5">
                 {/* Totals */}
                 <div className="space-y-2">
-                  {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} className="mb-2" />}
+                  {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} className="mb-2" suppressVolumeDiscount={schoolApplied} />}
                   <div className="flex items-center justify-between text-sm text-stone-600">
                     <span>Products</span>
                     <span>{fmt(productSubtotalGross)}</span>
                   </div>
-                  {fullFlatbedDiscount > 0 && (
+                  {flatbedOff > 0 && (
                     <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
                       <span>Full flatbed (10% off)</span>
-                      <span>−{fmt(fullFlatbedDiscount)}</span>
+                      <span>−{fmt(flatbedOff)}</span>
+                    </div>
+                  )}
+                  {schoolOff > 0 && (
+                    <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
+                      <span>School code (bagged only)</span>
+                      <span>−{fmt(schoolOff)}</span>
                     </div>
                   )}
                   {fulfillment === "delivery" && (
@@ -1859,7 +1968,7 @@ const Checkout: React.FC = () => {
                       <span>{deliveryQuote ? fmt(deliveryFee) : "Enter ZIP →"}</span>
                     </div>
                   )}
-                  {appliedDiscount && (
+                  {appliedDiscount?.kind === "test" && (
                     <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
                       <span>Discount ({appliedDiscount.code})</span>
                       <span>−{fmt(discountAmount)}</span>
@@ -1872,14 +1981,23 @@ const Checkout: React.FC = () => {
                 </div>
 
                 {appliedDiscount ? (
-                  <div className="flex items-center justify-between rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Code {appliedDiscount.code} applied · −{appliedDiscount.percent}%
+                  <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {appliedDiscount.kind === "school"
+                          ? `Code ${appliedDiscount.code} applied · 30% off bagged products`
+                          : `Code ${appliedDiscount.code} applied · −${appliedDiscount.percent}%`}
+                      </div>
+                      <button type="button" onClick={removeDiscount} className="rounded p-1 text-emerald-700 hover:bg-emerald-100" aria-label="Remove discount">
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                    <button type="button" onClick={removeDiscount} className="rounded p-1 text-emerald-700 hover:bg-emerald-100" aria-label="Remove discount">
-                      <X className="h-4 w-4" />
-                    </button>
+                    {schoolApplied && (
+                      <ul className="mt-2 space-y-1 text-xs leading-relaxed text-emerald-900">
+                        {(appliedDiscount?.notices || []).map((notice) => <li key={notice}>{notice}</li>)}
+                      </ul>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -1888,10 +2006,27 @@ const Checkout: React.FC = () => {
                     </Label>
                     <div className="mt-1 flex gap-2">
                       <Input id="discount" value={discountInput} onChange={(e) => setDiscountInput(e.target.value)} placeholder="Enter code" className="flex-1 h-11 text-base" autoCapitalize="characters" />
-                      <Button type="button" variant="outline" onClick={applyDiscount} className="h-11 px-4">
-                        Apply
+                      <Button type="button" variant="outline" onClick={applyDiscount} disabled={discountChecking} className="h-11 px-4">
+                        {discountChecking ? "Checking…" : "Apply"}
                       </Button>
                     </div>
+                    {discountInput.trim().toUpperCase().startsWith("SCHOOL") && (
+                      <div className="mt-2">
+                        <Label htmlFor="school-discount-email" className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                          Verification email
+                        </Label>
+                        <Input
+                          id="school-discount-email"
+                          type="email"
+                          inputMode="email"
+                          value={schoolEmail}
+                          onChange={(e) => setSchoolEmail(e.target.value)}
+                          placeholder={email || "Email from the school form"}
+                          autoComplete="email"
+                          className="mt-1 h-11 text-base"
+                        />
+                      </div>
+                    )}
                     {discountError && <p className="mt-1 text-xs text-red-600">{discountError}</p>}
                   </div>
                 )}
