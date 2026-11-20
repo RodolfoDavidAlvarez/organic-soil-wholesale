@@ -4,23 +4,17 @@ import { useQuoteCart, type CartItem } from "@/contexts/QuoteCartContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
-import { FlatbedLoadMeter } from "@/components/FlatbedLoadMeter";
 import { OrderCallbackDialog } from "@/components/OrderCallbackDialog";
 import {
   cartFlatbedSpots,
-  FLATBED_CAPACITY,
   fullLoadDiscountAmount,
   isWalkingFloorDeliveryFormat,
-  spotsForFormat,
 } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
 import { BundleCartLine } from "@/components/BundleCartLine";
 import { promoBundleHref, getPromoBundleByProductId } from "@shared/promoBundles.js";
-import {
-  CART_LOAD_GROUP_HINTS,
-  CART_LOAD_GROUP_LABELS,
-  partitionPayCartItems,
-} from "@shared/cartLoadGroups.js";
+import { getPayPickupProductDescription } from "@/data/payPickupProductContent";
+import { partitionPayCartItems } from "@shared/cartLoadGroups.js";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Trash2, Minus, Plus, ArrowRight, Package,
@@ -44,10 +38,29 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
 };
 
 const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
-const FLATBED_IMAGE = "/images/optimized/mixed-truckload-example.jpg";
+const MIXED_BAG_TIERS = [
+  { amount: 500, percent: 10 },
+  { amount: 1500, percent: 20 },
+] as const;
 
 function isWalkingFloorFormat(format: string) {
   return isWalkingFloorDeliveryFormat(format);
+}
+
+function isPalletFormat(format: string) {
+  const key = format.toLowerCase();
+  return key.includes("pallet") && !key.includes("truckload");
+}
+
+/** Progress copy only. Checkout does not apply these mixed-bag rates yet. */
+function mixedBagProgressHint(payItems: CartItem[]): string | null {
+  if (payItems.some((item) => isPalletFormat(item.format))) return null;
+  const mixed = payItems.filter((item) => !isWalkingFloorFormat(item.format));
+  if (!mixed.length) return null;
+  const subtotal = mixed.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const next = MIXED_BAG_TIERS.find((tier) => subtotal < tier.amount);
+  if (!next || subtotal <= 0) return null;
+  return `Add ${fmt(next.amount - subtotal)} for ${next.percent}% off a mixed bag order.`;
 }
 
 function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice }: {
@@ -58,110 +71,82 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice }: 
   closeDrawer: () => void;
 }) {
   const imageUrl = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
-  const lineSpots = spotsForFormat(item.format, item.quantity);
   const offer = getPromoBundleByProductId(item.productId);
-  const sizeThumb =
-    item.sizeImage ||
-    (isWalkingFloorFormat(item.format) ? WALKING_FLOOR_IMAGE : undefined);
+  const palletThumb = isPalletFormat(item.format) ? item.sizeImage : undefined;
+  const preview = getPayPickupProductDescription(item.productId, "");
+  const lineTotal = item.unitPrice * item.quantity;
+  const listTotal = item.listUnitPrice && item.listUnitPrice > item.unitPrice
+    ? item.listUnitPrice * item.quantity
+    : null;
 
   if (offer) return (
     <div className="rounded-2xl bg-white p-4">
-      <BundleCartLine bundle={offer} quantity={item.quantity} priceLabel={showPrice ? fmt(item.unitPrice * item.quantity) : undefined}
+      <BundleCartLine bundle={offer} quantity={item.quantity} priceLabel={showPrice ? fmt(lineTotal) : undefined}
         onOpen={closeDrawer} onQuantity={(quantity) => updateQuantity(item.productId, item.format, quantity)}
         onRemove={() => removeItem(item.productId, item.format)} />
     </div>
   );
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white px-2.5 py-2 shadow-sm">
-      <div className="flex items-stretch gap-2">
-        <div className="flex shrink-0 gap-1">
+    <article className="rounded-2xl bg-white p-4">
+      <Link
+        href={promoBundleHref(item.productId) || `/products/${item.productSlug}`}
+        onClick={closeDrawer}
+        className="block rounded-xl focus-visible:ring-2"
+      >
+        <div className="relative">
           {imageUrl ? (
-            <div className="relative h-[4.25rem] w-[4.25rem] overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
-              <OptimizedImage
-                src={imageUrl}
-                alt={item.productName}
-                className="h-full w-full object-contain bg-white p-0.5"
-                width={120}
-                q={60}
-              />
-            </div>
+            <OptimizedImage
+              src={imageUrl}
+              alt={item.productName}
+              width={640}
+              q={75}
+              className="h-40 w-full rounded-xl bg-white object-contain"
+            />
           ) : (
-            <div className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-lg bg-stone-100 text-stone-400">
-              <Package className="h-6 w-6" />
+            <div className="flex h-40 w-full items-center justify-center rounded-xl bg-stone-50 text-stone-300">
+              <Package className="h-10 w-10" />
             </div>
           )}
-          {sizeThumb ? (
-            <div className="relative h-[4.25rem] w-[3.25rem] overflow-hidden rounded-lg bg-[#eef4eb] ring-1 ring-[#264027]/20">
-              <OptimizedImage
-                src={sizeThumb}
-                alt={item.format}
-                className="h-full w-full object-cover"
-                width={100}
-                q={65}
-              />
+          {palletThumb ? (
+            <div className="absolute bottom-2 right-2 h-16 w-16 overflow-hidden rounded-lg bg-white shadow-md ring-2 ring-white">
+              <OptimizedImage src={palletThumb} alt="" className="h-full w-full object-cover" width={128} q={70} />
             </div>
           ) : null}
         </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-1.5">
-            <div className="min-w-0">
-              <Link
-                href={promoBundleHref(item.productId) || `/products/${item.productSlug}`}
-                onClick={closeDrawer}
-                className="text-sm font-semibold leading-tight text-stone-900 hover:text-[#264027]"
-              >
-                {item.productName}
-              </Link>
-              <p className="mt-0.5 text-[13px] font-bold leading-snug text-[#264027]">
-                {item.format}
-                {lineSpots > 0 ? (
-                  <span className="ml-1.5 font-semibold text-stone-500">
-                    · +{lineSpots} spot{lineSpots === 1 ? "" : "s"}
-                  </span>
-                ) : null}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => removeItem(item.productId, item.format)}
-              className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
-              aria-label="Remove"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="mt-1.5 flex items-center justify-between gap-2">
-            <div className="inline-flex items-center gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5">
-              <button
-                type="button"
-                onClick={() => updateQuantity(item.productId, item.format, item.quantity - 1)}
-                disabled={item.quantity <= 1}
-                className="h-7 w-7 rounded-md text-stone-700 hover:bg-stone-100 disabled:opacity-40"
-              >
-                <Minus className="mx-auto h-3 w-3" />
-              </button>
-              <span className="w-6 text-center text-xs font-bold">{item.quantity}</span>
-              <button
-                type="button"
-                onClick={() => updateQuantity(item.productId, item.format, item.quantity + 1)}
-                className="h-7 w-7 rounded-md text-stone-700 hover:bg-stone-100"
-              >
-                <Plus className="mx-auto h-3 w-3" />
-              </button>
-            </div>
-            <div className="text-right">
-              {item.listUnitPrice && item.listUnitPrice > item.unitPrice ? (
-                <p className="text-[11px] text-stone-400 line-through">{fmt(item.listUnitPrice * item.quantity)}</p>
-              ) : null}
-              <p className="text-sm font-bold text-[#264027]">{fmt(item.unitPrice * item.quantity)}</p>
-              {item.discountPercent ? <p className="text-[10px] font-bold text-green-700">{item.discountPercent}% off · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</p> : null}
-            </div>
-          </div>
+        <div className="mt-3 flex items-baseline justify-between gap-3">
+          <h3 className="text-xl font-semibold leading-tight tracking-tight text-stone-950">{item.productName}</h3>
+          <span className="text-sm font-semibold tabular-nums">{fmt(lineTotal)}</span>
         </div>
+      </Link>
+      <p className="mt-1 text-sm text-stone-600">{item.format}</p>
+      {listTotal || item.discountPercent ? (
+        <p className="mt-1 text-sm text-stone-600">
+          {listTotal ? <span className="mr-2 line-through">{fmt(listTotal)}</span> : null}
+          {item.discountPercent ? <span>{item.discountPercent}% off · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</span> : null}
+        </p>
+      ) : null}
+      {preview ? (
+        <p className="mt-2 flex min-w-0 items-baseline gap-2 text-sm text-stone-600">
+          <span className="truncate">{preview}</span>
+          <Link href={promoBundleHref(item.productId) || `/products/${item.productSlug}`} onClick={closeDrawer} className="shrink-0 font-semibold text-[#264027] underline underline-offset-2">See more</Link>
+        </p>
+      ) : null}
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <div className="inline-flex items-center rounded-full border border-stone-200">
+          <button type="button" aria-label={`Decrease quantity of ${item.productName}`} disabled={item.quantity <= 1} onClick={() => updateQuantity(item.productId, item.format, item.quantity - 1)} className="grid h-11 w-11 place-items-center rounded-full hover:bg-stone-50 disabled:opacity-35">
+            <Minus className="h-4 w-4" />
+          </button>
+          <span className="min-w-5 text-center text-sm font-semibold tabular-nums">{item.quantity}</span>
+          <button type="button" aria-label={`Increase quantity of ${item.productName}`} onClick={() => updateQuantity(item.productId, item.format, item.quantity + 1)} className="grid h-11 w-11 place-items-center rounded-full hover:bg-stone-50">
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        <button type="button" aria-label={`Remove ${item.productName}`} onClick={() => removeItem(item.productId, item.format)} className="grid h-11 w-11 place-items-center rounded-full text-stone-500 hover:bg-red-50 hover:text-red-700">
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -213,6 +198,7 @@ export const QuoteCartDrawer = () => {
   const flatbedSpots = useMemo(() => cartFlatbedSpots(items), [items]);
   const flatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
   const payTotal = payGross - flatbedDiscount;
+  const bagProgressHint = mixedBagProgressHint(payItems);
   const quoteQuantity = quoteItems.reduce((count, item) => count + item.quantity, 0);
   const quoteTotal = useMemo(() => quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [quoteItems]);
   const { offerItems, walkingFloorItems, flatbedItems, yardItems } = useMemo(
@@ -279,20 +265,11 @@ export const QuoteCartDrawer = () => {
               </span>
               <div className="flex flex-col items-start">
                 <span className="text-base font-bold leading-none">
-                  {hasMixedLoads
-                    ? "Your order"
-                    : flatbedSpots > 0
-                      ? "Your flatbed load"
-                      : walkingFloorItems.length > 0
-                        ? "Your delivery"
-                        : "Your order"}
+                  {walkingFloorItems.length > 0 && !hasMixedLoads ? "Your delivery" : "Your order"}
                 </span>
                 <span className="mt-1 text-xs font-medium text-stone-500">
                   {totalItems} {totalItems === 1 ? "item" : "items"}
-                  {flatbedSpots > 0 ? ` · flatbed ${flatbedSpots}/${FLATBED_CAPACITY}` : ""}
-                  {walkingFloorItems.length > 0
-                    ? ` · ${walkingFloorItems.length} walking-floor`
-                    : ""}
+                  {walkingFloorItems.length > 0 ? ` · ${walkingFloorItems.length} walking-floor` : ""}
                 </span>
               </div>
             </SheetTitle>
@@ -311,49 +288,17 @@ export const QuoteCartDrawer = () => {
             <>
               <div className="flex-1 space-y-3 overflow-y-auto py-4">
                 {renderLines(offerItems)}
-
-                {/* Flatbed next — mixable load, meter, 10% off. Number trucks only when both exist. */}
-                {flatbedItems.length > 0 && (
-                  <LoadSection
-                    title={
-                      hasDeliveryTrucks
-                        ? "Truck 1 · Flatbed"
-                        : "Flatbed load"
-                    }
-                    hint="Mix pallets & totes · pickup needs a scheduled heads-up"
-                    image={FLATBED_IMAGE}
-                    headerExtra={<FlatbedLoadMeter spots={flatbedSpots} meterOnly />}
-                  >
-                    {renderLines(flatbedItems)}
-                  </LoadSection>
-                )}
+                {renderLines(yardItems)}
+                {renderLines(flatbedItems)}
 
                 {walkingFloorItems.length > 0 && (
                   <LoadSection
-                    title={
-                      hasDeliveryTrucks
-                        ? "Truck 2 · Walking floor"
-                        : "Walking-floor delivery"
-                    }
+                    title={hasDeliveryTrucks ? "Truck 2 · Walking floor" : "Walking-floor delivery"}
                     hint="24-ton bulk dump · always delivered"
                     image={WALKING_FLOOR_IMAGE}
                     accent="camel"
                   >
                     {renderLines(walkingFloorItems)}
-                  </LoadSection>
-                )}
-
-                {yardItems.length > 0 && (
-                  <LoadSection
-                    title={CART_LOAD_GROUP_LABELS.bags}
-                    hint={CART_LOAD_GROUP_HINTS.bags}
-                    image={
-                      yardItems[0]?.imageUrl ||
-                      CART_IMAGE_FALLBACKS[yardItems[0].productId] ||
-                      FLATBED_IMAGE
-                    }
-                  >
-                    {renderLines(yardItems)}
                   </LoadSection>
                 )}
 
@@ -383,6 +328,9 @@ export const QuoteCartDrawer = () => {
                       <span className="text-sm font-medium text-stone-600">Pay today</span>
                       <span className="text-xl font-bold text-[#264027]">{fmt(payTotal)}</span>
                     </div>
+                    {bagProgressHint ? (
+                      <p className="text-center text-xs text-stone-500">{bagProgressHint}</p>
+                    ) : null}
                     <Button
                       size="lg"
                       onClick={goToCheckout}

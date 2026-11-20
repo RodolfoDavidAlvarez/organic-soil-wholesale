@@ -12,7 +12,6 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import { PickupReadyTime, type PickupReadySelection } from "@/components/PickupReadyTime";
 import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
-import { FlatbedLoadMeter } from "@/components/FlatbedLoadMeter";
 import { loadDeliveryDraft, saveDeliveryDraft } from "@/lib/deliveryDraft";
 import { currentDeliveryQuote, deliveryQuoteKey } from "@shared/deliveryQuoteBinding.js";
 import {
@@ -27,6 +26,7 @@ import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkout
 import { computeAsapPickup, resolveCheckoutPickupTime, validatePickupIso, HOURS_LABEL, PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
 import { BundleCartLine } from "@/components/BundleCartLine";
 import { getPromoBundleByProductId } from "@shared/promoBundles.js";
+import { getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { isSchoolDiscountCode, resolveDiscountCode, schoolLineCaption } from "@shared/checkoutDiscount.js";
 import {
   cartAllowsPhoenixYardPickup,
@@ -1729,12 +1729,15 @@ const Checkout: React.FC = () => {
                 <CardTitle className="text-lg font-semibold tracking-tight text-stone-900">Your order</CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-5 pt-0">
-                {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} compact className="mt-3" suppressVolumeDiscount={schoolApplied} />}
+                {hasFlatbedSpots && (
+                  <p className="mt-3 text-xs leading-snug text-stone-500">Pallets and totes need a scheduled pickup.</p>
+                )}
                 <ul className="divide-y divide-stone-200">
                   {groupedPayItems.map((item) => {
                     const bundle = getPromoBundleByProductId(item.productId);
                     const image = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
                     const walkingFloor = isWalkingFloorDeliveryFormat(item.format);
+                    const preview = getPayPickupProductDescription(item.productId, "");
                     const changeQuantity = (quantity: number) => {
                       updateQuantity(item.productId, item.format, quantity);
                       trackEvent("Checkout Item Quantity Changed", { product_id: item.productId, format: item.format, quantity, source: "summary" });
@@ -1761,19 +1764,22 @@ const Checkout: React.FC = () => {
                           </div>
                           {payItems.length > 1 && <span className="text-sm font-semibold tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>}
                         </div>
-                        <details className="mt-1 text-sm">
-                          <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-[#36513a]">Item details{!walkingFloor && " & quantity"}</summary>
-                          {walkingFloor ? <p className="text-sm text-stone-600">Qty {item.quantity} · walking-floor load</p> : (
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="inline-flex items-center rounded-xl border border-stone-200">
-                                <button type="button" aria-label={`Decrease quantity of ${item.productName}`} className="grid h-11 w-11 place-items-center disabled:opacity-40" disabled={item.quantity <= 1} onClick={() => changeQuantity(item.quantity - 1)}><Minus className="h-4 w-4" /></button>
-                                <span className="min-w-6 text-center tabular-nums">{item.quantity}</span>
-                                <button type="button" aria-label={`Increase quantity of ${item.productName}`} className="grid h-11 w-11 place-items-center" onClick={() => changeQuantity(item.quantity + 1)}><Plus className="h-4 w-4" /></button>
-                              </div>
-                              <button type="button" aria-label={`Remove ${item.productName}`} className="inline-flex min-h-11 items-center gap-1 px-2 text-stone-600 hover:text-red-700" onClick={remove}><Trash2 className="h-4 w-4" /> Remove</button>
+                        {preview ? (
+                          <p className="mt-2 flex min-w-0 items-baseline gap-2 text-sm text-stone-600">
+                            <span className="truncate">{preview}</span>
+                            <Link href={`/products/${item.productSlug}`} className="shrink-0 font-semibold text-[#264027] underline underline-offset-2">See more</Link>
+                          </p>
+                        ) : null}
+                        {walkingFloor ? <p className="mt-2 text-sm text-stone-600">Qty {item.quantity} · walking-floor load</p> : (
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <div className="inline-flex items-center rounded-xl border border-stone-200">
+                              <button type="button" aria-label={`Decrease quantity of ${item.productName}`} className="grid h-11 w-11 place-items-center disabled:opacity-40" disabled={item.quantity <= 1} onClick={() => changeQuantity(item.quantity - 1)}><Minus className="h-4 w-4" /></button>
+                              <span className="min-w-6 text-center tabular-nums">{item.quantity}</span>
+                              <button type="button" aria-label={`Increase quantity of ${item.productName}`} className="grid h-11 w-11 place-items-center" onClick={() => changeQuantity(item.quantity + 1)}><Plus className="h-4 w-4" /></button>
                             </div>
-                          )}
-                        </details>
+                            <button type="button" aria-label={`Remove ${item.productName}`} className="inline-flex min-h-11 items-center gap-1 px-2 text-stone-600 hover:text-red-700" onClick={remove}><Trash2 className="h-4 w-4" /> Remove</button>
+                          </div>
+                        )}
                       </li>
                     );
                   })}
@@ -1821,7 +1827,9 @@ const Checkout: React.FC = () => {
               <CardContent className="space-y-4 p-4 sm:p-5">
                 {/* Totals */}
                 <div className="space-y-2">
-                  {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} className="mb-2" suppressVolumeDiscount={schoolApplied} />}
+                  {hasFlatbedSpots && (
+                    <p className="text-xs leading-snug text-stone-500">Pallets and totes need a scheduled pickup.</p>
+                  )}
                   <div className="flex items-center justify-between text-sm text-stone-600">
                     <span>Products</span>
                     <span>{fmt(productSubtotalGross)}</span>
