@@ -1158,9 +1158,12 @@ const normalizeProduct = (record: ApiProduct): Product => {
   };
 };
 
+class ProductNotFoundError extends Error {}
+
 const fetchProduct = async (identifier: string): Promise<Product> => {
   const response = await fetch(`/api/public/products/${identifier}`);
-  if (!response.ok) throw new Error("Product not found");
+  if (response.status === 404) throw new ProductNotFoundError("Product not found");
+  if (!response.ok) throw new Error("Product details could not be loaded");
   return normalizeProduct(await response.json());
 };
 
@@ -1175,9 +1178,10 @@ const ProductDetail = () => {
   const { toast } = useToast();
   const slug = params?.slug ?? "";
 
-  const { data: product, isLoading, error } = useQuery({
+  const { data: product, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["publicProduct", slug],
     queryFn: () => fetchProduct(slug),
+    retry: (count, cause) => !(cause instanceof ProductNotFoundError) && count < 2,
     enabled: Boolean(slug),
   });
 
@@ -1939,8 +1943,13 @@ const ProductDetail = () => {
           {/* Error */}
           {!isLoading && error && (
             <Card className="rounded-2xl border-destructive/30 bg-destructive/5 p-8 text-center">
-              <h2 className="text-2xl font-semibold text-destructive">Product not available</h2>
-              <p className="mt-2 text-muted-foreground">We couldn&apos;t find that product. It may have been archived or renamed.</p>
+              <h2 className="text-2xl font-semibold text-destructive">{error instanceof ProductNotFoundError ? "Product not available" : "Couldn’t load product details"}</h2>
+              <p className="mt-2 text-muted-foreground">{error instanceof ProductNotFoundError
+                ? "We couldn’t find this product in the catalog."
+                : "Please try again in a moment."}</p>
+              {!(error instanceof ProductNotFoundError) && (
+                <Button className="mt-6 mr-2" disabled={isFetching} onClick={() => void refetch()}>Try again</Button>
+              )}
               <Button asChild className="mt-6"><Link href="/products">Return to catalog</Link></Button>
             </Card>
           )}
