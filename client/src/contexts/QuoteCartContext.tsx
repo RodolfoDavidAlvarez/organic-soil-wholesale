@@ -125,7 +125,7 @@ export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
     trackEvent("Cart Cleared");
   }, []);
 
-  const totalItems = useMemo(() => items.length, [items]);
+  const totalItems = useMemo(() => items.reduce((count, item) => count + item.quantity, 0), [items]);
   const totalPrice = useMemo(() => items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [items]);
   const flatbedSpots = useMemo(() => cartFlatbedSpots(items), [items]);
   const fullFlatbedDiscount = useMemo(() => hasFullFlatbedDiscount(flatbedSpots), [flatbedSpots]);

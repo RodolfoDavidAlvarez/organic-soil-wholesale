@@ -213,6 +213,7 @@ export const QuoteCartDrawer = () => {
   const flatbedSpots = useMemo(() => cartFlatbedSpots(items), [items]);
   const flatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
   const payTotal = payGross - flatbedDiscount;
+  const quoteQuantity = quoteItems.reduce((count, item) => count + item.quantity, 0);
   const quoteTotal = useMemo(() => quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [quoteItems]);
   const { offerItems, walkingFloorItems, flatbedItems, yardItems } = useMemo(
     () => partitionPayCartItems(payItems),
@@ -362,7 +363,7 @@ export const QuoteCartDrawer = () => {
                       <FileText className="h-3.5 w-3.5" />
                       Request a quote
                       <span className="text-stone-400">·</span>
-                      <span className="text-stone-500">{quoteItems.length} item{quoteItems.length !== 1 && "s"}</span>
+                      <span className="text-stone-500">{quoteQuantity} {quoteQuantity === 1 ? "item" : "items"}</span>
                     </div>
                     {renderLines(quoteItems)}
                   </div>

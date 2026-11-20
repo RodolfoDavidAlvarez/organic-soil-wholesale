@@ -118,6 +118,7 @@ const Checkout: React.FC = () => {
   const { items, removeItem, updateQuantity, clearCart } = useQuoteCart();
 
   const payItems = useMemo(() => items.filter((i) => i.mode === "pay"), [items]);
+  const payQuantity = payItems.reduce((count, item) => count + item.quantity, 0);
   const payGroups = useMemo(() => partitionPayCartItems(payItems), [payItems]);
   const groupedPayItems = useMemo(
     () => (payGroups.offerItems.length > 0 ? [...payGroups.offerItems, ...payGroups.otherItems] : payItems),
@@ -945,7 +946,7 @@ const Checkout: React.FC = () => {
               <p className="hidden text-xs text-stone-500 sm:block">Confirm pickup or delivery, then pay securely.</p>
             </div>
             <div className="ml-auto inline-flex items-center gap-1 rounded-full bg-[#264027]/10 px-3 py-1.5 text-sm font-bold text-[#264027]">
-              {payItems.length} item{payItems.length !== 1 && "s"}
+              {payQuantity} {payQuantity === 1 ? "item" : "items"}
             </div>
           </div>
         </div>

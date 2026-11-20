@@ -1,6 +1,7 @@
 export const PROMO_BUNDLE_PRODUCT_IDS: readonly number[];
 
 export type PromoBundleItem = {
+  bagCount: number;
   name: string;
   amount: string;
   image: string;

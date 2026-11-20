@@ -67,9 +67,9 @@ export const PROMO_BUNDLES = Object.freeze([
     result: "Three cubic feet of compost plus two cubic feet of worm castings feed the soil, and ten cubic feet of mulch cover the same bed.",
     pickupNote: "Phoenix yard pickup. Add other bags from Products and check out together.",
     items: [
-      { name: "Nature's Blanket Premium mulch", amount: "5 bags · 10 cu ft", ...productImages.mulch },
-      { name: "Simon's Gold dairy compost", amount: "3 bags · 3 cu ft included", ...productImages.simons },
-      { name: "Mikey's Worm Poop worm castings", amount: "2 bags · 2 cu ft", ...productImages.mikeys },
+      { name: "Nature's Blanket Premium mulch", bagCount: 5, amount: "5 bags · 10 cu ft", ...productImages.mulch },
+      { name: "Simon's Gold dairy compost", bagCount: 3, amount: "3 bags · 3 cu ft included", ...productImages.simons },
+      { name: "Mikey's Worm Poop worm castings", bagCount: 2, amount: "2 bags · 2 cu ft", ...productImages.mikeys },
     ],
   },
   {
@@ -103,9 +103,9 @@ export const PROMO_BUNDLES = Object.freeze([
     result: "Fifteen cubic feet of PlantPal Plus, three cubic feet of castings, and six cubic feet of mulch included free.",
     pickupNote: "Phoenix yard pickup. The three Nature's Blanket bags are included—already in this bundle price.",
     items: [
-      { name: "PlantPal Plus all-stage potting mix", amount: "10 bags · 15 cu ft", ...productImages.plantpal },
-      { name: "Nature's Blanket Premium mulch", amount: "3 bags · 6 cu ft included", ...productImages.mulch },
-      { name: "Mikey's Worm Poop worm castings", amount: "3 bags · 3 cu ft", ...productImages.mikeys },
+      { name: "PlantPal Plus all-stage potting mix", bagCount: 10, amount: "10 bags · 15 cu ft", ...productImages.plantpal },
+      { name: "Nature's Blanket Premium mulch", bagCount: 3, amount: "3 bags · 6 cu ft included", ...productImages.mulch },
+      { name: "Mikey's Worm Poop worm castings", bagCount: 3, amount: "3 bags · 3 cu ft", ...productImages.mikeys },
     ],
   },
   {
@@ -139,10 +139,10 @@ export const PROMO_BUNDLES = Object.freeze([
     result: "Forty bags fill two to three 4×8 beds depending on depth—45 cu ft of PlantPal Plus plus feed and mulch.",
     pickupNote: "Phoenix yard pickup. Add other bags from Products and check out together.",
     items: [
-      { name: "PlantPal Plus all-stage potting mix", amount: "30 bags · 45 cu ft", ...productImages.plantpal },
-      { name: "Simon's Gold dairy compost", amount: "4 bags · 4 cu ft", ...productImages.simons },
-      { name: "Mikey's Worm Poop worm castings", amount: "3 bags · 3 cu ft", ...productImages.mikeys },
-      { name: "Nature's Blanket Premium mulch", amount: "3 bags · 6 cu ft", ...productImages.mulch },
+      { name: "PlantPal Plus all-stage potting mix", bagCount: 30, amount: "30 bags · 45 cu ft", ...productImages.plantpal },
+      { name: "Simon's Gold dairy compost", bagCount: 4, amount: "4 bags · 4 cu ft", ...productImages.simons },
+      { name: "Mikey's Worm Poop worm castings", bagCount: 3, amount: "3 bags · 3 cu ft", ...productImages.mikeys },
+      { name: "Nature's Blanket Premium mulch", bagCount: 3, amount: "3 bags · 6 cu ft", ...productImages.mulch },
     ],
   },
 ]);

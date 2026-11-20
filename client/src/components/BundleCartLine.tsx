@@ -14,6 +14,7 @@ type Props = {
 };
 
 export function BundleCartLine({ bundle, quantity, priceLabel, onOpen, onQuantity, onRemove }: Props) {
+  const totalBags = quantity * bundle.items.reduce((sum, item) => sum + item.bagCount, 0);
   return (
     <article className="min-w-0">
       <Link href={`/offers/${bundle.slug}`} onClick={onOpen} aria-label={`View ${bundle.title}`} className="block rounded-xl focus-visible:ring-2">
@@ -29,12 +30,12 @@ export function BundleCartLine({ bundle, quantity, priceLabel, onOpen, onQuantit
           {priceLabel && <span className="text-sm font-semibold tabular-nums">{priceLabel}</span>}
         </div>
       </Link>
-      <p className="mt-1 text-sm text-stone-600">{bundle.bagLabel} per bundle</p>
-      <ul aria-label="Included in each bundle" className="mt-3 space-y-1">
+      <p className="mt-1 text-sm text-stone-600">{quantity} {quantity === 1 ? "bundle" : "bundles"} · {totalBags} bags total</p>
+      <ul aria-label="Included in this order" className="mt-3 space-y-1">
         {bundle.items.map((item) => (
           <li key={item.name} className="flex items-baseline justify-between gap-3 text-sm leading-snug">
             <span className="text-stone-700">{item.name}</span>
-            <span className="shrink-0 font-medium tabular-nums text-stone-900">{item.amount.split(" · ")[0]}</span>
+            <span className="shrink-0 font-medium tabular-nums text-stone-900">{item.bagCount * quantity} bags</span>
           </li>
         ))}
       </ul>
