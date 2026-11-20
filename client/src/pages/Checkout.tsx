@@ -28,6 +28,7 @@ import { BundleCartLine } from "@/components/BundleCartLine";
 import { getPromoBundleByProductId } from "@shared/promoBundles.js";
 import { getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { isSchoolDiscountCode, resolveDiscountCode, schoolLineCaption } from "@shared/checkoutDiscount.js";
+import { baggedVolumeHint, baggedVolumeSavingsLabel, chargeOrderDiscounts } from "@shared/baggedVolumeDiscount.js";
 import {
   cartAllowsPhoenixYardPickup,
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
@@ -499,10 +500,20 @@ const Checkout: React.FC = () => {
     () => payItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0),
     [payItems]
   );
-  const schoolOff = schoolApplied ? (appliedDiscount?.discountCents || 0) / 100 : 0;
+  const pricedDiscounts = useMemo(() => chargeOrderDiscounts({
+    items: payItems,
+    discountKind: appliedDiscount?.kind === "test" ? "test" : schoolApplied ? "school" : "none",
+    schoolDiscountCents: schoolApplied ? appliedDiscount?.discountCents || 0 : 0,
+  }), [payItems, appliedDiscount?.kind, appliedDiscount?.discountCents, schoolApplied]);
+  const schoolOff = pricedDiscounts.choice.groupCents / 100;
+  const volumeOff = pricedDiscounts.choice.volumeCents / 100;
+  const volumeLabel = baggedVolumeSavingsLabel(pricedDiscounts.volume.percent);
+  const volumeHint = pricedDiscounts.choice.winner === "group" || pricedDiscounts.choice.winner === "test"
+    ? null
+    : baggedVolumeHint(pricedDiscounts.volume, fmt);
   /** Flatbed 10% is skipped while a school code is applied. The server does the same. */
   const flatbedOff = schoolApplied ? 0 : fullFlatbedDiscount;
-  const productSubtotal = productSubtotalGross - flatbedOff - schoolOff;
+  const productSubtotal = productSubtotalGross - flatbedOff - schoolOff - volumeOff;
   const deliveryFee = fulfillment === "delivery" && deliveryQuote ? deliveryQuote.costDollars : 0;
   const subtotal = productSubtotal + deliveryFee;
   const discountAmount = appliedDiscount?.kind === "test" ? subtotal : 0;
@@ -1761,6 +1772,12 @@ const Checkout: React.FC = () => {
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold leading-tight text-stone-950">{item.productName}</p>
                             <p className="mt-1 text-sm text-stone-600">{item.format}{item.quantity > 1 && ` · Qty ${item.quantity}`}</p>
+                            {item.listUnitPrice && item.listUnitPrice > item.unitPrice ? (
+                              <p className="mt-1 text-xs text-stone-500">
+                                <span className="line-through">{fmt(item.listUnitPrice * item.quantity)}</span>
+                                {item.discountPercent ? ` · ${item.discountPercent}% pallet savings` : ""}
+                              </p>
+                            ) : null}
                           </div>
                           {payItems.length > 1 && <span className="text-sm font-semibold tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>}
                         </div>
@@ -1784,13 +1801,19 @@ const Checkout: React.FC = () => {
                     );
                   })}
                 </ul>
-                {(flatbedOff > 0 || schoolOff > 0 || fulfillment === "delivery" || appliedDiscount?.kind === "test") && (
+                {(flatbedOff > 0 || schoolOff > 0 || volumeOff > 0 || fulfillment === "delivery" || appliedDiscount?.kind === "test") && (
                   <div className="flex justify-between py-1 text-sm text-stone-600"><span>Products</span><span>{fmt(productSubtotalGross)}</span></div>
                 )}
                 {flatbedOff > 0 && (
                   <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
                     <span>Full flatbed (10% off)</span>
                     <span>−{fmt(flatbedOff)}</span>
+                  </div>
+                )}
+                {volumeOff > 0 && volumeLabel && (
+                  <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
+                    <span>{volumeLabel}</span>
+                    <span>−{fmt(volumeOff)}</span>
                   </div>
                 )}
                 {schoolOff > 0 && (
@@ -1812,6 +1835,7 @@ const Checkout: React.FC = () => {
                   <span>{fulfillment === "delivery" && !deliveryQuote ? "Subtotal" : "Total"}</span>
                   <span className="text-xl tabular-nums">{fmt(total)}</span>
                 </div>
+                {volumeHint && <p className="mt-2 text-xs leading-snug text-stone-500">{volumeHint}</p>}
               </CardContent>
             </Card>
             )}
@@ -1840,6 +1864,12 @@ const Checkout: React.FC = () => {
                       <span>−{fmt(flatbedOff)}</span>
                     </div>
                   )}
+                  {volumeOff > 0 && volumeLabel && (
+                    <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
+                      <span>{volumeLabel}</span>
+                      <span>−{fmt(volumeOff)}</span>
+                    </div>
+                  )}
                   {schoolOff > 0 && (
                     <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
                       <span>School code (bagged only)</span>
@@ -1865,6 +1895,7 @@ const Checkout: React.FC = () => {
                     <span>Total</span>
                     <span>{fmt(total)}</span>
                   </div>
+                  {volumeHint && <p className="text-xs leading-snug text-stone-500">{volumeHint}</p>}
                 </div>
 
                 {appliedDiscount ? (
@@ -1872,7 +1903,9 @@ const Checkout: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
                         <CheckCircle2 className="h-4 w-4" />
-                        {appliedDiscount.kind === "school"
+                        {pricedDiscounts.choice.winner === "volume" && appliedDiscount.kind === "school"
+                          ? `Code ${appliedDiscount.code} was not combined. The bag discount saves more.`
+                          : appliedDiscount.kind === "school"
                           ? `Code ${appliedDiscount.code} applied · 30% off bagged products`
                           : `Code ${appliedDiscount.code} applied · −${appliedDiscount.percent}%`}
                       </div>
@@ -1880,7 +1913,7 @@ const Checkout: React.FC = () => {
                         <X className="h-4 w-4" />
                       </button>
                     </div>
-                    {schoolApplied && (
+                    {schoolApplied && pricedDiscounts.choice.winner === "group" && (
                       <ul className="mt-2 space-y-1 text-xs leading-relaxed text-emerald-900">
                         {(appliedDiscount?.notices || []).map((notice) => <li key={notice}>{notice}</li>)}
                       </ul>
@@ -1915,6 +1948,7 @@ const Checkout: React.FC = () => {
                       </div>
                     )}
                     {discountError && <p id="discount-error" role="alert" className="mt-1 text-xs text-red-600">{discountError}</p>}
+                    <p className="mt-2 text-xs leading-relaxed text-stone-500">A code and the bag discount do not combine. The larger savings is used.</p>
                   </div>
                 )}
               </CardContent>

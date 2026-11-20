@@ -8,12 +8,12 @@ import { OrderCallbackDialog } from "@/components/OrderCallbackDialog";
 import {
   cartFlatbedSpots,
   fullLoadDiscountAmount,
-  isWalkingFloorDeliveryFormat,
 } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
 import { BundleCartLine } from "@/components/BundleCartLine";
 import { promoBundleHref, getPromoBundleByProductId } from "@shared/promoBundles.js";
 import { getPayPickupProductDescription } from "@/data/payPickupProductContent";
+import { baggedVolumeHint, baggedVolumeQuote, baggedVolumeSavingsLabel } from "@shared/baggedVolumeDiscount.js";
 import { partitionPayCartItems } from "@shared/cartLoadGroups.js";
 import { cn } from "@/lib/utils";
 import {
@@ -38,29 +38,10 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
 };
 
 const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
-const MIXED_BAG_TIERS = [
-  { amount: 500, percent: 10 },
-  { amount: 1500, percent: 20 },
-] as const;
-
-function isWalkingFloorFormat(format: string) {
-  return isWalkingFloorDeliveryFormat(format);
-}
 
 function isPalletFormat(format: string) {
   const key = format.toLowerCase();
   return key.includes("pallet") && !key.includes("truckload");
-}
-
-/** Progress copy only. Checkout does not apply these mixed-bag rates yet. */
-function mixedBagProgressHint(payItems: CartItem[]): string | null {
-  if (payItems.some((item) => isPalletFormat(item.format))) return null;
-  const mixed = payItems.filter((item) => !isWalkingFloorFormat(item.format));
-  if (!mixed.length) return null;
-  const subtotal = mixed.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const next = MIXED_BAG_TIERS.find((tier) => subtotal < tier.amount);
-  if (!next || subtotal <= 0) return null;
-  return `Add ${fmt(next.amount - subtotal)} for ${next.percent}% off a mixed bag order.`;
 }
 
 function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice }: {
@@ -197,8 +178,10 @@ export const QuoteCartDrawer = () => {
   const payGross = useMemo(() => payItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [payItems]);
   const flatbedSpots = useMemo(() => cartFlatbedSpots(items), [items]);
   const flatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
-  const payTotal = payGross - flatbedDiscount;
-  const bagProgressHint = mixedBagProgressHint(payItems);
+  const baggedVolume = useMemo(() => baggedVolumeQuote(payItems), [payItems]);
+  const payTotal = payGross - flatbedDiscount - baggedVolume.amount;
+  const bagSavingsLabel = baggedVolumeSavingsLabel(baggedVolume.percent);
+  const bagProgressHint = baggedVolumeHint(baggedVolume, fmt);
   const quoteQuantity = quoteItems.reduce((count, item) => count + item.quantity, 0);
   const quoteTotal = useMemo(() => quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [quoteItems]);
   const { offerItems, walkingFloorItems, flatbedItems, yardItems } = useMemo(
@@ -324,13 +307,19 @@ export const QuoteCartDrawer = () => {
                         <span className="font-semibold">−{fmt(flatbedDiscount)}</span>
                       </div>
                     )}
+                    {baggedVolume.amountCents > 0 && bagSavingsLabel && (
+                      <div className="flex items-center justify-between text-sm text-emerald-800">
+                        <span className="font-medium">{bagSavingsLabel}</span>
+                        <span className="font-semibold">−{fmt(baggedVolume.amount)}</span>
+                      </div>
+                    )}
+                    {bagProgressHint ? (
+                      <p className="text-center text-xs text-stone-500">{bagProgressHint}</p>
+                    ) : null}
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-stone-600">Pay today</span>
                       <span className="text-xl font-bold text-[#264027]">{fmt(payTotal)}</span>
                     </div>
-                    {bagProgressHint ? (
-                      <p className="text-center text-xs text-stone-500">{bagProgressHint}</p>
-                    ) : null}
                     <Button
                       size="lg"
                       onClick={goToCheckout}

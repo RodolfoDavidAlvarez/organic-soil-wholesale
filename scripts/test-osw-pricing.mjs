@@ -215,17 +215,19 @@ assert.deepEqual(
 );
 
 const drawerSource = readFileSync(new URL("../client/src/components/QuoteCartDrawer.tsx", import.meta.url), "utf8");
-assert.match(drawerSource, /CART_LOAD_GROUP_LABELS\.offers/);
 assert.match(drawerSource, /partitionPayCartItems/);
+assert.match(drawerSource, /offerItems/);
+assert.match(drawerSource, /BundleCartLine/);
+assert.match(drawerSource, /baggedVolumeQuote/);
+assert.doesNotMatch(drawerSource, /FlatbedLoadMeter/);
 assert.doesNotMatch(drawerSource, /title="Bags & small items"/);
 
 const checkoutSource = readFileSync(new URL("../client/src/pages/Checkout.tsx", import.meta.url), "utf8");
-assert.match(checkoutSource, /CART_LOAD_GROUP_LABELS\.offers/);
 assert.match(checkoutSource, /partitionPayCartItems/);
-assert.match(checkoutSource, /CART_LOAD_GROUP_HINTS\.offers/);
-assert.match(drawerSource, /includedLabel/);
-assert.match(checkoutSource, /includedLabel/);
 assert.match(checkoutSource, /getPromoBundleByProductId/);
+assert.match(checkoutSource, /chargeOrderDiscounts/);
+assert.match(checkoutSource, /getPayPickupProductDescription/);
+assert.doesNotMatch(checkoutSource, /FlatbedLoadMeter/);
 
 const bundleOffersSource = readFileSync(new URL("../client/src/pages/BundleOffers.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
@@ -239,7 +241,7 @@ assert.doesNotMatch(bundleOffersSource, /Three setups\. Tap one\./);
 assert.doesNotMatch(bundleOffersSource, /Need a truckload, not a bundle/);
 assert.match(bundleOffersSource, /href=\{product\.href\}/);
 assert.match(bundleOffersSource, /id="bundle-contents-heading"/);
-assert.match(bundleOffersSource, /refreshCopy\[product\.productKey\]/);
+assert.match(bundleOffersSource, /getBundleUsage\(offer\.items\.find/);
 assert.match(bundleOffersSource, /id="bundle-faq-heading"/);
 assert.match(bundleOffersSource, /href="\/garden-bed-offer\.html"/);
 assert.match(bundleOffersSource, /useRoute(?:<[^>]+>)?\("\/deals\/:slug"\)/);

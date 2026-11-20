@@ -29,6 +29,7 @@ import {
 } from '../../shared/checkoutDiscount.js';
 import { settleSchoolCheckout } from '../../shared/schoolRedeem.js';
 import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
+import { chargeOrderDiscounts, volumeStripeCouponParams } from '../../shared/baggedVolumeDiscount.js';
 import { nonBundleProductSubtotal, resolvePromoBundle } from '../../shared/promoBundles.js';
 import {
   cartAllowsPhoenixYardPickup,
@@ -88,6 +89,7 @@ router.post('/school-quote', async (req, res) => {
 // Create checkout session
 router.post('/create-session', async (req, res) => {
   let schoolCoupon: { id: string } | null = null;
+  let volumeCoupon: { id: string } | null = null;
   let schoolSession: { id: string } | null = null;
   let stripeForCleanup: Stripe | null = null;
   try {
@@ -227,12 +229,22 @@ router.post('/create-session', async (req, res) => {
       }
     }
 
+    const charged = chargeOrderDiscounts({
+      items,
+      discountKind: discountDecision.kind,
+      schoolDiscountCents: schoolQuote?.ok ? schoolQuote.discountCents : 0,
+    });
     const customerNotes = [
       orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
       customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
       customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
       typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
-      ...checkoutDiscountNotes(discountDecision, schoolQuote),
+      ...(discountDecision.kind === 'test'
+        ? checkoutDiscountNotes(discountDecision, null)
+        : charged.choice.winner === 'group'
+          ? checkoutDiscountNotes(discountDecision, schoolQuote)
+          : []),
+      ...charged.notes,
       flatbedPricing.applied
         ? `Full flatbed (22 spots): 10% product discount (−$${flatbedPricing.discountAmount.toFixed(2)})`
         : null,
@@ -298,8 +310,9 @@ router.post('/create-session', async (req, res) => {
     const discountBase = discountPercent === 100
       ? rawSubtotal
       : nonBundleProductSubtotal(items);
-    const schoolDiscountCents = schoolQuote && schoolQuote.ok ? schoolQuote.discountCents : 0;
-    const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100) - schoolDiscountCents / 100);
+    const schoolDiscountCents = charged.choice.groupCents;
+    const volumeDiscountCents = charged.choice.volumeCents;
+    const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100) - schoolDiscountCents / 100 - volumeDiscountCents / 100);
     const totalCents = Math.round(totalDollars * 100);
     const isFreeOrder = totalCents === 0 && discountPercent > 0;
 
@@ -495,15 +508,19 @@ router.post('/create-session', async (req, res) => {
 
     const stripe = getStripe();
     stripeForCleanup = stripe;
-    if (schoolQuote?.ok) {
+    if (schoolQuote?.ok && charged.choice.winner === 'group') {
       const heldQuote = await reserveSchoolCheckoutQuote(schoolQuote, items, order.id);
       if (!heldQuote.ok) {
         return res.status(schoolQuoteFailureStatus(heldQuote.status)).json({ error: heldQuote.error });
       }
     }
-    schoolCoupon = schoolDiscountCents > 0
+    schoolCoupon = charged.choice.winner === 'group' && schoolDiscountCents > 0
       ? await stripe.coupons.create(schoolStripeCouponParams(schoolDiscountCents))
       : null;
+    volumeCoupon = charged.choice.winner === 'volume' && volumeDiscountCents > 0
+      ? await stripe.coupons.create(volumeStripeCouponParams(volumeDiscountCents))
+      : null;
+    const checkoutCoupon = schoolCoupon || volumeCoupon;
     const baseMetadata = {
       order_id: order.id.toString(),
       pickup_time: isDelivery ? '' : pickupTime,
@@ -525,7 +542,7 @@ router.post('/create-session', async (req, res) => {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      ...(schoolCoupon ? { discounts: [{ coupon: schoolCoupon.id }] } : {}),
+      ...(checkoutCoupon ? { discounts: [{ coupon: checkoutCoupon.id }] } : {}),
       success_url: `${stripeOrigin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
       cancel_url: `${stripeOrigin}/checkout?canceled=true`,
       metadata: schoolHold ? schoolHold.metadata : baseMetadata,
@@ -548,8 +565,9 @@ router.post('/create-session', async (req, res) => {
     });
   } catch (error) {
     console.error('Checkout error:', error);
-    if (schoolCoupon?.id && !schoolSession && stripeForCleanup) {
-      await stripeForCleanup.coupons.del(schoolCoupon.id).catch(() => {});
+    if (!schoolSession && stripeForCleanup) {
+      if (schoolCoupon?.id) await stripeForCleanup.coupons.del(schoolCoupon.id).catch(() => {});
+      if (volumeCoupon?.id) await stripeForCleanup.coupons.del(volumeCoupon.id).catch(() => {});
     }
     res.status(500).json({ error: 'Failed to create checkout session' });
   }

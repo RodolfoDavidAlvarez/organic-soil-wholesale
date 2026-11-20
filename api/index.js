@@ -52,6 +52,7 @@ import {
   schoolQuoteFailureStatus,
   schoolStripeCouponParams,
 } from '../shared/checkoutDiscount.js';
+import { chargeOrderDiscounts, volumeStripeCouponParams } from '../shared/baggedVolumeDiscount.js';
 import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRedeem.js';
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import { resolvePickupProductName } from '../shared/pickupProductName.js';
@@ -7001,6 +7002,7 @@ ${pages}
     if (path === '/api/checkout/create-session' && req.method === 'POST') {
       const monitorSessionId = req.body?.monitorSessionId;
       let schoolCoupon = null;
+      let volumeCoupon = null;
       let schoolSession = null;
       let stripeClient = null;
       try {
@@ -7144,12 +7146,22 @@ ${pages}
           ? `${preferredDeliveryDate} → ${preferredDeliveryDateEnd}`
           : (preferredDeliveryDate || '');
 
+        const charged = chargeOrderDiscounts({
+          items,
+          discountKind: discountDecision.kind,
+          schoolDiscountCents: schoolQuote?.ok ? schoolQuote.discountCents : 0,
+        });
         const customerNotes = [
           orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
           customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
           customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
           typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
-          ...checkoutDiscountNotes(discountDecision, schoolQuote),
+          ...(discountDecision.kind === 'test'
+            ? checkoutDiscountNotes(discountDecision, null)
+            : charged.choice.winner === 'group'
+              ? checkoutDiscountNotes(discountDecision, schoolQuote)
+              : []),
+          ...charged.notes,
           flatbedPricing.applied
             ? `Full flatbed (22 spots): 10% product discount (−$${flatbedPricing.discountAmount.toFixed(2)})`
             : null,
@@ -7175,8 +7187,9 @@ ${pages}
         const discountBase = discountPercent === 100
           ? rawSubtotal
           : nonBundleProductSubtotal(items);
-        const schoolDiscountCents = schoolQuote && schoolQuote.ok ? schoolQuote.discountCents : 0;
-        const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100) - schoolDiscountCents / 100);
+        const schoolDiscountCents = charged.choice.groupCents;
+        const volumeDiscountCents = charged.choice.volumeCents;
+        const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100) - schoolDiscountCents / 100 - volumeDiscountCents / 100);
         const totalCents = Math.round(totalDollars * 100);
         const isFreeOrder = totalCents === 0 && discountPercent > 0;
 
@@ -7411,16 +7424,20 @@ ${pages}
           });
         }
 
-        if (schoolQuote?.ok) {
+        if (schoolQuote?.ok && charged.choice.winner === 'group') {
           const heldQuote = await reserveSchoolCheckoutQuote(schoolQuote, items, order.id);
           if (!heldQuote.ok) {
             return res.status(schoolQuoteFailureStatus(heldQuote.status)).json({ error: heldQuote.error });
           }
         }
 
-        schoolCoupon = schoolDiscountCents > 0
+        schoolCoupon = charged.choice.winner === 'group' && schoolDiscountCents > 0
           ? await stripeClient.coupons.create(schoolStripeCouponParams(schoolDiscountCents))
           : null;
+        volumeCoupon = charged.choice.winner === 'volume' && volumeDiscountCents > 0
+          ? await stripeClient.coupons.create(volumeStripeCouponParams(volumeDiscountCents))
+          : null;
+        const checkoutCoupon = schoolCoupon || volumeCoupon;
         const schoolHold = schoolCoupon
           ? schoolCheckoutCharge({
             order_id: String(order.id),
@@ -7447,7 +7464,7 @@ ${pages}
           payment_method_types: ['card'],
           line_items: lineItems,
           mode: 'payment',
-          ...(schoolCoupon ? { discounts: [{ coupon: schoolCoupon.id }] } : {}),
+          ...(checkoutCoupon ? { discounts: [{ coupon: checkoutCoupon.id }] } : {}),
           success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
           cancel_url: `${origin}/checkout?canceled=true${isCheckoutMonitorSessionId(monitorSessionId) ? `&monitor_id=${encodeURIComponent(monitorSessionId)}` : ''}`,
           metadata: schoolHold ? schoolHold.metadata : {
@@ -7499,8 +7516,9 @@ ${pages}
         });
       } catch (err) {
         console.error('Checkout error:', err);
-        if (schoolCoupon?.id && !schoolSession && stripeClient) {
-          await stripeClient.coupons.del(schoolCoupon.id).catch(() => {});
+        if (!schoolSession && stripeClient) {
+          if (schoolCoupon?.id) await stripeClient.coupons.del(schoolCoupon.id).catch(() => {});
+          if (volumeCoupon?.id) await stripeClient.coupons.del(volumeCoupon.id).catch(() => {});
         }
         if (isCheckoutMonitorSessionId(monitorSessionId)) {
           try {
