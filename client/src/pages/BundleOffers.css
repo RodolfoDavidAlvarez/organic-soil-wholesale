@@ -1964,3 +1964,19 @@
 .bo-index .bo-grid-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 16px; border-radius: 8px; background: #28432e; color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; }
 .bo-bed-card > .bo-grid-action { align-self: flex-start; margin: 0 16px 14px; }
 .bo-index .bo-grid-details { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Stretch the native details link to the card without intercepting its cart button. */
+.bo-index .bo-grid-details::after,
+.bo-index .bo-bed-card > a.bo-grid-action::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 15px;
+}
+.bo-index .bo-grid-actions button { position: relative; z-index: 3; }
+.bo-index .bo-grid-details:focus-visible::after,
+.bo-index .bo-bed-card > a.bo-grid-action:focus-visible::after {
+  outline: 3px solid #294c33;
+  outline-offset: -3px;
+}
