@@ -790,15 +790,21 @@ const Checkout: React.FC = () => {
           monitorSessionId,
         }),
       });
-      const data = await res.json();
+      const unavailable = import.meta.env.DEV && res.status === 404
+        ? "Payments are unavailable in this local preview. Your cart is saved."
+        : "Payment checkout couldn’t open. Your cart is saved. Please try again.";
+      const data = await res.json().catch(() => null);
+      if (!data || typeof data !== "object") throw new Error(unavailable);
       if (res.status === 409 && data.repricedDelivery) {
         setBoundDeliveryQuote({ key: quoteRequestKey, quote: data.repricedDelivery });
+        setSubmitting(false);
         setError(data.error);
         setActiveStep("timing");
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
-      if (!res.ok) throw new Error(data?.error || "Checkout failed");
+      if (!res.ok) throw new Error(data.error || unavailable);
+      if (!(data.free === true && data.orderId) && !data.url) throw new Error(unavailable);
       trackEvent("Checkout Session Created", {
         fulfillment,
         item_count: payItems.length,
