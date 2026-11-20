@@ -1209,16 +1209,18 @@ async function ensureRepresentativeForAdmin(db, adminId) {
 }
 
 export default async function handler(req, res) {
-  // CORS
+  const url = new URL(req.url || "/", `https://${req.headers.host || "localhost"}`);
+  const path = url.pathname;
+  const outreachPath = path.replace(/\/+$/, "") || "/";
+  const outreachRequest = outreachPath === "/api/admin/outreach" || outreachPath.startsWith("/api/admin/outreach/");
+  // CORS. Browser calls to the desk send Authorization, so that header has to
+  // be allowed before the OPTIONS preflight returns.
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', outreachRequest ? 'Content-Type, Authorization' : 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  const url = new URL(req.url, `https://${req.headers.host}`);
-  const path = url.pathname;
   const startedAt = Date.now();
   const vercelRequestId = Array.isArray(req.headers['x-vercel-id'])
     ? req.headers['x-vercel-id'][0]

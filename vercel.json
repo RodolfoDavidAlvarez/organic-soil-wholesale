@@ -11,6 +11,9 @@
     },
     "api/garden-offer.js": {
       "maxDuration": 60
+    },
+    "api/outreach-desk.js": {
+      "maxDuration": 60
     }
   },
   "crons": [
@@ -261,6 +264,18 @@
     {
       "source": "/api/webhooks/stripe",
       "destination": "/api/stripe-webhook"
+    },
+    {
+      "source": "/api/admin/outreach",
+      "destination": "/api/outreach-desk"
+    },
+    {
+      "source": "/api/admin/outreach/",
+      "destination": "/api/outreach-desk"
+    },
+    {
+      "source": "/api/admin/outreach/:path*",
+      "destination": "/api/outreach-desk?route=:path*"
     },
     {
       "source": "/api/:path*",
