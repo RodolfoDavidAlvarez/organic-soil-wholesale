@@ -1,3 +1,5 @@
+import { SCHOOL_HOLD_METADATA_KEY, SCHOOL_HOLD_METADATA_VALUE } from './checkoutDiscount.js';
+
 export class CheckoutConfirmationError extends Error {
   constructor(message, status = 400) {
     super(message);
@@ -39,6 +41,12 @@ function purchaseSummary(order, items, session) {
   };
 }
 
+function schoolHoldReady(session) {
+  return session?.metadata?.[SCHOOL_HOLD_METADATA_KEY] === SCHOOL_HOLD_METADATA_VALUE
+    && session.status === 'complete'
+    && session.payment_status === 'unpaid';
+}
+
 /** Verify the caller's checkout-session bearer token before returning an order summary. */
 export async function confirmPaidCheckout({ db, orderId, sessionId, retrieveSession, fulfillOrder }) {
   const id = Number(orderId);
@@ -68,7 +76,7 @@ export async function confirmPaidCheckout({ db, orderId, sessionId, retrieveSess
       || session.mode !== 'payment') {
     throw new CheckoutConfirmationError('Checkout session does not match this order', 403);
   }
-  if (session.payment_status !== 'paid') {
+  if (session.payment_status !== 'paid' && !schoolHoldReady(session)) {
     return { payload: { ok: false, pending: true, paymentStatus: session.payment_status }, session };
   }
 
@@ -81,6 +89,17 @@ export async function confirmPaidCheckout({ db, orderId, sessionId, retrieveSess
     items = result.data || [];
   } else {
     const result = await fulfillOrder(id, session);
+    if (result?.voided || result?.refunded) {
+      return {
+        payload: {
+          ok: false,
+          voided: result.voided === true,
+          refunded: result.refunded === true,
+          error: result.error || 'This school code cannot be used on this order.',
+        },
+        session,
+      };
+    }
     if (!result?.ok || !result.order) throw new Error('Failed to confirm order payment');
     confirmedOrder = result.order;
     items = Array.isArray(result.items) ? result.items : [];

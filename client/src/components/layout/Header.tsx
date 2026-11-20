@@ -91,6 +91,7 @@ const Header = () => {
     if (path === "/products") return location === "/products" || location.startsWith("/products/");
     if (path === "/offers") return location === "/offers" || location.startsWith("/offers/") || location.startsWith("/deals");
     if (path === "/careers") return location === "/careers" || location.startsWith("/careers/");
+    if (path === "/schools") return location === "/schools" || location.startsWith("/schools/");
     return location === path;
   };
 
@@ -102,6 +103,7 @@ const Header = () => {
   const navLinks = [
     { name: "Products", path: "/products" },
     { name: "Deals", path: "/offers" },
+    { name: "Schools", path: "/schools", mobileOnly: true },
     { name: "About Us", path: "/about" },
     { name: "Operations", path: "/operations" },
     { name: "Careers", path: "/careers" },
@@ -225,7 +227,7 @@ const Header = () => {
             </div>
 
             {/* Other Navigation Links */}
-            {navLinks.slice(1).map((link) => (
+            {navLinks.slice(1).filter((link) => !("mobileOnly" in link && link.mobileOnly)).map((link) => (
               <Link key={link.path} href={link.path} className={navItemClass(isActive(link.path))} aria-current={isActive(link.path) ? "page" : undefined}>
                   {link.name}
                   {isActive(link.path) ? (

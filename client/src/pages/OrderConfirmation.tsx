@@ -46,7 +46,8 @@ const PURCHASE_TRACKED_PREFIX = 'osw-purchase-tracked:';
 const OrderConfirmation: React.FC = () => {
   const [, navigate] = useLocation();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
-  const [confirmationStatus, setConfirmationStatus] = useState<'checking' | 'confirmed' | 'pending' | 'error' | 'missing'>('checking');
+  const [confirmationStatus, setConfirmationStatus] = useState<'checking' | 'confirmed' | 'pending' | 'error' | 'missing' | 'voided' | 'refunded'>('checking');
+  const [releaseMessage, setReleaseMessage] = useState<string | null>(null);
   const [confirmationAttempt, setConfirmationAttempt] = useState(0);
   const trackedPurchases = useRef(new Set<string>());
 
@@ -130,11 +131,20 @@ const OrderConfirmation: React.FC = () => {
           sessionId: sessionId || undefined,
         }),
       })
-        .then((response) => (response.ok ? response.json() : null))
+        .then(async (response) => {
+          const payload = await response.json().catch(() => null);
+          if (response.ok || payload?.pending || payload?.voided || payload?.refunded) return payload;
+          return null;
+        })
         .then((payload) => {
           if (!active || !fallbackOrder) return;
           const confirmed = payload?.ok ? mergeConfirmedOrder(payload, fallbackOrder) : fallbackOrder;
           setOrderDetails(confirmed);
+          if (payload?.voided || payload?.refunded) {
+            setReleaseMessage(typeof payload.error === 'string' ? payload.error : null);
+            setConfirmationStatus(payload.voided ? 'voided' : 'refunded');
+            return;
+          }
           if (payload?.ok || confirmed.freeOrder) {
             setConfirmationStatus('confirmed');
             trackPurchaseOnce(confirmed);
@@ -165,9 +175,12 @@ const OrderConfirmation: React.FC = () => {
   if (confirmationStatus !== 'confirmed') {
     const checking = confirmationStatus === 'checking';
     const missing = confirmationStatus === 'missing';
+    const released = confirmationStatus === 'voided' || confirmationStatus === 'refunded';
     const heading = checking ? 'Checking your payment'
       : missing ? 'No order found'
       : confirmationStatus === 'pending' ? 'Payment confirmation is pending'
+      : confirmationStatus === 'voided' ? 'Your card was not charged'
+      : confirmationStatus === 'refunded' ? 'The charge was refunded'
       : 'We couldn’t confirm your payment';
     return (
       <>
@@ -175,11 +188,13 @@ const OrderConfirmation: React.FC = () => {
         <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
           <Card className="max-w-md w-full">
             <CardContent className="text-center py-10 space-y-5">
-              <div role="status" aria-live="polite">
+              <div role={checking || confirmationStatus === 'pending' ? 'status' : 'alert'} aria-live="polite">
                 <h1 className="text-2xl font-bold mb-3">{heading}</h1>
                 <p className="text-stone-600">
                   {checking ? 'Please wait while we check the payment status for your order.'
                     : missing ? 'Open the confirmation link from your receipt, or call us for help.'
+                    : released ? (releaseMessage || 'This school code cannot be used on this order. Call us if you need another code.')
+                    : confirmationStatus === 'pending' ? 'We have not finished confirming this payment. Check again in a moment, and do not place another order.'
                     : 'If you already paid, don’t place another order. Check again or call us for help.'}
                 </p>
                 {orderDetails?.orderId && <p className="mt-3 text-sm text-stone-600">Order #{orderDetails.orderId}</p>}
