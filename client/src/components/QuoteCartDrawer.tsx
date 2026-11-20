@@ -14,6 +14,7 @@ import {
   spotsForFormat,
 } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
+import { BundleCartLine } from "@/components/BundleCartLine";
 import { promoBundleHref, getPromoBundleByProductId } from "@shared/promoBundles.js";
 import {
   CART_LOAD_GROUP_HINTS,
@@ -49,7 +50,8 @@ function isWalkingFloorFormat(format: string) {
   return isWalkingFloorDeliveryFormat(format);
 }
 
-function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
+function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice }: {
+  showPrice: boolean;
   item: CartItem;
   removeItem: (id: number, fmt: string) => void;
   updateQuantity: (id: number, fmt: string, q: number) => void;
@@ -61,6 +63,14 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
   const sizeThumb =
     item.sizeImage ||
     (isWalkingFloorFormat(item.format) ? WALKING_FLOOR_IMAGE : undefined);
+
+  if (offer) return (
+    <div className="rounded-2xl bg-white p-4">
+      <BundleCartLine bundle={offer} quantity={item.quantity} priceLabel={showPrice ? fmt(item.unitPrice * item.quantity) : undefined}
+        onOpen={closeDrawer} onQuantity={(quantity) => updateQuantity(item.productId, item.format, quantity)}
+        onRemove={() => removeItem(item.productId, item.format)} />
+    </div>
+  );
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white px-2.5 py-2 shadow-sm">
@@ -112,11 +122,6 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
                   </span>
                 ) : null}
               </p>
-              {offer?.includedLabel ? (
-                <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
-                  {offer.includedLabel}
-                </p>
-              ) : null}
             </div>
             <button
               type="button"
@@ -255,6 +260,7 @@ export const QuoteCartDrawer = () => {
       <LineItem
         key={`${item.productId}-${item.format}`}
         item={item}
+        showPrice={items.length > 1}
         removeItem={removeItem}
         updateQuantity={updateQuantity}
         closeDrawer={closeDrawer}
@@ -303,19 +309,7 @@ export const QuoteCartDrawer = () => {
           ) : (
             <>
               <div className="flex-1 space-y-3 overflow-y-auto py-4">
-                {offerItems.length > 0 && (
-                  <LoadSection
-                    title={CART_LOAD_GROUP_LABELS.offers}
-                    hint={CART_LOAD_GROUP_HINTS.offers}
-                    image={
-                      offerItems[0]?.imageUrl ||
-                      CART_IMAGE_FALLBACKS[offerItems[0].productId] ||
-                      FLATBED_IMAGE
-                    }
-                  >
-                    {renderLines(offerItems)}
-                  </LoadSection>
-                )}
+                {renderLines(offerItems)}
 
                 {/* Flatbed next — mixable load, meter, 10% off. Number trucks only when both exist. */}
                 {flatbedItems.length > 0 && (

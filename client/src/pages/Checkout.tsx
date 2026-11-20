@@ -14,18 +14,16 @@ import { FlatbedLoadMeter } from "@/components/FlatbedLoadMeter";
 import { loadDeliveryDraft, saveDeliveryDraft } from "@/lib/deliveryDraft";
 import { currentDeliveryQuote, deliveryQuoteKey } from "@shared/deliveryQuoteBinding.js";
 import {
-  FLATBED_CAPACITY,
   cartFlatbedSpots,
   fullLoadDiscountAmount,
-  hasFullFlatbedDiscount,
   isWalkingFloorDeliveryFormat,
   requiresPickupHeadsUp,
-  spotsForFormat,
 } from "@/lib/flatbedSpots";
 import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkoutMonitor";
-import { computeAsapPickup, validatePickupIso, PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
+import { computeAsapPickup, validatePickupIso, HOURS_LABEL, PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
+import { BundleCartLine } from "@/components/BundleCartLine";
 import { getPromoBundleByProductId } from "@shared/promoBundles.js";
 import { isSchoolDiscountCode, resolveDiscountCode, schoolLineCaption } from "@shared/checkoutDiscount.js";
 import {
@@ -33,13 +31,11 @@ import {
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
 } from "@shared/phoenixYardPickup.js";
 import {
-  CART_LOAD_GROUP_HINTS,
-  CART_LOAD_GROUP_LABELS,
   partitionPayCartItems,
 } from "@shared/cartLoadGroups.js";
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
-  Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation, Clock, ChevronDown,
+  User as UserIcon, MapPin, Truck, ArrowRight, Navigation, Clock,
   Minus, Plus, Trash2,
 } from "lucide-react";
 
@@ -55,17 +51,6 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
   4101: "/images/offers/flyers/garden-refresh-plus.webp",
   4102: "/images/offers/flyers/big-garden-setup.webp",
 };
-const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
-
-function CartGroupHeading({ title, hint }: { title: string; hint: string }) {
-  return (
-    <div>
-      <p className="text-sm font-bold text-stone-900">{title}</p>
-      <p className="text-[11px] leading-snug text-stone-500">{hint}</p>
-    </div>
-  );
-}
-
 type Fulfillment = "pickup" | "delivery";
 type CheckoutStep = "fulfillment" | "timing" | "customer" | "review";
 type PickupSiteId = (typeof PICKUP_LOCATIONS)[number]["id"];
@@ -275,7 +260,6 @@ const Checkout: React.FC = () => {
   const [deliveryWindow, setDeliveryWindow] = useState("Anytime during business hours");
   /** When a product-page quote exists, show a compact summary instead of re-quoting. */
   const [editingDeliveryQuote, setEditingDeliveryQuote] = useState(false);
-  const [showSummaryItems, setShowSummaryItems] = useState(true);
   const [roughAccess, setRoughAccess] = useState(() =>
     typeof window !== "undefined" ? Boolean(loadDeliveryDraft()?.roughAccess) : false,
   );
@@ -911,7 +895,7 @@ const Checkout: React.FC = () => {
 
   const sideCtaLabel =
     activeStep === "fulfillment" ? "Continue"
-      : activeStep === "timing" ? (fulfillment === "pickup" ? "Confirm ready time" : "Confirm delivery")
+      : activeStep === "timing" ? (fulfillment === "pickup" ? "Continue with this time" : "Confirm delivery")
         : activeStep === "customer" ? "Review and pay"
           : ctaLabel;
   const sideCtaDisabled =
@@ -1195,19 +1179,27 @@ const Checkout: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 p-4 sm:p-5">
-                {groupedPayItems.map((item, index) => (
-                  <React.Fragment key={`${item.productId}-${item.format}`}>
-                    {index === 0 && payGroups.offerItems.length > 0 ? (
-                      <CartGroupHeading
-                        title={CART_LOAD_GROUP_LABELS.offers}
-                        hint={CART_LOAD_GROUP_HINTS.offers}
-                      />
-                    ) : null}
-                  <div className="rounded-xl bg-white">
+                {groupedPayItems.map((item) => {
+                  const bundle = getPromoBundleByProductId(item.productId);
+                  if (bundle) return (
+                    <BundleCartLine key={item.productId} bundle={bundle} quantity={item.quantity}
+                      priceLabel={payItems.length > 1 ? fmt(item.unitPrice * item.quantity) : undefined}
+                      onQuantity={(quantity) => {
+                        updateQuantity(item.productId, item.format, quantity);
+                        trackEvent("Checkout Item Quantity Changed", { product_id: item.productId, format: item.format, quantity });
+                      }}
+                      onRemove={() => {
+                        removeItem(item.productId, item.format);
+                        trackEvent("Checkout Item Removed", { product_id: item.productId, format: item.format });
+                      }} />
+                  );
+                  const image = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
+                  return (
+                  <div key={`${item.productId}-${item.format}`} className="rounded-xl bg-white">
                     <div className="grid grid-cols-[64px_1fr_auto] gap-3 sm:grid-cols-[72px_1fr_auto]">
-                      {item.imageUrl ? (
+                      {image ? (
                         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200 sm:h-[72px] sm:w-[72px]">
-                          <OptimizedImage src={item.imageUrl} alt={item.productName} className="h-full w-full object-contain p-1" />
+                          <OptimizedImage src={image} alt={item.productName} className="h-full w-full object-contain p-1" />
                           {item.sizeImage && (
                             <div className="absolute -bottom-0.5 -right-0.5 h-7 w-7 overflow-hidden rounded-md bg-white ring-2 ring-white shadow-md">
                               <OptimizedImage src={item.sizeImage} alt={item.format} className="h-full w-full object-cover" />
@@ -1222,11 +1214,6 @@ const Checkout: React.FC = () => {
                       <div className="min-w-0">
                         <p className="text-base font-bold leading-tight text-stone-950">{item.productName}</p>
                         <p className="mt-0.5 text-sm leading-tight text-stone-500">{item.format}</p>
-                        {getPromoBundleByProductId(item.productId)?.includedLabel ? (
-                          <p className="mt-0.5 text-xs leading-snug text-stone-500">
-                            {getPromoBundleByProductId(item.productId)?.includedLabel}
-                          </p>
-                        ) : null}
                         <p className="mt-1 text-xs text-stone-500">{fmt(item.unitPrice)} each</p>
                         {schoolApplied && schoolLineCaption(item) ? (
                           <p className="mt-1 text-xs font-bold text-green-700">{schoolLineCaption(item)}</p>
@@ -1282,83 +1269,15 @@ const Checkout: React.FC = () => {
                         </Link>
                     </div>
                   </div>
-                  </React.Fragment>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>}
 
             {/* Pickup OR Delivery card */}
             {activeStep === "timing" && (fulfillment === "pickup" ? (
-              <Card className="rounded-2xl border-stone-200 shadow-sm">
-                <CardHeader className="px-4 py-3 sm:px-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
-                      <Calendar className="h-4 w-4 text-[#b38a58]" />
-                      When will your order be ready?
-                    </CardTitle>
-                    {(fulfillmentSeeded || !hasWalkingFloorDelivery) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveStep("fulfillment");
-                          setError(null);
-                          trackEvent("Checkout Step Viewed", { step: "fulfillment", fulfillment, source: "change_chip" });
-                        }}
-                        className="shrink-0 rounded-full bg-[#264027]/10 px-3 py-1.5 text-xs font-bold text-[#264027] transition hover:bg-[#264027]/15"
-                      >
-                        Pickup · change
-                      </button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 pt-0 sm:px-5">
-                  <div className="mb-3 flex items-start gap-2 rounded-lg bg-stone-50 px-3 py-2.5 text-sm leading-snug text-stone-600">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#264027]" />
-                    <div className="min-w-0 flex-1">
-                      <p>
-                        Pickup at <span className="font-semibold text-stone-800">{selectedPickupSite.shortLabel}</span>
-                        <span className="block text-xs text-stone-500">{selectedPickupSite.addressLine}</span>
-                      </p>
-                      <a
-                        href={selectedPickupSite.directionsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => {
-                          trackEvent("Checkout Pickup Directions", { pickup_site: selectedPickupSite.id });
-                        }}
-                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#264027] underline-offset-2 hover:underline"
-                      >
-                        <Navigation className="h-3.5 w-3.5" />
-                        Get directions &amp; distance
-                      </a>
-                    </div>
-                  </div>
-                  {hasBulkItem && selectedPickupSite.id === "congress" && (
-                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-snug text-amber-900">
-                      <span className="font-bold">Congress bulk pickup</span> is weighed on the scale and can be
-                      ready in about 30 minutes during pickup hours.
-                    </div>
-                  )}
-                  {isPhoenixBulkPickup && (
-                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-snug text-amber-900">
-                      <span className="font-bold">Phoenix bulk pickup</span> is by appointment only and must be
-                      scheduled about 1 week ahead{phoenixBulkOverLimit ? ` (max ${PHOENIX_BULK_MAX_TONS} tons).` : "."}
-                    </div>
-                  )}
-                  {!hasBulkItem && selectedPickupSite.id === "phoenix" && (
-                    <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm leading-snug text-emerald-950">
-                      <span className="font-bold">Phoenix pickup</span> is available for PlantPal Plus, Mikey’s Worm Poop,
-                      Simon’s Gold, Nature’s Blanket and Sabrina Kills Bugs. Loose bulk is compost and mulch by appointment.
-                      {pickupNeedsHeadsUp
-                        ? " Pallet or more needs a scheduled slot."
-                        : " Bags can be ready in about 30 minutes."}
-                    </div>
-                  )}
-                  {phoenixBulkOverLimit && (
-                    <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm leading-snug text-red-900">
-                      This Phoenix bulk load is over the {PHOENIX_BULK_MAX_TONS}-ton limit. Choose Congress pickup or delivery.
-                    </div>
-                  )}
+              <Card className="rounded-2xl border-stone-200 bg-white shadow-sm">
+                <CardContent className="p-5 sm:p-7">
                   <PickupReadyTime
                     key={`${selectedPickupSite.id}-${pickupAllowAsap ? "asap" : "sched"}`}
                     value={pickupReady}
@@ -1366,7 +1285,47 @@ const Checkout: React.FC = () => {
                     allowAsap={pickupAllowAsap}
                     minLeadDays={pickupMinLeadDays}
                     scheduleHelpText={pickupScheduleHelpText}
-                  />
+                  >
+                    <div className="mt-4 flex items-start gap-3">
+                      <MapPin aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-[#264027]" />
+                      <div>
+                        <p className="font-semibold text-stone-900">{selectedPickupSite.name}</p>
+                        <a
+                          href={selectedPickupSite.directionsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => trackEvent("Checkout Pickup Directions", { pickup_site: selectedPickupSite.id })}
+                          className="inline-flex min-h-11 items-center text-sm text-stone-600 underline decoration-stone-300 underline-offset-4"
+                        >
+                          {selectedPickupSite.addressLine}
+                        </a>
+                        <p className="text-xs text-stone-500">{HOURS_LABEL}</p>
+                      </div>
+                    </div>
+                  </PickupReadyTime>
+                  {hasBulkItem && selectedPickupSite.id === "congress" && (
+                    <p className="mt-4 text-sm text-stone-600">Bulk pickup is weighed on the Congress yard scale.</p>
+                  )}
+                  {phoenixBulkOverLimit && (
+                    <p role="alert" className="mt-4 text-sm font-semibold text-red-800">
+                      This load exceeds the {PHOENIX_BULK_MAX_TONS}-ton Phoenix limit. Choose Congress pickup or delivery.
+                    </p>
+                  )}
+                  <div className="mt-5 flex flex-wrap items-center gap-x-5 border-t border-stone-200 pt-4">
+                    <Button type="button" onClick={handleStepCtaClick} disabled={sideCtaDisabled}
+                      className="hidden h-12 rounded-xl bg-[#264027] px-6 font-semibold text-white hover:bg-[#1f3320] lg:inline-flex">
+                      {sideCtaLabel}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
+                    </Button>
+                    {(fulfillmentSeeded || !hasWalkingFloorDelivery) && (
+                      <button type="button" onClick={() => {
+                        setActiveStep("fulfillment");
+                        setError(null);
+                        trackEvent("Checkout Step Viewed", { step: "fulfillment", fulfillment, source: "change_chip" });
+                      }} className="min-h-11 text-sm font-semibold text-[#264027] underline underline-offset-4">
+                        Change pickup or delivery
+                      </button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ) : (
@@ -1721,21 +1680,62 @@ const Checkout: React.FC = () => {
           <div className="min-w-0 space-y-4 lg:order-2 lg:sticky lg:top-20 lg:self-start">
             {activeStep !== "review" && (
             <Card className="overflow-hidden rounded-2xl border-stone-200 shadow-sm">
-              <CardHeader className="border-b border-[#264027]/10 bg-[#264027]/5 px-4 py-3">
-                <CardTitle className="flex items-center justify-between gap-2 text-base">
-                  <span className="inline-flex items-center gap-2">
-                    <ShoppingBag className="h-4 w-4 text-[#264027]" />
-                    {payItems.length} {payItems.length === 1 ? "item" : "items"}
-                  </span>
-                  <span className="font-bold text-[#264027]">{fmt(total)}</span>
-                </CardTitle>
+              <CardHeader className="px-5 pb-1 pt-5">
+                <CardTitle className="text-lg font-semibold tracking-tight text-stone-900">Your order</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 px-4 py-3">
-                {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} compact className="mb-1" suppressVolumeDiscount={schoolApplied} />}
-                <div className="flex items-center justify-between text-sm text-stone-600">
-                  <span>Products</span>
-                  <span>{fmt(productSubtotalGross)}</span>
-                </div>
+              <CardContent className="px-5 pb-5 pt-0">
+                {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} compact className="mt-3" suppressVolumeDiscount={schoolApplied} />}
+                <ul className="divide-y divide-stone-200">
+                  {groupedPayItems.map((item) => {
+                    const bundle = getPromoBundleByProductId(item.productId);
+                    const image = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
+                    const walkingFloor = isWalkingFloorDeliveryFormat(item.format);
+                    const changeQuantity = (quantity: number) => {
+                      updateQuantity(item.productId, item.format, quantity);
+                      trackEvent("Checkout Item Quantity Changed", { product_id: item.productId, format: item.format, quantity, source: "summary" });
+                    };
+                    const remove = () => {
+                      removeItem(item.productId, item.format);
+                      trackEvent("Checkout Item Removed", { product_id: item.productId, format: item.format, source: "summary" });
+                    };
+                    if (bundle) return (
+                      <li key={item.productId} className="py-3">
+                        <BundleCartLine bundle={bundle} quantity={item.quantity} onQuantity={changeQuantity} onRemove={remove}
+                          priceLabel={payItems.length > 1 ? fmt(item.unitPrice * item.quantity) : undefined} />
+                      </li>
+                    );
+                    return (
+                      <li key={`summary-${item.productId}-${item.format}`} className="py-3">
+                        <div className="flex items-center gap-3">
+                          {image ? (
+                            <OptimizedImage src={image} alt="" width={140} q={70} className="h-16 w-16 shrink-0 rounded-lg bg-stone-50 object-contain" />
+                          ) : <Package aria-hidden="true" className="h-12 w-12 shrink-0 text-stone-400" />}
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold leading-tight text-stone-950">{item.productName}</p>
+                            <p className="mt-1 text-sm text-stone-600">{item.format}{item.quantity > 1 && ` · Qty ${item.quantity}`}</p>
+                          </div>
+                          {payItems.length > 1 && <span className="text-sm font-semibold tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>}
+                        </div>
+                        <details className="mt-1 text-sm">
+                          <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-[#36513a]">Item details{!walkingFloor && " & quantity"}</summary>
+                          {walkingFloor ? <p className="text-sm text-stone-600">Qty {item.quantity} · walking-floor load</p> : (
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="inline-flex items-center rounded-xl border border-stone-200">
+                                <button type="button" aria-label={`Decrease quantity of ${item.productName}`} className="grid h-11 w-11 place-items-center disabled:opacity-40" disabled={item.quantity <= 1} onClick={() => changeQuantity(item.quantity - 1)}><Minus className="h-4 w-4" /></button>
+                                <span className="min-w-6 text-center tabular-nums">{item.quantity}</span>
+                                <button type="button" aria-label={`Increase quantity of ${item.productName}`} className="grid h-11 w-11 place-items-center" onClick={() => changeQuantity(item.quantity + 1)}><Plus className="h-4 w-4" /></button>
+                              </div>
+                              <button type="button" aria-label={`Remove ${item.productName}`} className="inline-flex min-h-11 items-center gap-1 px-2 text-stone-600 hover:text-red-700" onClick={remove}><Trash2 className="h-4 w-4" /> Remove</button>
+                            </div>
+                          )}
+                        </details>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {(flatbedOff > 0 || schoolOff > 0 || fulfillment === "delivery" || appliedDiscount?.kind === "test") && (
+                  <div className="flex justify-between py-1 text-sm text-stone-600"><span>Products</span><span>{fmt(productSubtotalGross)}</span></div>
+                )}
                 {flatbedOff > 0 && (
                   <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
                     <span>Full flatbed (10% off)</span>
@@ -1754,174 +1754,13 @@ const Checkout: React.FC = () => {
                     <span>{deliveryQuote ? fmt(deliveryFee) : "—"}</span>
                   </div>
                 )}
-                {(showSummaryItems || activeStep === "fulfillment") && (
-                  <div className="space-y-2 border-t border-stone-100 pt-2">
-                    {groupedPayItems.map((item, index) => {
-                      const lineSpots = spotsForFormat(item.format, item.quantity);
-                      const isWalkingFloorBulk = isWalkingFloorDeliveryFormat(item.format);
-                      const canEditQty = !isWalkingFloorBulk;
-                      const imageUrl = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
-                      const sizeThumb =
-                        item.sizeImage || (isWalkingFloorBulk ? WALKING_FLOOR_IMAGE : undefined);
-                      return (
-                        <React.Fragment key={`summary-${item.productId}-${item.format}`}>
-                        {index === 0 && payGroups.offerItems.length > 0 ? (
-                          <CartGroupHeading
-                            title={CART_LOAD_GROUP_LABELS.offers}
-                            hint={CART_LOAD_GROUP_HINTS.offers}
-                          />
-                        ) : null}
-                        <div
-                          className="rounded-xl border border-stone-200 bg-white px-2.5 py-2 shadow-sm"
-                        >
-                          <div className="flex items-stretch gap-2">
-                            <div className="flex shrink-0 gap-1.5">
-                              {imageUrl ? (
-                                <div className="relative h-24 w-24 overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
-                                  <OptimizedImage
-                                    src={imageUrl}
-                                    alt={item.productName}
-                                    className="h-full w-full object-contain bg-white p-1"
-                                    width={180}
-                                    q={65}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-stone-100 text-stone-400">
-                                  <Package className="h-8 w-8" />
-                                </div>
-                              )}
-                              {sizeThumb ? (
-                                <div className="relative h-24 w-[4.5rem] overflow-hidden rounded-lg bg-[#eef4eb] ring-1 ring-[#264027]/20">
-                                  <OptimizedImage
-                                    src={sizeThumb}
-                                    alt={item.format}
-                                    className="h-full w-full object-cover"
-                                    width={140}
-                                    q={70}
-                                  />
-                                </div>
-                              ) : null}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-1.5">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold leading-tight text-stone-900">
-                                    {item.productName}
-                                  </p>
-                                  <p className="mt-0.5 text-[13px] font-bold leading-snug text-[#264027]">
-                                    {item.format}
-                                    {lineSpots > 0 ? (
-                                      <span className="ml-1.5 font-semibold text-stone-500">
-                                        · +{lineSpots} spot{lineSpots === 1 ? "" : "s"}
-                                      </span>
-                                    ) : null}
-                                  </p>
-                                  {getPromoBundleByProductId(item.productId)?.includedLabel ? (
-                                    <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
-                                      {getPromoBundleByProductId(item.productId)?.includedLabel}
-                                    </p>
-                                  ) : null}
-                                </div>
-                                {canEditQty ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      removeItem(item.productId, item.format);
-                                      trackEvent("Checkout Item Removed", {
-                                        product_id: item.productId,
-                                        format: item.format,
-                                        source: "summary",
-                                      });
-                                    }}
-                                    className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
-                                    aria-label="Remove"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                ) : null}
-                              </div>
-                              {canEditQty ? (
-                                <div className="mt-1.5 flex items-center justify-between gap-2">
-                                  <div className="inline-flex items-center gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        updateQuantity(item.productId, item.format, item.quantity - 1);
-                                        trackEvent("Checkout Item Quantity Changed", {
-                                          product_id: item.productId,
-                                          format: item.format,
-                                          quantity: item.quantity - 1,
-                                          source: "summary",
-                                        });
-                                      }}
-                                      disabled={item.quantity <= 1}
-                                      className="h-7 w-7 rounded-md text-stone-700 hover:bg-stone-100 disabled:opacity-40"
-                                      aria-label="Decrease quantity"
-                                    >
-                                      <Minus className="mx-auto h-3 w-3" />
-                                    </button>
-                                    <span className="w-6 text-center text-xs font-bold">{item.quantity}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        updateQuantity(item.productId, item.format, item.quantity + 1);
-                                        trackEvent("Checkout Item Quantity Changed", {
-                                          product_id: item.productId,
-                                          format: item.format,
-                                          quantity: item.quantity + 1,
-                                          source: "summary",
-                                        });
-                                      }}
-                                      className="h-7 w-7 rounded-md text-stone-700 hover:bg-stone-100"
-                                      aria-label="Increase quantity"
-                                    >
-                                      <Plus className="mx-auto h-3 w-3" />
-                                    </button>
-                                  </div>
-                                  <p className="text-sm font-bold text-[#264027]">
-                                    {fmt(item.unitPrice * item.quantity)}
-                                  </p>
-                                </div>
-                              ) : (
-                                <div className="mt-1.5 flex items-center justify-between gap-2">
-                                  <p className="text-xs text-stone-500">
-                                    Qty {item.quantity} · walking-floor load
-                                  </p>
-                                  <p className="text-sm font-bold text-[#264027]">
-                                    {fmt(item.unitPrice * item.quantity)}
-                                  </p>
-                                </div>
-                              )}
-                              {lineSpots > 0 && hasFlatbedSpots ? (
-                                <p className="mt-1 text-[11px] font-medium text-stone-500">
-                                  {schoolApplied
-                                    ? "School rate replaces other discounts"
-                                    : hasFullFlatbedDiscount(flatbedSpots)
-                                    ? "Full load · 10% off"
-                                    : flatbedSpots > FLATBED_CAPACITY
-                                      ? "Over one flatbed"
-                                      : `${FLATBED_CAPACITY - flatbedSpots} left for 10% off`}
-                                </p>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
+                {appliedDiscount?.kind === "test" && (
+                  <div className="flex justify-between py-1 text-sm text-emerald-700"><span>Discount</span><span>−{fmt(discountAmount)}</span></div>
                 )}
-                {activeStep !== "fulfillment" && (
-                  <button
-                    type="button"
-                    onClick={() => setShowSummaryItems((v) => !v)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#264027]"
-                  >
-                    {showSummaryItems ? "Hide items" : "Show order items"}
-                    <ChevronDown className={cn("h-3.5 w-3.5 transition", showSummaryItems && "rotate-180")} />
-                  </button>
-                )}
+                <div className="mt-2 flex items-baseline justify-between border-t border-stone-200 pt-3 font-semibold text-stone-950">
+                  <span>{fulfillment === "delivery" && !deliveryQuote ? "Subtotal" : "Total"}</span>
+                  <span className="text-xl tabular-nums">{fmt(total)}</span>
+                </div>
               </CardContent>
             </Card>
             )}
@@ -2035,7 +1874,8 @@ const Checkout: React.FC = () => {
               </div>
             )}
 
-            {/* Desktop CTA */}
+            {/* Pickup timing keeps its desktop action beside the selected time. */}
+            {!(activeStep === "timing" && fulfillment === "pickup") && <>
             <Button
               type={activeStep === "review" ? "submit" : "button"}
               onClick={handleStepCtaClick}
@@ -2068,6 +1908,7 @@ const Checkout: React.FC = () => {
                   ? "Secure Stripe checkout. We'll call to schedule delivery after payment."
                   : "Secure Stripe checkout. We'll have your order ready at the time shown above."}
             </p>
+            </>}
           </div>
         </div>
 

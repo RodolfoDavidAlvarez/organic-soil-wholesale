@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Calendar } from "lucide-react";
+import type { ReactNode } from "react";
+import { Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   computeAsapPickup,
-  HOURS_LABEL,
 } from "@shared/pickupSchedule.js";
 import { PickupSlotPicker, type PickupSelection } from "@/components/PickupSlotPicker";
 
@@ -26,6 +26,7 @@ interface PickupReadyTimeProps {
   allowAsap?: boolean;
   minLeadDays?: number;
   scheduleHelpText?: string;
+  children: ReactNode;
 }
 
 type AsapResult = ReturnType<typeof computeAsapPickup>;
@@ -58,6 +59,7 @@ export function PickupReadyTime({
   allowAsap = true,
   minLeadDays = 0,
   scheduleHelpText,
+  children,
 }: PickupReadyTimeProps) {
   const [mode, setMode] = useState<PickupTimingMode>(allowAsap ? (value?.pickupMode ?? "asap") : "schedule");
   const [tick, setTick] = useState(0);
@@ -111,85 +113,29 @@ export function PickupReadyTime({
   const displayAsap = value?.pickupMode === "asap" ? value : asapSelection(computedAsap);
 
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className={cn("grid gap-2", allowAsap ? "grid-cols-2" : "grid-cols-1")}>
-        {allowAsap && (
-        <button
-          type="button"
-          onClick={() => setMode("asap")}
-          className={cn(
-            "flex min-h-[52px] flex-col items-start justify-center gap-0.5 rounded-xl border px-3 py-2.5 text-left transition touch-manipulation",
-            mode === "asap"
-              ? "border-[#264027] bg-[#264027]/10 text-[#264027] shadow-[inset_0_0_0_1px_#264027]"
-              : "border-stone-200 bg-white text-stone-700 hover:border-stone-400",
-          )}
-        >
-          <span className="flex items-center gap-1.5 text-sm font-bold">
-            <Clock className="h-4 w-4" /> ASAP
-          </span>
-          <span className="text-[11px] font-medium text-stone-500">
-            {displayAsap?.status === "asap"
-              ? "Ready in about 30 min"
-              : displayAsap?.readyLabel
-                ? displayAsap.readyLabel.replace(/^Ready\s+/i, "")
-                : "Next open window"}
-          </span>
-        </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setMode("schedule")}
-          className={cn(
-            "flex min-h-[52px] flex-col items-start justify-center gap-0.5 rounded-xl border px-3 py-2.5 text-left transition touch-manipulation",
-            mode === "schedule"
-              ? "border-[#264027] bg-[#264027]/10 text-[#264027] shadow-[inset_0_0_0_1px_#264027]"
-              : "border-stone-200 bg-white text-stone-700 hover:border-stone-400",
-          )}
-        >
-          <span className="flex items-center gap-1.5 text-sm font-bold">
-            <Calendar className="h-4 w-4" /> Schedule
-          </span>
-          <span className="text-[11px] font-medium text-stone-500">
-            {minLeadDays > 0 ? `At least ${minLeadDays} days out` : "Pick a time slot"}
-          </span>
-        </button>
+    <div className={cn("space-y-5", className)}>
+      <div>
+        <h2 className="text-[clamp(1.65rem,4vw,2.25rem)] font-semibold leading-tight tracking-tight text-stone-950">
+          {mode === "asap" ? displayAsap?.readyLabel ?? "Calculating pickup time…" : "Choose a pickup time"}
+        </h2>
+        {children}
       </div>
-
-      {mode === "asap" ? (
-        <div className="rounded-xl border border-[#264027]/20 bg-[#264027]/5 px-4 py-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#264027]/10">
-              <Clock className="h-5 w-5 text-[#264027]" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-bold leading-snug text-stone-900">
-                {displayAsap?.readyLabel ?? "Calculating ready time…"}
-              </p>
-              <p className="mt-1 text-sm leading-snug text-stone-600">
-                {displayAsap?.status === "asap"
-                  ? "We'll start preparing your order as soon as you pay."
-                  : "Your order will be prepared for the next available window."}
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <>
-          {scheduleHelpText && (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-medium leading-snug text-amber-900">
-              {scheduleHelpText}
-            </p>
-          )}
+      {mode === "schedule" && (
+        <div className="space-y-4">
+          {scheduleHelpText && <p className="text-sm text-stone-600">{scheduleHelpText}</p>}
           <PickupSlotPicker value={scheduleSlot} onChange={setScheduleSlot} minLeadDays={minLeadDays} />
-          {!scheduleSlot && (
-            <p className="text-xs font-medium text-stone-500">
-              Select a date and time slot to continue.
-            </p>
-          )}
-        </>
+        </div>
       )}
-
-      <p className="text-xs text-stone-500">{HOURS_LABEL}</p>
+      {allowAsap && (
+        <button
+          type="button"
+          onClick={() => setMode(mode === "asap" ? "schedule" : "asap")}
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 text-sm font-semibold text-[#264027] hover:bg-stone-50 focus-visible:ring-2"
+        >
+          <Calendar aria-hidden="true" className="h-4 w-4" />
+          {mode === "asap" ? "Choose another time" : "Use next available pickup"}
+        </button>
+      )}
     </div>
   );
 }
