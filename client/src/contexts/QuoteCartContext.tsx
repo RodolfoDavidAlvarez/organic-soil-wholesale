@@ -1,3 +1,4 @@
+import { clearCheckoutDraft } from "@/lib/checkoutTabDraft";
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import {
@@ -74,6 +75,7 @@ export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     saveCart(items);
+    if (!items.some(item => item.mode === "pay")) clearCheckoutDraft();
   }, [items]);
 
   const addItem = useCallback((newItem: CartItem) => {

@@ -1,3 +1,4 @@
+import { clearCheckoutDraft } from "@/lib/checkoutTabDraft";
 import React, { useEffect, useRef, useState } from 'react';
 import SEO from '@/components/layout/SEO';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -146,6 +147,7 @@ const OrderConfirmation: React.FC = () => {
             return;
           }
           if (payload?.ok || confirmed.freeOrder) {
+            clearCheckoutDraft(String(confirmed.orderId));
             setConfirmationStatus('confirmed');
             trackPurchaseOnce(confirmed);
             try {

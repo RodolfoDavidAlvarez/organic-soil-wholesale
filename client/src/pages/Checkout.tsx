@@ -1,5 +1,7 @@
+import { readCheckoutDraft, saveCheckoutDraft, markCheckoutDraftPending } from "@/lib/checkoutTabDraft";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
+import { useCheckoutStepHistory, type CheckoutStep } from "@/hooks/useCheckoutStepHistory";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import SEO from "@/components/layout/SEO";
 import { Button } from "@/components/ui/button";
@@ -22,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkoutMonitor";
-import { computeAsapPickup, validatePickupIso, HOURS_LABEL, PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
+import { computeAsapPickup, resolveCheckoutPickupTime, validatePickupIso, HOURS_LABEL, PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
 import { BundleCartLine } from "@/components/BundleCartLine";
 import { getPromoBundleByProductId } from "@shared/promoBundles.js";
 import { isSchoolDiscountCode, resolveDiscountCode, schoolLineCaption } from "@shared/checkoutDiscount.js";
@@ -52,7 +54,7 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
   4102: "/images/offers/flyers/big-garden-setup.webp",
 };
 type Fulfillment = "pickup" | "delivery";
-type CheckoutStep = "fulfillment" | "timing" | "customer" | "review";
+
 type PickupSiteId = (typeof PICKUP_LOCATIONS)[number]["id"];
 
 const DELIVERY_WINDOWS = [
@@ -156,6 +158,9 @@ const Checkout: React.FC = () => {
     [payItems],
   );
 
+  const draftCartKey = JSON.stringify(payItems.map(item => JSON.stringify([item.productId, item.format, item.quantity])).sort());
+  const [tabDraft] = useState(() => readCheckoutDraft(draftCartKey));
+
   // One boot read: honor PDP Pick up / Deliver seed; walking-floor alone forces delivery.
   const [checkoutBoot] = useState(() => {
     const walkingFloorInCart = items.some(
@@ -172,6 +177,10 @@ const Checkout: React.FC = () => {
       } catch {
         // ignore
       }
+    }
+
+    if (!pref && tabDraft && (!walkingFloorInCart || tabDraft.fulfillment === "delivery")) {
+      return { fulfillment: tabDraft.fulfillment, seeded: false, step: tabDraft.step, pickupBlockedByWalkingFloor: false };
     }
 
     // Walking-floor in cart cannot be picked up — delivery for the whole order.
@@ -214,7 +223,7 @@ const Checkout: React.FC = () => {
   const [fulfillment, setFulfillment] = useState<Fulfillment>(checkoutBoot.fulfillment);
   const [fulfillmentSeeded] = useState(checkoutBoot.seeded);
   const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>(
-    phoenixPickupBlocked ? "congress" : "phoenix",
+    phoenixPickupBlocked ? "congress" : tabDraft?.pickupSiteId ?? "phoenix",
   );
   const selectedPickupSite = useMemo(
     () => PICKUP_LOCATIONS.find((loc) => loc.id === pickupSiteId) ?? PICKUP_LOCATIONS[0],
@@ -241,10 +250,27 @@ const Checkout: React.FC = () => {
       : undefined;
 
   // Pickup state (ASAP ready time — auto-computed)
-  const [pickupReady, setPickupReady] = useState<PickupReadySelection | null>(null);
+  const [pickupReady, setPickupReady] = useState<PickupReadySelection | null>(() => {
+    if (!tabDraft?.pickupMode) return null;
+    const ready = resolveCheckoutPickupTime({
+      pickupMode: tabDraft.pickupMode,
+      pickupTime: tabDraft.scheduledAt,
+      allowAsap: pickupAllowAsap,
+      minLeadDays: pickupMinLeadDays,
+    });
+    if (!ready.ok || !ready.pickupAtIso || !ready.readyLabel) return null;
+    return {
+      pickupMode: tabDraft.pickupMode,
+      readyAt: ready.pickupAtIso,
+      readyLabel: ready.readyLabel,
+      status: tabDraft.pickupMode === "schedule" ? "scheduled" : "asap",
+      slotLabel: tabDraft.pickupMode === "schedule" ? ready.readyLabel.replace(/^Pickup /, "") : undefined,
+    };
+  });
 
   // Delivery state — seed ZIP / quote from product-page estimate when present
   const [deliveryAddress, setDeliveryAddress] = useState(() => {
+    if (tabDraft) return tabDraft.deliveryAddress;
     const draft = typeof window !== "undefined" ? loadDeliveryDraft() : null;
     return {
       street: "",
@@ -255,31 +281,51 @@ const Checkout: React.FC = () => {
   });
   // Saved drafts have no load identity. Re-price them before showing a payable total.
   const [boundDeliveryQuote, setBoundDeliveryQuote] = useState<{ key: string; quote: TruckingQuote } | null>(null);
-  const [availabilityPreset, setAvailabilityPreset] = useState<AvailabilityPreset>("1-3");
-  const [deliveryFrom, setDeliveryFrom] = useState(() => rangeForPreset("1-3").from);
-  const [deliveryTo, setDeliveryTo] = useState(() => rangeForPreset("1-3").to);
-  const [deliveryWindow, setDeliveryWindow] = useState("Anytime during business hours");
+  const [availabilityPreset, setAvailabilityPreset] = useState<AvailabilityPreset>(tabDraft?.availabilityPreset ?? "1-3");
+  const [deliveryFrom, setDeliveryFrom] = useState(() => tabDraft?.deliveryFrom ?? rangeForPreset("1-3").from);
+  const [deliveryTo, setDeliveryTo] = useState(() => tabDraft?.deliveryTo ?? rangeForPreset("1-3").to);
+  const [deliveryWindow, setDeliveryWindow] = useState(tabDraft?.deliveryWindow ?? "Anytime during business hours");
   /** When a product-page quote exists, show a compact summary instead of re-quoting. */
   const [editingDeliveryQuote, setEditingDeliveryQuote] = useState(false);
   const [roughAccess, setRoughAccess] = useState(() =>
-    typeof window !== "undefined" ? Boolean(loadDeliveryDraft()?.roughAccess) : false,
+    tabDraft?.roughAccess ?? (typeof window !== "undefined" ? Boolean(loadDeliveryDraft()?.roughAccess) : false),
   );
   // Default true: assume the customer has semi-truck access. They opt out
   // explicitly if they don't, which triggers an ops notification.
   const [semiAccess, setSemiAccess] = useState(() => {
+    if (tabDraft) return tabDraft.semiAccess;
     if (typeof window === "undefined") return true;
     const draft = loadDeliveryDraft();
     return draft ? draft.semiAccess !== false : true;
   });
 
   // Customer
-  const [name, setName] = useState("");
-  const [company, setCompany] = useState("");
-  const [customerCategory, setCustomerCategory] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [notes, setNotes] = useState("");
-  const [activeStep, setActiveStep] = useState<CheckoutStep>(checkoutBoot.step);
+  const [name, setName] = useState(tabDraft?.name ?? "");
+  const [company, setCompany] = useState(tabDraft?.company ?? "");
+  const [customerCategory, setCustomerCategory] = useState(tabDraft?.customerCategory ?? "");
+  const [email, setEmail] = useState(tabDraft?.email ?? "");
+  const [phone, setPhone] = useState(tabDraft?.phone ?? "");
+  const [notes, setNotes] = useState(tabDraft?.notes ?? "");
+  const [initialStep] = useState<CheckoutStep>(() => {
+    if (checkoutBoot.step === "customer" || checkoutBoot.step === "review") {
+      // A delivery price must be reviewed afresh. Expired pickup slots must be replaced.
+      if (fulfillment === "delivery" || !pickupReady) return "timing";
+    }
+    return checkoutBoot.step;
+  });
+  const [activeStep, setActiveStep] = useCheckoutStepHistory(initialStep);
+  const pickupMode = pickupReady?.pickupMode ?? null;
+  const scheduledAt = pickupMode === "schedule" ? pickupReady?.readyAt ?? null : null;
+  useEffect(() => {
+    if (!payItems.length) return;
+    saveCheckoutDraft(draftCartKey, {
+      fulfillment, step: activeStep, pickupSiteId, pickupMode, scheduledAt, deliveryAddress,
+      availabilityPreset, deliveryFrom, deliveryTo, deliveryWindow, roughAccess, semiAccess,
+      name, company, customerCategory, email, phone, notes,
+    });
+  }, [draftCartKey, payItems.length, fulfillment, activeStep, pickupSiteId, pickupMode, scheduledAt,
+    deliveryAddress, availabilityPreset, deliveryFrom, deliveryTo, deliveryWindow, roughAccess,
+    semiAccess, name, company, customerCategory, email, phone, notes]);
   const [devModeLabel, setDevModeLabel] = useState<string | null>(null);
 
   const quoteItems = useMemo(
@@ -369,10 +415,13 @@ const Checkout: React.FC = () => {
     };
   }, [deliveryAddress.zip]);
 
+  const checkedInitialTruckDraft = useRef(false);
   // Walking-floor + saved ZIP → jump to address — but not when pickup was blocked (show conflict first).
   useEffect(() => {
+    if (checkedInitialTruckDraft.current) return;
+    checkedInitialTruckDraft.current = true;
     if (!hasWalkingFloorDelivery || activeStep !== "fulfillment") return;
-    if (checkoutBoot.pickupBlockedByWalkingFloor) return;
+    if (checkoutBoot.pickupBlockedByWalkingFloor || tabDraft) return;
     const draft = loadDeliveryDraft();
     if (draft?.zip && draft?.quote) {
       setActiveStep("timing");
@@ -399,7 +448,7 @@ const Checkout: React.FC = () => {
     if (!boundDeliveryQuote || deliveryQuote) return;
     setBoundDeliveryQuote(null);
     setEditingDeliveryQuote(true);
-    saveDeliveryDraft({ ...deliveryAddress, roughAccess, semiAccess, quote: null });
+    saveDeliveryDraft({ zip: deliveryAddress.zip, city: deliveryAddress.city, state: deliveryAddress.state, roughAccess, semiAccess, quote: null });
     if (fulfillment === "delivery") {
       setActiveStep("timing");
       setError("Your order or delivery details changed. Get an updated delivery price before continuing.");
@@ -788,6 +837,7 @@ const Checkout: React.FC = () => {
           orderId: data.orderId,
           stripeSessionId: data.sessionId,
         });
+        markCheckoutDraftPending(draftCartKey, data.orderId);
         window.location.assign(data.url);
         return;
       }
@@ -917,6 +967,11 @@ const Checkout: React.FC = () => {
   };
 
   const goBack = () => {
+    if (stepIndex > 0) {
+      setError(null);
+      setActiveStep(stepMeta[stepIndex - 1].key);
+      return;
+    }
     if (window.history.length > 1) {
       window.history.back();
       return;
@@ -939,7 +994,7 @@ const Checkout: React.FC = () => {
               className="h-10 min-h-[40px] rounded-full px-3 text-stone-700 touch-manipulation"
             >
               <ArrowLeft className="mr-1 h-5 w-5" />
-              Back
+              {stepIndex > 0 ? `Back to ${stepMeta[stepIndex - 1].label}` : "Back"}
             </Button>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-stone-950 sm:text-3xl">Checkout</h1>
@@ -965,8 +1020,8 @@ const Checkout: React.FC = () => {
               <div className="grid grid-cols-4 gap-1">
                 {stepMeta.map((step, index) => {
                   const isActive = step.key === activeStep;
-                  const isComplete = step.complete && !isActive;
-                  const canOpen = index <= stepIndex || step.complete || step.key === "fulfillment";
+                  const isComplete = index < stepIndex && step.complete;
+                  const canOpen = index <= stepIndex;
 
                   return (
                     <button
@@ -974,6 +1029,7 @@ const Checkout: React.FC = () => {
                       type="button"
                       disabled={!canOpen}
                       aria-current={isActive ? "step" : undefined}
+                      aria-label={isComplete ? `Edit ${step.label}` : undefined}
                       onClick={() => {
                         if (canOpen) {
                           setActiveStep(step.key);
@@ -1003,7 +1059,7 @@ const Checkout: React.FC = () => {
                       >
                         {isComplete ? <CheckCircle2 className="h-3.5 w-3.5" /> : index + 1}
                       </span>
-                      <span className="truncate">{step.label}</span>
+                      <span className={cn("truncate", isComplete && "underline underline-offset-2")}>{step.label}</span>
                     </button>
                   );
                 })}
@@ -1013,7 +1069,7 @@ const Checkout: React.FC = () => {
             {/* Fulfillment toggle — first decision the customer makes */}
             {activeStep === "fulfillment" && <Card className="overflow-hidden rounded-2xl border-stone-200 shadow-sm">
               <CardHeader className="px-4 pb-2 pt-4 sm:px-5">
-                <CardTitle className="text-xl leading-tight sm:text-2xl">How do you want it?</CardTitle>
+                <CardTitle className="text-xl leading-tight sm:text-2xl">Pickup or delivery?</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-0 sm:px-5">
                 {hasWalkingFloorDelivery && (
@@ -1043,6 +1099,7 @@ const Checkout: React.FC = () => {
                   <button
                     type="button"
                     disabled={hasWalkingFloorDelivery}
+                    aria-pressed={fulfillment === "pickup"}
                     onClick={() => {
                       if (!hasWalkingFloorDelivery) {
                         setFulfillment("pickup");
@@ -1067,11 +1124,12 @@ const Checkout: React.FC = () => {
                         ? "Remove walking-floor to enable pickup"
                         : pickupNeedsHeadsUp
                           ? "Pallet or more · schedule a heads-up slot"
-                          : "Bags · ready in about 30 minutes"}
+                          : "Choose your pickup yard"}
                     </span>
                   </button>
                   <button
                     type="button"
+                    aria-pressed={fulfillment === "delivery"}
                     onClick={() => {
                       setFulfillment("delivery");
                       trackEvent("Checkout Fulfillment Selected", { fulfillment: "delivery", has_truckload_item: hasWalkingFloorDelivery });
@@ -1118,6 +1176,7 @@ const Checkout: React.FC = () => {
                           <button
                             type="button"
                             disabled={phoenixDisabled}
+                            aria-pressed={pickupSiteId === loc.id}
                             onClick={() => {
                               if (phoenixDisabled) return;
                               setPickupSiteId(loc.id);
@@ -1132,42 +1191,24 @@ const Checkout: React.FC = () => {
                               pickupSiteId === loc.id ? "text-[#264027]" : "text-stone-700",
                             )}
                           >
-                            <span className="text-sm font-bold leading-tight">{loc.shortLabel}</span>
+                            <span className="text-sm font-bold leading-tight">{loc.shortLabel}{pickupSiteId === loc.id && <CheckCircle2 aria-hidden="true" className="ml-2 inline-block h-4 w-4" />}</span>
                             <span className="text-[11px] font-medium leading-snug text-stone-500">{loc.addressLine}</span>
-                            {loc.pickupNote && (
-                              <span
-                                className={cn(
-                                  "mt-0.5 text-[11px] font-bold leading-snug",
-                                  pickupSiteId === loc.id ? "text-[#264027]" : "text-stone-600",
-                                )}
-                              >
-                                {loc.pickupNote}
-                              </span>
-                            )}
                           </button>
-                          <a
-                            href={loc.directionsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => {
-                              trackEvent("Checkout Pickup Directions", { pickup_site: loc.id });
-                            }}
-                            className={cn(
-                              "flex min-h-[40px] items-center justify-center gap-1.5 border-t px-3 py-2 text-xs font-semibold transition touch-manipulation",
-                              pickupSiteId === loc.id
-                                ? "border-[#264027]/20 bg-[#264027]/5 text-[#264027] hover:bg-[#264027]/10"
-                                : "border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100",
-                            )}
-                          >
-                            <Navigation className="h-3.5 w-3.5" />
-                            Directions &amp; distance
-                          </a>
                         </div>
                         );
                       })}
                     </div>
+                    <a href={selectedPickupSite.directionsUrl} target="_blank" rel="noopener noreferrer"
+                      onClick={() => trackEvent("Checkout Pickup Directions", { pickup_site: selectedPickupSite.id })}
+                      className="inline-flex min-h-11 items-center gap-2 text-sm text-stone-600 underline underline-offset-4">
+                      <Navigation aria-hidden="true" className="h-4 w-4" /> Directions to {selectedPickupSite.shortLabel}
+                    </a>
                   </div>
                 )}
+                <Button type="button" onClick={handleStepCtaClick}
+                  className="mt-3 hidden h-12 rounded-xl bg-[#264027] px-6 font-semibold text-white hover:bg-[#1f3320] lg:flex">
+                  {sideCtaLabel}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
+                </Button>
               </CardContent>
             </Card>}
 
@@ -1394,7 +1435,7 @@ const Checkout: React.FC = () => {
                           onClick={() => {
                             setBoundDeliveryQuote(null);
                             setEditingDeliveryQuote(true);
-                            saveDeliveryDraft({ ...deliveryAddress, roughAccess, semiAccess, quote: null });
+                            saveDeliveryDraft({ zip: deliveryAddress.zip, city: deliveryAddress.city, state: deliveryAddress.state, roughAccess, semiAccess, quote: null });
                           }}
                           className="shrink-0 text-xs font-semibold text-[#264027] underline-offset-2 hover:underline"
                         >
@@ -1876,7 +1917,7 @@ const Checkout: React.FC = () => {
             )}
 
             {/* Pickup timing keeps its desktop action beside the selected time. */}
-            {!(activeStep === "timing" && fulfillment === "pickup") && <>
+            {activeStep !== "fulfillment" && !(activeStep === "timing" && fulfillment === "pickup") && <>
             <Button
               type={activeStep === "review" ? "submit" : "button"}
               onClick={handleStepCtaClick}
