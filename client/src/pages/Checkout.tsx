@@ -1,7 +1,7 @@
 import { readCheckoutDraft, saveCheckoutDraft, markCheckoutDraftPending } from "@/lib/checkoutTabDraft";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
-import { useCheckoutStepHistory, type CheckoutStep } from "@/hooks/useCheckoutStepHistory";
+import { limitCheckoutStep, requestedCheckoutStep, useCheckoutStepHistory, type CheckoutStep } from "@/hooks/useCheckoutStepHistory";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import SEO from "@/components/layout/SEO";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ import {
 
 const fmt = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+
+const checkoutPickupSites = [...PICKUP_LOCATIONS].sort((a, b) => Number(b.id === "phoenix") - Number(a.id === "phoenix"));
 
 const CART_IMAGE_FALLBACKS: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg",
@@ -306,26 +308,6 @@ const Checkout: React.FC = () => {
   const [email, setEmail] = useState(tabDraft?.email ?? "");
   const [phone, setPhone] = useState(tabDraft?.phone ?? "");
   const [notes, setNotes] = useState(tabDraft?.notes ?? "");
-  const [initialStep] = useState<CheckoutStep>(() => {
-    if (checkoutBoot.step === "customer" || checkoutBoot.step === "review") {
-      // A delivery price must be reviewed afresh. Expired pickup slots must be replaced.
-      if (fulfillment === "delivery" || !pickupReady) return "timing";
-    }
-    return checkoutBoot.step;
-  });
-  const [activeStep, setActiveStep] = useCheckoutStepHistory(initialStep);
-  const pickupMode = pickupReady?.pickupMode ?? null;
-  const scheduledAt = pickupMode === "schedule" ? pickupReady?.readyAt ?? null : null;
-  useEffect(() => {
-    if (!payItems.length) return;
-    saveCheckoutDraft(draftCartKey, {
-      fulfillment, step: activeStep, pickupSiteId, pickupMode, scheduledAt, deliveryAddress,
-      availabilityPreset, deliveryFrom, deliveryTo, deliveryWindow, roughAccess, semiAccess,
-      name, company, customerCategory, email, phone, notes,
-    });
-  }, [draftCartKey, payItems.length, fulfillment, activeStep, pickupSiteId, pickupMode, scheduledAt,
-    deliveryAddress, availabilityPreset, deliveryFrom, deliveryTo, deliveryWindow, roughAccess,
-    semiAccess, name, company, customerCategory, email, phone, notes]);
   const [devModeLabel, setDevModeLabel] = useState<string | null>(null);
 
   const quoteItems = useMemo(
@@ -338,6 +320,31 @@ const Checkout: React.FC = () => {
   latestQuoteRequest.current = { cart: quoteCartKey, request: quoteRequestKey };
   // Derive validity during render: no one-frame window where an old price can be paid.
   const deliveryQuote: TruckingQuote | null = currentDeliveryQuote(boundDeliveryQuote, quoteRequestKey);
+
+  const timingComplete = fulfillment === "pickup"
+    ? Boolean(pickupReady && !phoenixBulkOverLimit && !hasWalkingFloorDelivery)
+    : Boolean(deliveryQuote && deliveryAddress.street.trim() && deliveryAddress.city.trim() && /^\d{5}$/.test(deliveryAddress.zip));
+  const customerComplete = Boolean(name.trim() && phone.trim() && customerCategory);
+  const lastAllowed: CheckoutStep = !timingComplete ? "timing" : customerComplete ? "review" : "customer";
+  const [initialStep] = useState<CheckoutStep>(() => {
+    if (!tabDraft || checkoutBoot.seeded) return checkoutBoot.step;
+    const requested = requestedCheckoutStep() ?? checkoutBoot.step;
+    // Deep links can return to earlier steps, within the progress saved for this cart.
+    return limitCheckoutStep(limitCheckoutStep(requested, checkoutBoot.step), lastAllowed);
+  });
+  const [activeStep, setActiveStep] = useCheckoutStepHistory(initialStep, lastAllowed);
+  const pickupMode = pickupReady?.pickupMode ?? null;
+  const scheduledAt = pickupMode === "schedule" ? pickupReady?.readyAt ?? null : null;
+  useEffect(() => {
+    if (!payItems.length) return;
+    saveCheckoutDraft(draftCartKey, {
+      fulfillment, step: activeStep, pickupSiteId, pickupMode, scheduledAt, deliveryAddress,
+      availabilityPreset, deliveryFrom, deliveryTo, deliveryWindow, roughAccess, semiAccess,
+      name, company, customerCategory, email, phone, notes,
+    });
+  }, [draftCartKey, payItems.length, fulfillment, activeStep, pickupSiteId, pickupMode, scheduledAt,
+    deliveryAddress, availabilityPreset, deliveryFrom, deliveryTo, deliveryWindow, roughAccess,
+    semiAccess, name, company, customerCategory, email, phone, notes]);
 
   useEffect(() => {
     fetch("/api/site-config")
@@ -891,16 +898,6 @@ const Checkout: React.FC = () => {
       ? "Place free order"
       : `Pay ${fmt(total)}`;
 
-  const timingComplete = fulfillment === "pickup"
-    ? Boolean(pickupReady)
-    : Boolean(
-        deliveryQuote &&
-        deliveryAddress.zip &&
-        deliveryAddress.street.trim() &&
-        deliveryAddress.city.trim()
-      );
-  const customerComplete = Boolean(name.trim() && phone.trim() && customerCategory);
-
   const stepMeta: Array<{ key: CheckoutStep; label: string; complete: boolean }> = [
     {
       key: "fulfillment",
@@ -1159,7 +1156,7 @@ const Checkout: React.FC = () => {
                       Pickup location
                     </p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {PICKUP_LOCATIONS.map((loc) => {
+                      {checkoutPickupSites.map((loc) => {
                         const phoenixDisabled = loc.id === "phoenix" && phoenixPickupBlocked;
                         return (
                         <div
