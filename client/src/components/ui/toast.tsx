@@ -28,7 +28,7 @@ ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 const toastVariants = cva(
   // Compact, less invasive padding (was p-6 pr-8). Extra right padding leaves
   // room for the always-visible close button on mobile.
-  "group pointer-events-auto relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-lg border p-3 pr-11 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-lg border p-3 pr-14 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
   {
     variants: {
       variant: {
@@ -72,13 +72,13 @@ const ToastClose = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Clos
       className={cn(
         // Always visible on touch devices — no more hover-only X.
         // 44x44 touch target so it's actually tappable on a phone.
-        "absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400 group-[.destructive]:text-red-200 group-[.destructive]:hover:bg-red-700/30 group-[.destructive]:hover:text-white group-[.destructive]:focus:ring-red-400",
+        "absolute right-1 top-1/2 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400 group-[.destructive]:text-red-200 group-[.destructive]:hover:bg-red-700/30 group-[.destructive]:hover:text-white group-[.destructive]:focus:ring-red-400",
         className
       )}
       toast-close=""
       {...props}
     >
-      <X className="h-5 w-5" />
+      <X aria-hidden="true" className="h-5 w-5" />
     </ToastPrimitives.Close>
   )
 );

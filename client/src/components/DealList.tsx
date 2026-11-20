@@ -6,8 +6,6 @@ import {
 } from "@shared/promoBundles.js";
 import { cn } from "@/lib/utils";
 import { useQuoteCart, type CartItem } from "@/contexts/QuoteCartContext";
-import { useToast } from "@/components/ui/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { trackEvent } from "@/lib/analytics";
 import {
   Carousel,
@@ -26,7 +24,6 @@ export const fmtDealPrice = (value: number) => `$${value.toFixed(0)}`;
 
 export function useAddDeal() {
   const { addItem, openDrawer } = useQuoteCart();
-  const { toast } = useToast();
 
   return (offer: PromoBundle) => {
     addItem(promoBundleCartItem(offer) as CartItem);
@@ -34,20 +31,6 @@ export function useAddDeal() {
       bundle: offer.slug,
       value: offer.salePrice,
       source: "deals-hub",
-    });
-    toast({
-      title: "Added to your order",
-      description: `${offer.title} · ${fmtDealPrice(offer.salePrice)} Phoenix pickup.`,
-      duration: 4500,
-      action: (
-        <ToastAction
-          altText="View order"
-          onClick={() => openDrawer()}
-          className="border-[#183a23]/25 bg-[#183a23] text-white hover:bg-[#0d2917] hover:text-white"
-        >
-          View order
-        </ToastAction>
-      ),
     });
     openDrawer();
   };
