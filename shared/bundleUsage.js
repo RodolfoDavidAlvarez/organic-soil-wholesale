@@ -17,7 +17,7 @@ const guidance = {
     nextUse: "Use at planting; topdress again as plants need it.",
   },
   "/products/natures-blanket-premium": {
-    purpose: "Spread this mulch over the soil to hold in moisture and limit weeds. As it breaks down, it returns nutrients to the soil.",
+    purpose: "Before the growing season, spread this mulch over garden beds to hold in moisture and limit weeds. The dairy compost and worm castings feed the soil as the mulch breaks down.",
     depth: 2,
     nextUse: "Top up when the layer thins. Keep stems clear.",
   },
