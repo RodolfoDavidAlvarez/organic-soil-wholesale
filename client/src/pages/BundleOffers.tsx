@@ -10,7 +10,6 @@ import { Link, useRoute } from "wouter";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   Leaf,
   MapPin,
   Phone,
@@ -335,28 +334,23 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
           <Link href="/offers">
             <ArrowLeft size={16} aria-hidden="true" /> All deals
           </Link>
-          <span aria-hidden="true">/</span>
-          <span>{offer.title}</span>
         </nav>
         <section
           className="bo-detail-hero"
           aria-labelledby="bundle-detail-heading"
         >
           <div className="bo-detail-intro">
-            <span className="bo-eyebrow">
-              {offer.bagLabel} · Phoenix pickup
-            </span>
+            <p className="bo-offer-meta">{offer.bagLabel} · {offer.volumeLabel} · Phoenix pickup</p>
             <h1 id="bundle-detail-heading">
               {offer.title}
             </h1>
             <p className="bo-lead">{detail.summary}</p>
-            <div className="bo-refresh-deal">
-              <div><span>Individual bags</span><s>{comparisonPrice(bundleComparison[offer.slug])}</s></div>
-              <ArrowRight size={20} aria-hidden="true" />
-              <div><span>Bundle price</span><strong>{fmtDealPrice(offer.salePrice)} <small>+ tax</small></strong></div>
-              <b>You save {comparisonPrice(bundleComparison[offer.slug] - offer.salePrice)}</b>
+            <div className="bo-offer-price">
+              <strong>{fmtDealPrice(offer.salePrice)}</strong>
+              <small>+ tax</small>
+              <s aria-label={`Individual bags ${comparisonPrice(bundleComparison[offer.slug])}`}>{comparisonPrice(bundleComparison[offer.slug])}</s>
             </div>
-            <p className="bo-comparison-note">Pricing preview based on $14.95 dairy compost and $34.90 worm castings bags.</p>
+            <p className="bo-offer-savings">Save {comparisonPrice(bundleComparison[offer.slug] - offer.salePrice)} compared with buying the bags individually.</p>
             <button
               type="button"
               className="bo-button bo-hero-add"
@@ -365,85 +359,56 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
               <ShoppingBag size={19} aria-hidden="true" />
               {justAdded
                 ? "Added to your order"
-                : `Add bundle to order · ${fmtDealPrice(offer.salePrice)}`}
+                : "Add bundle to order"}
             </button>
-            <p className="bo-order-note">
-              Pay online. Pick up at our Phoenix yard. Bed frame not included.
-            </p>
-            <div className="bo-included-summary">
-              <div className="bo-included-heading"><strong>Included in your bundle</strong><span>{offer.volumeLabel}</span></div>
-              <ul>{products.map((product) => (
-                <li key={product.productKey}><span>{product.name}</span><strong>{amountFor(offer, product).replace(" included", "")}</strong></li>
-              ))}</ul>
-              <a href="#bundle-contents-heading">Explore the products <ArrowRight size={14} aria-hidden="true" /></a>
-            </div>
+            <a className="bo-offer-contents-link" href="#bundle-contents-heading">See what’s included <ArrowRight size={15} aria-hidden="true" /></a>
           </div>
           <div className="bo-detail-gallery">
-            <BundleVideo slug={offer.slug} title={offer.title} />
-            <div className="bo-refresh-photo">
-              <img src={bundleGroupImages[offer.slug]} alt={`${offer.title} bundle of bagged garden materials`} loading="lazy" decoding="async" />
-              {offer.slug === "garden-refresh" && <span>3 dairy compost bags free</span>}
-              {offer.slug === "garden-refresh-plus" && <span>3 mulch bags free</span>}
-            </div>
+            <img className="bo-offer-hero-photo" src={bundleGroupImages[offer.slug]} alt={`Bagged products in the ${offer.title} bundle`} fetchPriority="high" decoding="async" />
           </div>
         </section>
         <section
           className="bo-contents-section"
           aria-labelledby="bundle-contents-heading"
         >
-          <div className="bo-section-heading">
-            <div>
-              <span className="bo-eyebrow">Every bag has a job</span>
-              <h2 id="bundle-contents-heading">What’s in your bundle.</h2>
-            </div>
-            <p>What you get and how each material helps your garden.</p>
-          </div>
-          <div className={`bo-refresh-products bo-refresh-products-${products.length}`}>
+          <h2 id="bundle-contents-heading">What’s included</h2>
+          <div className="bo-offer-contents">
+            <div className="bo-offer-products">
             {products.map((product) => {
               const usage = getBundleUsage(offer.items.find((item) => item.href === product.href));
-              return <article className="bo-refresh-product" key={product.productKey}>
+              return <article className="bo-offer-product" key={product.productKey}>
                 <img src={bagImage(product)} alt={`${product.name} bag`} loading="lazy" />
                 <div>
-                  <span>{amountFor(offer, product).replace(" included", "")}</span>
                   <h3>{product.name}</h3>
+                  <span>{amountFor(offer, product).replace(" included", "")}</span>
                   <p>{usage?.purpose || product.purpose}</p>
-                  {usage && <div className="bo-product-usage">
+                  {usage && <details className="bo-offer-use"><summary>How to use it</summary>
                     <small>{usage.perBag}</small>
                     <strong>{usage.coverage}</strong>
                     <p>{usage.application}</p>
-                    <p className="bo-product-topup">{usage.nextUse}</p>
-                  </div>}
+                    <p>{usage.nextUse}</p>
+                  </details>}
                   <Link href={product.href}>Product details <ArrowRight size={15} aria-hidden="true" /></Link>
                 </div>
               </article>;
             })}
           </div>
-          <p className="bo-usage-footnote">Coverage is per product, before settling. A 4×8 bed is 32 sq ft. Depth and plant needs vary; bag weights vary with moisture.</p>
-          <div className="bo-coverage-note">
-            <Leaf size={23} aria-hidden="true" />
-            <div>
-              <strong>Plan the fill. Count mulch separately.</strong>
-              <p>{detail.coverageNote}</p>
-              <p>
-                Included material volume: <strong>{offer.volumeLabel}</strong>.
-                Bed frame, plants, irrigation and tools are not included.
-              </p>
-            </div>
+            <BundleVideo slug={offer.slug} title={offer.title} />
           </div>
+          <details className="bo-offer-coverage">
+            <summary>How much ground will this cover?</summary>
+            <p>{detail.coverageNote}</p>
+            <p>Volume is measured before settling. A 4×8 bed is 32 square feet. The bundle contains growing materials only.</p>
+          </details>
         </section>
         <section
           className="bo-pickup-section"
           aria-labelledby="bundle-pickup-heading"
         >
           <div>
-            <span className="bo-eyebrow">
-              Order here. We’ll see you at the yard.
-            </span>
-            <h2 id="bundle-pickup-heading">Simple local pickup.</h2>
+            <h2 id="bundle-pickup-heading">Pickup details</h2>
             <p>
-              Add the bundle to your order, check out online and bring your
-              confirmation when you pick up. You can add other bags from
-              Products to the same order.
+              Choose your pickup time at checkout and bring your confirmation to the yard.
             </p>
             <PickupDetails />
           </div>
@@ -478,8 +443,7 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
           aria-labelledby="bundle-faq-heading"
         >
           <div>
-            <span className="bo-eyebrow">A few helpful answers</span>
-            <h2 id="bundle-faq-heading">Before you get growing.</h2>
+            <h2 id="bundle-faq-heading">Common questions</h2>
           </div>
           <div className="bo-faq-list">
             {detail.faqs.map((faq) => (
@@ -499,8 +463,7 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
         >
           <div className="bo-section-heading">
             <div>
-              <span className="bo-eyebrow">A different project?</span>
-              <h2 id="other-bundles-heading">Find the right starting point.</h2>
+              <h2 id="other-bundles-heading">Other bundles</h2>
             </div>
             <Link href="/offers">
               See all deals <ArrowRight size={17} aria-hidden="true" />

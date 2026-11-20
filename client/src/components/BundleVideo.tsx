@@ -48,7 +48,7 @@ export function BundleVideo({ slug, title }: { slug: string; title: string }) {
   return (
     <section ref={container} className={`bo-video-inline${expanded ? " bo-video-expanded" : ""}`} role={expanded ? "dialog" : undefined} aria-modal={expanded || undefined} aria-label={`${title} video walkthrough`}>
       <div className="bo-video-topbar">
-        <div><span className="bo-video-eyebrow">See the bundle</span><h2>{title}</h2></div>
+        <h3>Watch the walkthrough</h3>
         <button ref={expandButton} type="button" className="bo-video-expand" onClick={() => setExpanded(value => !value)} aria-label={expanded ? "Close expanded video" : `Expand ${title} video`} aria-expanded={expanded}>
           {expanded ? <Minimize2 size={17} aria-hidden="true" /> : <Maximize2 size={17} aria-hidden="true" />}
           {expanded ? "Close" : "Expand"}
@@ -68,7 +68,6 @@ export function BundleVideo({ slug, title }: { slug: string; title: string }) {
       </div>
       <div className="bo-video-copy">
         <span className="bo-video-duration">{video.duration} · Captions included</span>
-        <p className="bo-video-hint">Starts muted. Turn on sound in the player.</p>
         <a className="bo-video-fallback" href={`https://www.youtube.com/watch?v=${video.youtubeId}`} target="_blank" rel="noopener noreferrer">
           Watch on YouTube<span className="sr-only"> (opens in a new tab)</span>
         </a>
