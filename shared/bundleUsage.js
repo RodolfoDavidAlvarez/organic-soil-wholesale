@@ -1,23 +1,23 @@
 // Coverage uses the catalog's total volume, before settling. See docs/marketing/bundle-videos.
 const guidance = {
   "/products/plantpal": {
-    purpose: "Ready-to-use growing mix for filling beds and planting.",
+    purpose: "A ready-to-use potting mix for raised beds, pots and planters. Fill, plant and water it in.",
     nextUse: "Top up as the soil settles between growing seasons.",
   },
   "/products/simons-gold": {
-    purpose: "Dairy compost for organic matter and slow-release nutrition.",
+    purpose: "Dairy compost that adds organic matter and slowly releases nutrients into your soil.",
     depth: 1,
     weightPerBag: 50,
     nextUse: "Plan for spring and fall top-ups, as needed.",
   },
   "/products/mikeys-worm-poop": {
-    purpose: "Worm castings to support soil biology and growing roots.",
+    purpose: "Worm castings that support soil life around growing roots. Mix them into the planting area or sprinkle them around established plants.",
     depth: 0.5,
     weightPerBag: 45,
     nextUse: "Use at planting; topdress again as plants need it.",
   },
   "/products/natures-blanket-premium": {
-    purpose: "Surface cover to help hold moisture and limit weeds.",
+    purpose: "Spread this mulch over the soil to hold in moisture and limit weeds. As it breaks down, it returns nutrients to the soil.",
     depth: 2,
     nextUse: "Top up when the layer thins. Keep stems clear.",
   },
