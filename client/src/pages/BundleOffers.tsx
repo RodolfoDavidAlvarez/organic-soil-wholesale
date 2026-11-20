@@ -164,6 +164,7 @@ function BundleVisual({
 }
 
 function OffersIndex() {
+  const addDeal = useAddDeal();
   return (
     <main className="bundle-page bo-index">
       <Helmet>
@@ -201,7 +202,7 @@ function OffersIndex() {
                 <div className="bo-grid-pricing"><strong>$945.43</strong><span>+ tax</span><s aria-label="Individual value $1,408.43">$1,408.43</s><span>Save $463</span></div>
                 <p className="bo-bed-card-note">Free Arizona delivery in November 2026. A personal offer link is required to pay. Image is an illustration.</p>
               </div>
-              <a href="/garden-bed-offer.html" className="bo-card-link" aria-label="Explore the Raised Garden Bed Bundle" onClick={() => trackEvent("Garden Bed Offer Clicked", { source: "offers-index" })} />
+              <a href="/garden-bed-offer.html" className="bo-grid-action" aria-label="Explore the Raised Garden Bed Bundle" onClick={() => trackEvent("Garden Bed Offer Clicked", { source: "offers-index" })}>View bed offer <ArrowRight size={15} aria-hidden="true" /></a>
             </article>
             {PROMO_BUNDLES.map((deal) => (
               <article className="bo-deal-card" key={deal.slug}>
@@ -215,7 +216,10 @@ function OffersIndex() {
                     <span>Save {comparisonPrice(bundleComparison[deal.slug] - deal.salePrice)}</span>
                   </div>
                 </div>
-                <Link href={`/offers/${deal.slug}`} className="bo-card-link" aria-label={`Explore ${deal.title}`} onClick={() => trackEvent("Deal Card CTA Clicked", { bundle: deal.slug, source: "offers-index" })} />
+                <div className="bo-grid-actions">
+                  <button className="bo-grid-action" type="button" aria-label={`Add ${deal.title} to cart`} onClick={() => addDeal(deal)}>Add to cart</button>
+                  <Link href={`/offers/${deal.slug}`} className="bo-grid-details" aria-label={`Explore ${deal.title}`} onClick={() => trackEvent("Deal Card CTA Clicked", { bundle: deal.slug, source: "offers-index" })}>Details</Link>
+                </div>
               </article>
             ))}
           </div>
