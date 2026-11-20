@@ -114,7 +114,7 @@ function BundleVisual({
     return (
       <div className="bo-group-image">
         <img src={groupImage.src} alt={groupImage.alt} loading="lazy" />
-        {groupImage.free && <span className="bo-free-badge">{groupImage.free}</span>}
+
       </div>
     );
   }
@@ -178,29 +178,10 @@ function OffersIndex() {
       </Helmet>
       <div className="bo-shell">
         <header className="bo-index-heading">
-          <span className="bo-eyebrow">More growing. Better value.</span>
-          <h1>Garden bundles &amp; deals.</h1>
-          <p>
-            Choose the materials your garden needs. Get a clear bundle price,
-            real product details and local help along the way.
-          </p>
+          <h1>Garden bundles</h1>
+          <p>Choose a complete raised bed or just the materials for a bed you already have.</p>
         </header>
-        <section
-          className="bo-index-bundles"
-          aria-labelledby="pickup-bundles-heading"
-        >
-          <div className="bo-section-heading">
-            <div>
-              <span className="bo-eyebrow">
-                Garden bundles · Arizona
-              </span>
-              <h2 id="pickup-bundles-heading">Find your garden’s next step.</h2>
-            </div>
-            <p>
-              Choose a complete raised bed or a pickup bundle of growing materials.
-            </p>
-          </div>
-          <p className="bo-comparison-note">Pricing preview: individual bag totals use $14.95 for dairy compost and $34.90 for worm castings.</p>
+        <section className="bo-index-bundles" aria-label="Garden bundle options">
           <div className="bo-deal-grid">
             <article className="bo-deal-card bo-bed-card">
               <div className="bo-bed-card-image">
@@ -215,10 +196,9 @@ function OffersIndex() {
                 />
               </div>
               <div className="bo-deal-card-copy">
-                <div className="bo-card-price"><span>4 × 8 ft · 2 ft deep</span><b>Save $463</b></div>
-                <h3>Raised Garden Bed Bundle</h3>
-                <p>A heavy-duty raised bed with soil, mulch and amendments.</p>
-                <div className="bo-card-total"><strong>$945.43</strong><span>+ tax <span className="bo-card-value">Bundle value <s>$1,408.43</s></span></span></div>
+                <span className="bo-grid-name">Raised Garden Bed Bundle</span>
+                <h2>A heavy-duty 4 × 8 ft raised bed with soil, mulch and amendments.</h2>
+                <div className="bo-grid-pricing"><strong>$945.43</strong><span>+ tax</span><s aria-label="Individual value $1,408.43">$1,408.43</s><span>Save $463</span></div>
                 <p className="bo-bed-card-note">Free Arizona delivery in November 2026. A personal offer link is required to pay. Image is an illustration.</p>
               </div>
               <a href="/garden-bed-offer.html" className="bo-card-link" aria-label="Explore the Raised Garden Bed Bundle" onClick={() => trackEvent("Garden Bed Offer Clicked", { source: "offers-index" })} />
@@ -227,16 +207,12 @@ function OffersIndex() {
               <article className="bo-deal-card" key={deal.slug}>
                 <BundleVisual offer={deal} compact />
                 <div className="bo-deal-card-copy">
-                  <div className="bo-card-price">
-                    <span>{deal.bagLabel}</span>
-                  </div>
-                  <h3>{deal.title}</h3>
-                  <p>{getBundleDetails(deal.slug)?.summary}</p>
-                  <div className="bo-price-comparison" aria-label={`Individual bag total ${comparisonPrice(bundleComparison[deal.slug])}, bundle price ${fmtDealPrice(deal.salePrice)} plus tax`}>
-                    <span className="bo-was-price"><small>Individual bags</small><s>{comparisonPrice(bundleComparison[deal.slug])}</s></span>
-                    <ArrowRight size={19} aria-hidden="true" />
-                    <span className="bo-now-price"><small>Bundle price</small><strong>{fmtDealPrice(deal.salePrice)}</strong><span>+ tax</span></span>
-                    <b className="bo-price-saving">You save <strong>{comparisonPrice(bundleComparison[deal.slug] - deal.salePrice)}</strong></b>
+                  <span className="bo-grid-name">{deal.title} · {deal.bagLabel}</span>
+                  <h2>{getBundleDetails(deal.slug)?.summary}</h2>
+                  <div className="bo-grid-pricing">
+                    <strong>{fmtDealPrice(deal.salePrice)}</strong><span>+ tax</span>
+                    <s aria-label={`Individual bags ${comparisonPrice(bundleComparison[deal.slug])}`}>{comparisonPrice(bundleComparison[deal.slug])}</s>
+                    <span>Save {comparisonPrice(bundleComparison[deal.slug] - deal.salePrice)}</span>
                   </div>
                 </div>
                 <Link href={`/offers/${deal.slug}`} className="bo-card-link" aria-label={`Explore ${deal.title}`} onClick={() => trackEvent("Deal Card CTA Clicked", { bundle: deal.slug, source: "offers-index" })} />

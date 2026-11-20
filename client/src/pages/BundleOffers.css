@@ -1947,3 +1947,15 @@
   .bo-offer-product { padding: 12px 0; }
   .bo-detail .bo-pickup-section, .bo-detail .bo-faq-section { margin-top: 26px; padding-top: 18px; gap: 14px; }
 }
+
+/* The deals index reads as a small product catalog. */
+.bo-index .bo-index-heading { padding-block: 24px 16px; margin-bottom: 0; }
+.bo-index .bo-index-heading h1 { font-size: clamp(28px, 4vw, 40px); }
+.bo-index .bo-index-heading p { font-size: 15px; line-height: 1.5; margin-top: 6px; }
+.bo-index .bo-deal-card-copy { padding: 14px 16px 16px; gap: 6px; }
+.bo-index .bo-grid-name { font-size: 13px; font-weight: 550; color: #525b50; }
+.bo-index .bo-deal-card-copy h2 { font-size: clamp(18px, 2vw, 22px); line-height: 1.26; letter-spacing: -.025em; margin: 0; text-wrap: pretty; }
+.bo-index .bo-grid-pricing { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 9px; margin-top: 6px; font-size: 13px; color: #50594e; }
+.bo-index .bo-grid-pricing strong { font-size: 17px; color: #273428; }
+.bo-index .bo-bed-card-note { font-size: 12px; line-height: 1.45; margin: 2px 0 0; }
+.bo-index .bo-deal-card:hover { transform: none; box-shadow: none; }
