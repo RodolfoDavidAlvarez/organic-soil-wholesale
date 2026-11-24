@@ -23,6 +23,8 @@ import DeferredMount from "@/components/DeferredMount";
 import LazyYouTube from "@/components/LazyYouTube";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { DealHubCards } from "@/components/DealList";
+import { StockLeftBadge } from "@/components/StockUrgency";
+import { useInventoryStock } from "@/hooks/useInventoryStock";
 import RaisedGardenBedVideo from "@/components/RaisedGardenBedVideo";
 
 const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarousel"));
@@ -99,6 +101,7 @@ type FeaturedProduct = {
 
 const Home = () => {
   const [, navigate] = useLocation();
+  const { data: stockMap } = useInventoryStock([1000, 1001, 3000]);
 
   const [phoenixLat, phoenixLng] = PHOENIX_YARD_ENTRANCE_COORDINATES.split(",");
   const PHOENIX_COORDINATES = { lat: Number(phoenixLat), lng: Number(phoenixLng) };
@@ -270,12 +273,15 @@ const Home = () => {
           </div>
           <div className="grid gap-3 sm:grid-cols-3 sm:gap-5">
             {[
-              { name: "Simon’s Gold", type: "Dairy compost", use: "Add organic matter to existing soil.", image: "compost", href: "/products/simons-gold", alt: "A handful of Simon’s Gold dairy compost" },
-              { name: "Mikey’s Worm Poop", type: "Worm castings", use: "Top dress plants or add to soil blends.", image: "worm", href: "/products/mikeys-worm-poop", alt: "A close look at our worm castings" },
-              { name: "Nature’s Blanket Premium", type: "Enhanced mulch", use: "Cover the soil to help retain moisture.", image: "mulch", href: "/products/natures-blanket-premium", alt: "Wood fiber mulch held in a hand" },
+              { id: 1000, name: "Simon’s Gold", type: "Dairy compost", use: "Add organic matter to existing soil.", image: "compost", href: "/products/simons-gold", alt: "A handful of Simon’s Gold dairy compost" },
+              { id: 1001, name: "Mikey’s Worm Poop", type: "Worm castings", use: "Top dress plants or add to soil blends.", image: "worm", href: "/products/mikeys-worm-poop", alt: "A close look at our worm castings" },
+              { id: 3000, name: "Nature’s Blanket Premium", type: "Enhanced mulch", use: "Cover the soil to help retain moisture.", image: "mulch", href: "/products/natures-blanket-premium", alt: "Wood fiber mulch held in a hand" },
             ].map((product) => (
               <Link key={product.image} href={product.href} className="group grid grid-cols-[100px_1fr] overflow-hidden rounded-md bg-[#fdfcf8] ring-1 ring-[#264027]/10 transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#264027] sm:block">
-                <img src={`/images/performance/home-product-${product.image}-480.webp`} alt={product.alt} width="480" height="360" loading="lazy" decoding="async" className="h-full min-h-32 w-full object-cover sm:aspect-[2/1] sm:h-auto sm:min-h-0" />
+                <span className="relative block h-full min-h-32 sm:min-h-0">
+                  <img src={`/images/performance/home-product-${product.image}-480.webp`} alt={product.alt} width="480" height="360" loading="lazy" decoding="async" className="h-full min-h-32 w-full object-cover sm:aspect-[2/1] sm:h-auto sm:min-h-0" />
+                  <StockLeftBadge productId={product.id} stockMap={stockMap} />
+                </span>
                 <div className="flex items-center gap-3 p-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6b795b]">{product.type}</p>

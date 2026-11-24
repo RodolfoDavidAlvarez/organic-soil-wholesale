@@ -58,6 +58,7 @@ import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRed
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import { resolvePickupProductName } from '../shared/pickupProductName.js';
 import { inventoryCheckItems, stockKey, stockShortageMessage } from '../shared/inventoryStock.js';
+import { variantBaselines } from '../shared/stockUrgency.js';
 import {
   JOB_APPLICATION_BUCKET,
   JobApplicationError,
@@ -2457,6 +2458,22 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         const stock = {};
         for (const row of data || []) {
           stock[stockKey(row.product_id, row.size_option)] = { available: Math.max(0, Number(row.available) || 0), provisional: row.confirmed !== true };
+        }
+        try {
+          let mapQuery = db.from('inventory_variant_map').select('product_id, size_option, sku_code, units_per_item').eq('location_code', 'phx');
+          if (ids.length) mapQuery = mapQuery.in('product_id', ids);
+          const [{ data: mapRows, error: mapError }, { data: countRows, error: countError }] = await Promise.all([
+            mapQuery,
+            db.from('inventory_movements').select('sku_code, on_hand_after, created_at').eq('location_code', 'phx').eq('kind', 'count').order('created_at', { ascending: true }).limit(500),
+          ]);
+          if (mapError) throw mapError;
+          if (countError) throw countError;
+          const baselines = variantBaselines(mapRows, countRows);
+          for (const [key, baseline] of Object.entries(baselines)) {
+            if (stock[key]) stock[key].baseline = baseline;
+          }
+        } catch (baselineErr) {
+          console.error('[inventory stock] baseline skipped:', baselineErr?.message || baselineErr);
         }
         res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
         return res.json({ stock });

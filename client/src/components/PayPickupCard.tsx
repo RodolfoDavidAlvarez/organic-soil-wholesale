@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { shouldHidePhoenixYardBulkSize } from "@shared/phoenixYardPickup.js";
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
+import { StockLeftBadge } from "@/components/StockUrgency";
+import type { StockMap } from "@shared/inventoryStock.js";
 
 export interface PayPickupProductSize {
   key: string;
@@ -35,6 +37,7 @@ interface PayPickupCardProps {
   backdropImageOverride?: string;
   className?: string;
   priority?: boolean;
+  stockMap?: StockMap | null;
   /**
    * Buy Now button style.
    * - "brand"   (default) — OSW phthalo green, used on /products
@@ -112,7 +115,7 @@ const getSizeCategories = (product: PayPickupProduct) => {
  *  seasonality model so we're not flagging a single product as a one-off. */
 const PRODUCT_SEASONAL_BADGES: Record<number, string> = {};
 
-export function PayPickupCard({ product, heroImageOverride, backdropImageOverride, className, priority = false, buyButtonVariant = "brand" }: PayPickupCardProps) {
+export function PayPickupCard({ product, heroImageOverride, backdropImageOverride, className, priority = false, buyButtonVariant = "brand", stockMap }: PayPickupCardProps) {
   const [, navigate] = useLocation();
   const goToDetail = () => {
     const slug = product.slug || String(product.id);
@@ -200,6 +203,7 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
             )}
           </button>
 
+          <StockLeftBadge productId={product.id} stockMap={stockMap} />
           <div className="pointer-events-none absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-full bg-[#264027] px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-white shadow-lg ring-2 ring-white/80 sm:left-2 sm:top-2 sm:px-3 sm:py-1.5 sm:text-[11px] md:text-xs">
             <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" strokeWidth={2.5} />
             <span className="sm:hidden">Pay</span>

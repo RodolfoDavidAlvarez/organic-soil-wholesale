@@ -20,7 +20,10 @@ import { generateProductSlug } from "@/utils/generateSlug";
 import { extractYouTubeVideoId, YouTubePlayer } from "@/components/YouTubePlayer";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
-import { useInventoryStock, stockForLine, stockLabel } from "@/hooks/useInventoryStock";
+import { useInventoryStock } from "@/hooks/useInventoryStock";
+import { StockUrgencyLine } from "@/components/StockUrgency";
+import { inventoryKeyForLine, stockKey } from "@shared/inventoryStock.js";
+import { primaryBagSizeOption } from "@shared/stockUrgency.js";
 import { ToastAction } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription, getPayPickupProductType } from "@/data/payPickupProductContent";
@@ -1479,11 +1482,16 @@ const ProductDetail = () => {
   const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
   const canPayOnline = product ? isPayOnlineProduct(product.id) : false;
   const { data: stockMap } = useInventoryStock([product?.id]);
-  const selectedStock = product && selectedChoice
-    ? stockForLine(stockMap, { productId: product.id, productName: product.displayTitle, format: selectedChoice.cartLabel })
+  const selectedInventory = product && selectedChoice
+    ? inventoryKeyForLine({ productId: product.id, productName: product.displayTitle, format: selectedChoice.cartLabel })
     : null;
-  const selectedStockLabel = stockLabel(selectedStock);
-  const exceedsStock = Boolean(selectedStock && quantity > selectedStock.available);
+  const shownSize = selectedInventory?.sizeOption ?? (product ? primaryBagSizeOption(product.id) : null);
+  const shownStock = product && shownSize && stockMap ? stockMap[stockKey(product.id, shownSize)] ?? null : null;
+  const selectedStock = selectedInventory && stockMap
+    ? stockMap[stockKey(selectedInventory.productId, selectedInventory.sizeOption)] ?? null
+    : null;
+  const soldOut = Boolean(selectedStock && selectedStock.available <= 0);
+  const exceedsStock = Boolean(selectedStock && selectedStock.available > 0 && quantity > selectedStock.available);
   const phoenixYardPickupOk = product
     ? cartItemAllowsPhoenixYardPickup({
         productId: product.id,
@@ -2166,6 +2174,7 @@ const ProductDetail = () => {
                           : "pt-1",
                       )}
                     >
+                      <StockUrgencyLine entry={shownStock} sizeOption={shownSize} />
                       {buyStep === "sizes" ? (
                         <div className="mb-3 flex items-baseline justify-between gap-3">
                           <p className="text-sm font-semibold text-foreground">Choose a size</p>
@@ -2578,19 +2587,6 @@ const ProductDetail = () => {
                                   </button>
                                 </div>
                               </div>
-                              {selectedStockLabel && (
-                                <span
-                                  data-testid="stock-badge"
-                                  className={cn(
-                                    "rounded-full px-2.5 py-1 text-xs font-semibold",
-                                    selectedStockLabel.tone === "out" ? "bg-red-50 text-red-700 ring-1 ring-red-200"
-                                      : selectedStockLabel.tone === "low" ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200"
-                                      : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200",
-                                  )}
-                                >
-                                  {exceedsStock && selectedStock && selectedStock.available > 0 ? `Only ${selectedStock.available} left` : selectedStockLabel.text}
-                                </span>
-                              )}
                               {needsChoice && (
                                 <p className="text-right text-xl font-bold text-primary">
                                   {fmt(selectedTotal)}
@@ -2651,7 +2647,7 @@ const ProductDetail = () => {
                                   <div className="flex gap-2.5">
                                     <button
                                       type="button"
-                                      disabled={!selectedChoice}
+                                      disabled={!selectedChoice || soldOut}
                                       onClick={() => addSelectionToCart("checkout")}
                                       className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
                                     >
@@ -2661,7 +2657,7 @@ const ProductDetail = () => {
                                     </button>
                                     <button
                                       type="button"
-                                      disabled={!selectedChoice}
+                                      disabled={!selectedChoice || soldOut}
                                       onClick={() => addSelectionToCart()}
                                       aria-label={justAdded ? "Added to order" : "Add to order"}
                                       title={justAdded ? "Added to order" : "Add truckload to order"}
@@ -2706,7 +2702,7 @@ const ProductDetail = () => {
                                   <div className="flex gap-2.5">
                                     <button
                                       type="button"
-                                      disabled={!selectedChoice}
+                                      disabled={!selectedChoice || soldOut}
                                       onClick={() => addSelectionToCart("checkout")}
                                       className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
                                     >
@@ -2716,7 +2712,7 @@ const ProductDetail = () => {
                                     </button>
                                     <button
                                       type="button"
-                                      disabled={!selectedChoice}
+                                      disabled={!selectedChoice || soldOut}
                                       onClick={() => addSelectionToCart()}
                                       aria-label={justAdded ? "Added to flatbed" : "Add to flatbed"}
                                       title={
@@ -2752,7 +2748,7 @@ const ProductDetail = () => {
                                   <div className="flex gap-2.5">
                                     <button
                                       type="button"
-                                      disabled={!selectedChoice}
+                                      disabled={!selectedChoice || soldOut}
                                       onClick={() => addSelectionToCart("checkout")}
                                       className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
                                     >
@@ -2762,7 +2758,7 @@ const ProductDetail = () => {
                                     </button>
                                     <button
                                       type="button"
-                                      disabled={!selectedChoice}
+                                      disabled={!selectedChoice || soldOut}
                                       onClick={() => addSelectionToCart()}
                                       aria-label={justAdded ? "Added to order" : "Add to order"}
                                       title={justAdded ? "Added to order" : "Add to order"}

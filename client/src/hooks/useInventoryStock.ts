@@ -1,11 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { stockForLine, type StockEntry, type StockMap } from "@shared/inventoryStock.js";
+import { cardStockBadge, cartStockNote } from "@shared/stockUrgency.js";
 
 async function fetchStock(productIds: number[]): Promise<StockMap> {
-  const res = await fetch(`/api/inventory/stock?productIds=${productIds.join(",")}`);
-  if (!res.ok) return {};
-  const body = await res.json().catch(() => ({}));
-  return (body?.stock ?? {}) as StockMap;
+  try {
+    const res = await fetch(`/api/inventory/stock?productIds=${productIds.join(",")}`);
+    if (!res.ok) return {};
+    const body = await res.json().catch(() => ({}));
+    return (body?.stock ?? {}) as StockMap;
+  } catch {
+    return {};
+  }
 }
 
 /** Phoenix yard stock for the given products. Untracked variants are absent. */
@@ -20,11 +25,11 @@ export function useInventoryStock(productIds: Array<number | undefined | null>) 
   });
 }
 
-export function stockLabel(entry: StockEntry | null | undefined): { text: string; tone: "ok" | "low" | "out" } | null {
-  if (!entry) return null;
-  if (entry.available <= 0) return { text: "Sold out", tone: "out" };
-  if (entry.available <= 10) return { text: `Only ${entry.available} left`, tone: "low" };
-  return { text: `${entry.available.toLocaleString()} in stock`, tone: "ok" };
+/** Short card/cart label. Null when the variant is untracked. */
+export function stockLabel(entry: StockEntry | null | undefined): { text: string; tone: "ok" | "fast" | "low" | "out" } | null {
+  return cardStockBadge(entry);
 }
+
+export { cartStockNote };
 
 export { stockForLine };

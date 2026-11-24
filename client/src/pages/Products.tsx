@@ -14,6 +14,9 @@ import {
   type FeaturedProductSlot,
 } from "@/data/featuredProducts";
 import { PayPickupGrid } from "@/components/PayPickupGrid";
+import { StockLeftBadge } from "@/components/StockUrgency";
+import { useInventoryStock } from "@/hooks/useInventoryStock";
+import type { StockMap } from "@shared/inventoryStock.js";
 import { CATALOG_SEO, buildLocalBusinessSchema, buildProductsItemListSchema } from "@/config/seo";
 import { trackEvent } from "@/lib/analytics";
 import TrustStrip from "@/components/TrustStrip";
@@ -319,7 +322,7 @@ function DeliveryEligibilityCheck() {
 }
 
 /** Smaller card for specialty / mulch / amendment rows */
-function FeaturedRowCard({ slot, onOpen, ctaLabel = "Request a Quote" }: { slot: FeaturedProductSlot; onOpen: () => void; ctaLabel?: string }) {
+function FeaturedRowCard({ slot, onOpen, ctaLabel = "Request a Quote", stockMap }: { slot: FeaturedProductSlot; onOpen: () => void; ctaLabel?: string; stockMap?: StockMap | null }) {
   return (
     <motion.button
       type="button"
@@ -332,6 +335,7 @@ function FeaturedRowCard({ slot, onOpen, ctaLabel = "Request a Quote" }: { slot:
       className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white p-5 text-left shadow-[0_6px_22px_rgba(38,64,39,0.08)] ring-1 ring-stone-200/60 transition-shadow duration-300 hover:shadow-[0_14px_40px_rgba(38,64,39,0.16)]"
     >
       <div className="group/photo relative aspect-[16/10] overflow-hidden rounded-2xl bg-stone-100">
+        {slot.productId ? <StockLeftBadge productId={slot.productId} stockMap={stockMap} /> : null}
         <OptimizedImage
           src={slot.heroImage ?? slot.thumbnailImage}
           alt={slot.displayTitle}
@@ -381,6 +385,9 @@ function FeaturedRowCard({ slot, onOpen, ctaLabel = "Request a Quote" }: { slot:
 
 const Products = () => {
   const [, navigate] = useLocation();
+  const { data: stockMap } = useInventoryStock(
+    [...SPECIALTY_BLENDS, ...MULCH_PRODUCTS, ...OTHER_AMENDMENTS].map((slot) => slot.productId),
+  );
 
   const openSlot = (slot: FeaturedProductSlot) => {
     trackEvent("Product Card Clicked", {
@@ -515,7 +522,7 @@ const Products = () => {
           </div>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             {SPECIALTY_BLENDS.map((slot) => (
-              <FeaturedRowCard key={slot.slug} slot={slot} onOpen={() => requestQuoteForSlot(slot)} />
+              <FeaturedRowCard key={slot.slug} slot={slot} stockMap={stockMap} onOpen={() => requestQuoteForSlot(slot)} />
             ))}
           </div>
         </div>
@@ -539,7 +546,7 @@ const Products = () => {
           </div>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {MULCH_PRODUCTS.map((slot) => (
-              <FeaturedRowCard key={slot.slug} slot={slot} onOpen={() => openSlot(slot)} ctaLabel="Buy Now" />
+              <FeaturedRowCard key={slot.slug} slot={slot} stockMap={stockMap} onOpen={() => openSlot(slot)} ctaLabel="Buy Now" />
             ))}
           </div>
         </div>
@@ -563,7 +570,7 @@ const Products = () => {
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
             {OTHER_AMENDMENTS.map((slot) => (
-              <FeaturedRowCard key={slot.slug} slot={slot} onOpen={() => requestQuoteForSlot(slot)} />
+              <FeaturedRowCard key={slot.slug} slot={slot} stockMap={stockMap} onOpen={() => requestQuoteForSlot(slot)} />
             ))}
           </div>
         </div>
