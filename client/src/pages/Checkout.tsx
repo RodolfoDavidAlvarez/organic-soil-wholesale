@@ -3,6 +3,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { limitCheckoutStep, requestedCheckoutStep, useCheckoutStepHistory, type CheckoutStep } from "@/hooks/useCheckoutStepHistory";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
+import { useInventoryStock } from "@/hooks/useInventoryStock";
+import { lineStockNote } from "@/components/StockUrgency";
 import SEO from "@/components/layout/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,6 +126,7 @@ const Checkout: React.FC = () => {
   const { items, removeItem, updateQuantity, clearCart } = useQuoteCart();
 
   const payItems = useMemo(() => items.filter((i) => i.mode === "pay"), [items]);
+  const { data: stockMap } = useInventoryStock(payItems.map((item) => item.productId));
   const payQuantity = payItems.reduce((count, item) => count + item.quantity, 0);
   const payGroups = useMemo(() => partitionPayCartItems(payItems), [payItems]);
   const groupedPayItems = useMemo(
@@ -1299,6 +1302,9 @@ const Checkout: React.FC = () => {
                       <div className="min-w-0">
                         <p className="text-base font-bold leading-tight text-stone-950">{item.productName}</p>
                         <p className="mt-0.5 text-sm leading-tight text-stone-500">{item.format}</p>
+                        {lineStockNote(stockMap, item) ? (
+                          <p data-testid="cart-stock-note" className="mt-0.5 text-xs font-semibold text-stone-500">{lineStockNote(stockMap, item)}</p>
+                        ) : null}
                         <p className="mt-1 text-xs text-stone-500">
                           {lineOnSale(item) ? <span className="mr-1 line-through">{fmt(lineRegularUnit(item))}</span> : null}
                           {fmt(lineUnit(item))} each
@@ -1806,6 +1812,9 @@ const Checkout: React.FC = () => {
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold leading-tight text-stone-950">{item.productName}</p>
                             <p className="mt-1 text-sm text-stone-600">{item.format}{item.quantity > 1 && ` · Qty ${item.quantity}`}</p>
+                            {lineStockNote(stockMap, item) ? (
+                              <p data-testid="cart-stock-note" className="mt-0.5 text-xs font-semibold text-stone-500">{lineStockNote(stockMap, item)}</p>
+                            ) : null}
                             {lineOnSale(item) ? (
                               <p className="mt-1 text-xs text-stone-500">
                                 <span className="line-through">{fmt(lineRegularUnit(item) * item.quantity)}</span>

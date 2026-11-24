@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { PayPickupCard, type PayPickupProduct } from "@/components/PayPickupCard";
+import { useInventoryStock } from "@/hooks/useInventoryStock";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY } from "@/config/contact";
 import { getPayPickupProductType } from "@/data/payPickupProductContent";
 import { PHOENIX_YARD_PICKUP_GRID_IDS, shouldHidePhoenixYardBulkSize } from "@shared/phoenixYardPickup.js";
@@ -96,6 +97,7 @@ export function PayPickupGrid({ className }: PayPickupGridProps) {
     staleTime: 60 * 1000,
   });
 
+  const { data: stockMap } = useInventoryStock(MAIN_PRODUCT_IDS);
   const products = useMemo(() => {
     if (!data) return [];
     // Preserve the order from MAIN_PRODUCT_IDS
@@ -137,6 +139,7 @@ export function PayPickupGrid({ className }: PayPickupGridProps) {
             heroImageOverride={HERO_OVERRIDES[p.id]}
             backdropImageOverride={BACKDROP_OVERRIDES[p.id]}
             priority={index === 0}
+            stockMap={stockMap}
           />
         ))}
       </div>

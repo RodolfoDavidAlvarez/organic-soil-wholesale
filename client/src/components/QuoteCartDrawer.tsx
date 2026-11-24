@@ -17,6 +17,9 @@ import { baggedVolumeHint, baggedVolumeQuote, baggedVolumeSavingsLabel } from "@
 import { BLACK_FRIDAY_PROMO, blackFridayQuote } from "@shared/blackFridayPromo.js";
 import { partitionPayCartItems } from "@shared/cartLoadGroups.js";
 import { cn } from "@/lib/utils";
+import { useInventoryStock } from "@/hooks/useInventoryStock";
+import { lineStockNote } from "@/components/StockUrgency";
+import type { StockMap } from "@shared/inventoryStock.js";
 import {
   ShoppingCart, Trash2, Minus, Plus, ArrowRight, Package,
   CreditCard, FileText, Phone,
@@ -45,10 +48,11 @@ function isPalletFormat(format: string) {
   return key.includes("pallet") && !key.includes("truckload");
 }
 
-function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice, saleUnitCents }: {
+function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice, saleUnitCents, stockMap }: {
   showPrice: boolean;
   /** Black Friday unit price in cents when the sale is the order's discount. */
   saleUnitCents?: number;
+  stockMap?: StockMap | null;
   item: CartItem;
   removeItem: (id: number, fmt: string) => void;
   updateQuantity: (id: number, fmt: string, q: number) => void;
@@ -108,6 +112,9 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice, sa
         </div>
       </Link>
       <p className="mt-1 text-sm text-stone-600">{item.format}</p>
+      {lineStockNote(stockMap, item) ? (
+        <p data-testid="cart-stock-note" className="mt-0.5 text-xs font-semibold text-stone-500">{lineStockNote(stockMap, item)}</p>
+      ) : null}
       {onSale && listTotal ? (
         <p className="mt-1 text-sm text-stone-600">
           <span className="mr-2 line-through">{fmt(listTotal)}</span>
@@ -250,6 +257,7 @@ export const QuoteCartDrawer = () => {
     setCallbackOpen(true);
   };
 
+  const { data: stockMap } = useInventoryStock(items.map((item) => item.productId));
   const renderLines = (list: CartItem[]) =>
     list.map((item) => (
       <LineItem
@@ -260,6 +268,7 @@ export const QuoteCartDrawer = () => {
         updateQuantity={updateQuantity}
         closeDrawer={closeDrawer}
         saleUnitCents={saleUnitByKey.get(`${item.productId}:${item.format}`)}
+        stockMap={stockMap}
       />
     ));
 

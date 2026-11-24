@@ -1,4 +1,4 @@
-export type StockEntry = { available: number; provisional: boolean };
+export type StockEntry = { available: number; provisional: boolean; baseline?: number };
 export type StockMap = Record<string, StockEntry>;
 export function inventoryKeyForLine(item: Record<string, unknown> | null | undefined): { productId: number; sizeOption: string } | null;
 export function stockKey(productId: number | string, sizeOption: string): string;
