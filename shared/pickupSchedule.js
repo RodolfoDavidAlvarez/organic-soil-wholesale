@@ -7,6 +7,13 @@
 
 export const PICKUP_TIMEZONE = 'America/Phoenix';
 export const OPEN_DAYS = new Set([2, 3, 4, 5, 6]); // Tue–Sat
+/**
+ * Full-day closures (Phoenix calendar dates) on otherwise open days. Checkout,
+ * slot pickers, ASAP times and server validation all go through
+ * isOpenPickupDay, so a date here is never offered or accepted.
+ * 2026-11-26: Thanksgiving, closed (Nov 24, 2026 team meeting).
+ */
+export const CLOSED_DATES = new Set(['2026-11-26']);
 /** Hourly pickup starts; skip 1 PM (lunch). Last slot 3–4 PM. */
 export const SLOT_START_HOURS = [8, 9, 10, 11, 12, 14, 15];
 export const LUNCH_START_HOUR = 13;
@@ -119,7 +126,7 @@ export function phoenixWeekday(ymd) {
 
 export function isOpenPickupDay(ymdOrDate) {
   const ymd = typeof ymdOrDate === 'string' ? ymdOrDate : phoenixYmd(ymdOrDate);
-  return OPEN_DAYS.has(phoenixWeekday(ymd));
+  return OPEN_DAYS.has(phoenixWeekday(ymd)) && !CLOSED_DATES.has(ymd);
 }
 
 export function slotStartMs(ymd, startHour) {
@@ -245,7 +252,9 @@ export function validatePickupIso(pickupAtIso) {
     return {
       ok: false,
       reason: 'closed_day',
-      message: `Pickup is available ${HOURS_LABEL}.`,
+      message: CLOSED_DATES.has(ymd)
+        ? `We're closed that day. Pickup is available ${HOURS_LABEL}; please choose another day.`
+        : `Pickup is available ${HOURS_LABEL}.`,
     };
   }
 
