@@ -91,7 +91,7 @@ const BlackFridayBanner = ({ onLayoutChange }: Props) => {
             </span>
             <span className="text-[12.5px] font-semibold leading-snug text-white/90 sm:text-[17px]">
               <span className="hidden sm:inline">Bags &amp; pallets · now through Cyber Monday, Nov 30</span>
-              <span className="whitespace-nowrap text-[14px] sm:hidden">Bags &amp; pallets · thru Mon 11/30</span>
+              <span className="block text-[13.5px] sm:hidden">Bags &amp; pallets · thru Mon 11/30</span>
             </span>
             <span className="text-[12px] font-medium leading-snug text-white/75 sm:text-[15px]">
               Online or at the yard. Taken off in your cart.
