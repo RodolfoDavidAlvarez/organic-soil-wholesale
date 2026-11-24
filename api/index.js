@@ -53,6 +53,7 @@ import {
   schoolStripeCouponParams,
 } from '../shared/checkoutDiscount.js';
 import { chargeOrderDiscounts, volumeStripeCouponParams } from '../shared/baggedVolumeDiscount.js';
+import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '../shared/blackFridayPromo.js';
 import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRedeem.js';
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import { resolvePickupProductName } from '../shared/pickupProductName.js';
@@ -7146,12 +7147,39 @@ ${pages}
           ? `${preferredDeliveryDate} → ${preferredDeliveryDateEnd}`
           : (preferredDeliveryDate || '');
 
-        const charged = chargeOrderDiscounts({
+        let charged = chargeOrderDiscounts({
           items,
           discountKind: discountDecision.kind,
           schoolDiscountCents: schoolQuote?.ok ? schoolQuote.discountCents : 0,
         });
+
+        // Black Friday 2026 (shared/blackFridayPromo.js). Single best discount:
+        // compare the sale prices against whatever the existing rules already
+        // take off (flatbed, bag volume, or a school code) and keep the lower
+        // product total. Never touches delivery. TEST keeps its own path.
+        let blackFriday = null;
+        if (discountDecision.kind !== 'test') {
+          const existingOffCents = Math.round((flatbedPricing.applied ? flatbedPricing.discountAmount : 0) * 100)
+            + charged.choice.volumeCents
+            + charged.choice.groupCents;
+          blackFriday = blackFridayQuote({ items: canonicalItems, existingOffCents });
+          const saleItems = applyBlackFridayPrices(blackFriday);
+          if (saleItems) {
+            items = saleItems;
+            flatbedPricing = { items, applied: false, discountAmount: 0 };
+            schoolQuote = null;
+            charged = {
+              ...charged,
+              choice: { winner: 'black_friday', volumeCents: 0, groupCents: 0 },
+              notes: discountDecision.kind === 'school'
+                ? ['School code not used: the Black Friday sale saves more. The code stays unused.']
+                : [],
+            };
+          }
+        }
+
         const customerNotes = [
+          blackFridayOrderNote(blackFriday),
           orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
           customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
           customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,

@@ -30,6 +30,7 @@ import {
 import { settleSchoolCheckout } from '../../shared/schoolRedeem.js';
 import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 import { chargeOrderDiscounts, volumeStripeCouponParams } from '../../shared/baggedVolumeDiscount.js';
+import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '../../shared/blackFridayPromo.js';
 import { nonBundleProductSubtotal, resolvePromoBundle } from '../../shared/promoBundles.js';
 import {
   cartAllowsPhoenixYardPickup,
@@ -229,12 +230,37 @@ router.post('/create-session', async (req, res) => {
       }
     }
 
-    const charged = chargeOrderDiscounts({
+    let charged: any = chargeOrderDiscounts({
       items,
       discountKind: discountDecision.kind,
       schoolDiscountCents: schoolQuote?.ok ? schoolQuote.discountCents : 0,
     });
+
+    // Black Friday 2026: keep api/index.js in sync. Single best discount,
+    // never delivery, TEST keeps its own path.
+    let blackFriday: ReturnType<typeof blackFridayQuote> | null = null;
+    if (discountDecision.kind !== 'test') {
+      const existingOffCents = Math.round((flatbedPricing.applied ? flatbedPricing.discountAmount : 0) * 100)
+        + charged.choice.volumeCents
+        + charged.choice.groupCents;
+      blackFriday = blackFridayQuote({ items: canonicalItems, existingOffCents });
+      const saleItems = applyBlackFridayPrices(blackFriday);
+      if (saleItems) {
+        items = saleItems;
+        flatbedPricing = { items, applied: false, discountAmount: 0 };
+        schoolQuote = null;
+        charged = {
+          ...charged,
+          choice: { winner: 'black_friday', volumeCents: 0, groupCents: 0 },
+          notes: discountDecision.kind === 'school'
+            ? ['School code not used: the Black Friday sale saves more. The code stays unused.']
+            : [],
+        };
+      }
+    }
+
     const customerNotes = [
+      blackFridayOrderNote(blackFriday),
       orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
       customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
       customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
