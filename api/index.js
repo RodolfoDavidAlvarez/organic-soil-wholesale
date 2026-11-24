@@ -57,6 +57,7 @@ import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '
 import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRedeem.js';
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import { resolvePickupProductName } from '../shared/pickupProductName.js';
+import { inventoryCheckItems, stockKey, stockShortageMessage } from '../shared/inventoryStock.js';
 import {
   JOB_APPLICATION_BUCKET,
   JobApplicationError,
@@ -2442,6 +2443,29 @@ Use "" for fields you cannot clearly read. NEVER guess.`
     // {id, name, sizes, images}; the detail page hits the single-product
     // endpoint for the full record). Cached at the edge for 5 minutes with
     // stale-while-revalidate to keep TTFB <50ms after the first hit.
+    // GET /api/inventory/stock?productIds=111,1001 — sellable units per variant
+    // (Phoenix yard). Keys are "productId|canonical size". Untracked variants
+    // are omitted. Short edge cache so a paid order shows up within a minute.
+    if (path === '/api/inventory/stock' && req.method === 'GET') {
+      try {
+        const ids = String(req.query?.productIds || req.query?.ids || '')
+          .split(',').map((id) => Number(id.trim())).filter((id) => Number.isInteger(id) && id > 0).slice(0, 50);
+        let query = db.from('inventory_variant_availability').select('product_id, size_option, available, confirmed').eq('location_code', 'phx');
+        if (ids.length) query = query.in('product_id', ids);
+        const { data, error } = await query;
+        if (error) throw error;
+        const stock = {};
+        for (const row of data || []) {
+          stock[stockKey(row.product_id, row.size_option)] = { available: Math.max(0, Number(row.available) || 0), provisional: row.confirmed !== true };
+        }
+        res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+        return res.json({ stock });
+      } catch (err) {
+        console.error('[inventory stock] error:', err?.message || err);
+        return res.status(200).json({ stock: {}, unavailable: true });
+      }
+    }
+
     if (path === '/api/public/products' && req.method === 'GET') {
       const slimColumns = [
         'id', 'name', 'slug', 'description', 'category', 'price',
@@ -7146,6 +7170,26 @@ ${pages}
         const availabilityLabel = preferredDeliveryDate && preferredDeliveryDateEnd && preferredDeliveryDate !== preferredDeliveryDateEnd
           ? `${preferredDeliveryDate} → ${preferredDeliveryDateEnd}`
           : (preferredDeliveryDate || '');
+
+        // Oversell guard (Phoenix yard stock). Demand is summed per SKU across
+        // bags, pallets and bundles. Fails open if the stock lookup errors so a
+        // bookkeeping problem never blocks a sale; the paid-order trigger still
+        // records the movement.
+        if (discountDecision.kind !== 'test') {
+          try {
+            const checkItems = inventoryCheckItems(canonicalItems);
+            if (checkItems.length) {
+              const { data: shortages, error: stockError } = await db.rpc('inventory_check_cart', { p_items: checkItems });
+              if (stockError) {
+                console.error('[checkout] inventory check failed (allowing order):', stockError.message);
+              } else if (Array.isArray(shortages) && shortages.length) {
+                return res.status(409).json({ error: stockShortageMessage(shortages), stockShortages: shortages });
+              }
+            }
+          } catch (stockErr) {
+            console.error('[checkout] inventory check threw (allowing order):', stockErr?.message || stockErr);
+          }
+        }
 
         let charged = chargeOrderDiscounts({
           items,
