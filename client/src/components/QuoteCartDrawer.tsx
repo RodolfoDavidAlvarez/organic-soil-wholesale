@@ -14,6 +14,7 @@ import { BundleCartLine } from "@/components/BundleCartLine";
 import { promoBundleHref, getPromoBundleByProductId } from "@shared/promoBundles.js";
 import { getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { baggedVolumeHint, baggedVolumeQuote, baggedVolumeSavingsLabel } from "@shared/baggedVolumeDiscount.js";
+import { BLACK_FRIDAY_PROMO, blackFridayQuote } from "@shared/blackFridayPromo.js";
 import { partitionPayCartItems } from "@shared/cartLoadGroups.js";
 import { cn } from "@/lib/utils";
 import {
@@ -44,8 +45,10 @@ function isPalletFormat(format: string) {
   return key.includes("pallet") && !key.includes("truckload");
 }
 
-function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice }: {
+function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice, saleUnitCents }: {
   showPrice: boolean;
+  /** Black Friday unit price in cents when the sale is the order's discount. */
+  saleUnitCents?: number;
   item: CartItem;
   removeItem: (id: number, fmt: string) => void;
   updateQuantity: (id: number, fmt: string, q: number) => void;
@@ -55,10 +58,14 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice }: 
   const offer = getPromoBundleByProductId(item.productId);
   const palletThumb = isPalletFormat(item.format) ? item.sizeImage : undefined;
   const preview = getPayPickupProductDescription(item.productId, "");
-  const lineTotal = item.unitPrice * item.quantity;
-  const listTotal = item.listUnitPrice && item.listUnitPrice > item.unitPrice
-    ? item.listUnitPrice * item.quantity
-    : null;
+  const onSale = Number.isFinite(saleUnitCents);
+  const lineTotal = onSale ? ((saleUnitCents as number) * item.quantity) / 100 : item.unitPrice * item.quantity;
+  const regularUnit = item.listUnitPrice && item.listUnitPrice > item.unitPrice ? item.listUnitPrice : item.unitPrice;
+  const listTotal = onSale
+    ? regularUnit * item.quantity
+    : item.listUnitPrice && item.listUnitPrice > item.unitPrice
+      ? item.listUnitPrice * item.quantity
+      : null;
 
   if (offer) return (
     <div className="rounded-2xl bg-white p-4">
@@ -101,7 +108,12 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice }: 
         </div>
       </Link>
       <p className="mt-1 text-sm text-stone-600">{item.format}</p>
-      {listTotal || item.discountPercent ? (
+      {onSale && listTotal ? (
+        <p className="mt-1 text-sm text-stone-600">
+          <span className="mr-2 line-through">{fmt(listTotal)}</span>
+          <span className="font-semibold text-emerald-800">Black Friday · {BLACK_FRIDAY_PROMO.percent}% off · save {fmt(listTotal - lineTotal)}</span>
+        </p>
+      ) : listTotal || item.discountPercent ? (
         <p className="mt-1 text-sm text-stone-600">
           {listTotal ? <span className="mr-2 line-through">{fmt(listTotal)}</span> : null}
           {item.discountPercent ? <span>{item.discountPercent}% off · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</span> : null}
@@ -179,9 +191,22 @@ export const QuoteCartDrawer = () => {
   const flatbedSpots = useMemo(() => cartFlatbedSpots(items), [items]);
   const flatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
   const baggedVolume = useMemo(() => baggedVolumeQuote(payItems), [payItems]);
-  const payTotal = payGross - flatbedDiscount - baggedVolume.amount;
+  // Black Friday 2026: one discount only, same choice the server makes.
+  const blackFriday = useMemo(() => blackFridayQuote({
+    items: payItems,
+    existingOffCents: Math.round(flatbedDiscount * 100) + baggedVolume.amountCents,
+  }), [payItems, flatbedDiscount, baggedVolume.amountCents]);
+  const saleUnitByKey = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!blackFriday.applies) return map;
+    for (const entry of blackFriday.priced) {
+      if (entry.eligible) map.set(`${entry.item.productId}:${entry.item.format}`, entry.unitCents);
+    }
+    return map;
+  }, [blackFriday]);
+  const payTotal = blackFriday.applies ? blackFriday.saleCents / 100 : payGross - flatbedDiscount - baggedVolume.amount;
   const bagSavingsLabel = baggedVolumeSavingsLabel(baggedVolume.percent);
-  const bagProgressHint = baggedVolumeHint(baggedVolume, fmt);
+  const bagProgressHint = blackFriday.applies ? null : baggedVolumeHint(baggedVolume, fmt);
   const quoteQuantity = quoteItems.reduce((count, item) => count + item.quantity, 0);
   const quoteTotal = useMemo(() => quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [quoteItems]);
   const { offerItems, walkingFloorItems, flatbedItems, yardItems } = useMemo(
@@ -234,6 +259,7 @@ export const QuoteCartDrawer = () => {
         removeItem={removeItem}
         updateQuantity={updateQuantity}
         closeDrawer={closeDrawer}
+        saleUnitCents={saleUnitByKey.get(`${item.productId}:${item.format}`)}
       />
     ));
 
@@ -301,13 +327,19 @@ export const QuoteCartDrawer = () => {
               <div className="space-y-3 border-t border-stone-200 pt-3">
                 {payItems.length > 0 && (
                   <>
-                    {flatbedDiscount > 0 && (
+                    {blackFriday.applies && blackFriday.saleSavingsCents > 0 && (
+                      <div className="flex items-center justify-between text-sm text-emerald-800">
+                        <span className="font-semibold">Black Friday savings ({BLACK_FRIDAY_PROMO.percent}% off {BLACK_FRIDAY_PROMO.scopeLabel})</span>
+                        <span className="font-semibold">{fmt(blackFriday.saleSavingsCents / 100)}</span>
+                      </div>
+                    )}
+                    {!blackFriday.applies && flatbedDiscount > 0 && (
                       <div className="flex items-center justify-between text-sm text-emerald-800">
                         <span className="font-medium">Full flatbed (10% off)</span>
                         <span className="font-semibold">−{fmt(flatbedDiscount)}</span>
                       </div>
                     )}
-                    {baggedVolume.amountCents > 0 && bagSavingsLabel && (
+                    {!blackFriday.applies && baggedVolume.amountCents > 0 && bagSavingsLabel && (
                       <div className="flex items-center justify-between text-sm text-emerald-800">
                         <span className="font-medium">{bagSavingsLabel}</span>
                         <span className="font-semibold">−{fmt(baggedVolume.amount)}</span>

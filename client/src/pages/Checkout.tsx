@@ -29,6 +29,7 @@ import { getPromoBundleByProductId } from "@shared/promoBundles.js";
 import { getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { isSchoolDiscountCode, resolveDiscountCode, schoolLineCaption } from "@shared/checkoutDiscount.js";
 import { baggedVolumeHint, baggedVolumeSavingsLabel, chargeOrderDiscounts } from "@shared/baggedVolumeDiscount.js";
+import { BLACK_FRIDAY_PROMO, blackFridayQuote, isBlackFridayEligibleLine } from "@shared/blackFridayPromo.js";
 import {
   cartAllowsPhoenixYardPickup,
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
@@ -505,15 +506,43 @@ const Checkout: React.FC = () => {
     discountKind: appliedDiscount?.kind === "test" ? "test" : schoolApplied ? "school" : "none",
     schoolDiscountCents: schoolApplied ? appliedDiscount?.discountCents || 0 : 0,
   }), [payItems, appliedDiscount?.kind, appliedDiscount?.discountCents, schoolApplied]);
-  const schoolOff = pricedDiscounts.choice.groupCents / 100;
-  const volumeOff = pricedDiscounts.choice.volumeCents / 100;
+  /** Flatbed 10% is skipped while a school code is applied. The server does the same. */
+  const flatbedOffBase = schoolApplied ? 0 : fullFlatbedDiscount;
+  // Black Friday 2026: one discount only. The sale wins only when it beats the
+  // existing discounts on product total; the server makes the same choice.
+  const blackFriday = useMemo(() => appliedDiscount?.kind === "test"
+    ? null
+    : blackFridayQuote({
+      items: payItems,
+      existingOffCents: Math.round(flatbedOffBase * 100) + pricedDiscounts.choice.volumeCents + pricedDiscounts.choice.groupCents,
+    }), [payItems, appliedDiscount?.kind, flatbedOffBase, pricedDiscounts.choice.volumeCents, pricedDiscounts.choice.groupCents]);
+  const saleApplies = Boolean(blackFriday?.applies);
+  const saleOff = saleApplies && blackFriday ? (blackFriday.currentCents - blackFriday.saleCents) / 100 : 0;
+  const saleUnitByKey = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!saleApplies || !blackFriday) return map;
+    for (const entry of blackFriday.priced) {
+      if (entry.eligible) map.set(`${entry.item.productId}:${entry.item.format}`, entry.unitCents / 100);
+    }
+    return map;
+  }, [saleApplies, blackFriday]);
+  /** Unit price the customer is charged for this line (sale price when the sale is the order's discount). */
+  const lineUnit = (item: { productId: number; format: string; unitPrice: number }) =>
+    saleUnitByKey.get(`${item.productId}:${item.format}`) ?? item.unitPrice;
+  const lineOnSale = (item: { productId: number; format: string }) => saleUnitByKey.has(`${item.productId}:${item.format}`);
+  const lineRegularUnit = (item: { unitPrice: number; listUnitPrice?: number }) =>
+    item.listUnitPrice && item.listUnitPrice > item.unitPrice ? item.listUnitPrice : item.unitPrice;
+  /** "Products" row: the sum of the line prices shown (sale prices during the sale). */
+  const productsShown = saleApplies && blackFriday ? blackFriday.saleCents / 100 : productSubtotalGross;
+  const saleSavingsVsRegular = saleApplies && blackFriday ? blackFriday.saleSavingsCents / 100 : 0;
+  const schoolOff = saleApplies ? 0 : pricedDiscounts.choice.groupCents / 100;
+  const volumeOff = saleApplies ? 0 : pricedDiscounts.choice.volumeCents / 100;
   const volumeLabel = baggedVolumeSavingsLabel(pricedDiscounts.volume.percent);
-  const volumeHint = pricedDiscounts.choice.winner === "group" || pricedDiscounts.choice.winner === "test"
+  const volumeHint = saleApplies || pricedDiscounts.choice.winner === "group" || pricedDiscounts.choice.winner === "test"
     ? null
     : baggedVolumeHint(pricedDiscounts.volume, fmt);
-  /** Flatbed 10% is skipped while a school code is applied. The server does the same. */
-  const flatbedOff = schoolApplied ? 0 : fullFlatbedDiscount;
-  const productSubtotal = productSubtotalGross - flatbedOff - schoolOff - volumeOff;
+  const flatbedOff = saleApplies ? 0 : flatbedOffBase;
+  const productSubtotal = productSubtotalGross - flatbedOff - schoolOff - volumeOff - saleOff;
   const deliveryFee = fulfillment === "delivery" && deliveryQuote ? deliveryQuote.costDollars : 0;
   const subtotal = productSubtotal + deliveryFee;
   const discountAmount = appliedDiscount?.kind === "test" ? subtotal : 0;
@@ -1270,14 +1299,19 @@ const Checkout: React.FC = () => {
                       <div className="min-w-0">
                         <p className="text-base font-bold leading-tight text-stone-950">{item.productName}</p>
                         <p className="mt-0.5 text-sm leading-tight text-stone-500">{item.format}</p>
-                        <p className="mt-1 text-xs text-stone-500">{fmt(item.unitPrice)} each</p>
-                        {schoolApplied && schoolLineCaption(item) ? (
+                        <p className="mt-1 text-xs text-stone-500">
+                          {lineOnSale(item) ? <span className="mr-1 line-through">{fmt(lineRegularUnit(item))}</span> : null}
+                          {fmt(lineUnit(item))} each
+                        </p>
+                        {lineOnSale(item) ? (
+                          <p className="mt-1 text-xs font-bold text-green-700">Black Friday · {BLACK_FRIDAY_PROMO.percent}% off regular price · save {fmt((lineRegularUnit(item) - lineUnit(item)) * item.quantity)}</p>
+                        ) : schoolApplied && schoolLineCaption(item) ? (
                           <p className="mt-1 text-xs font-bold text-green-700">{schoolLineCaption(item)}</p>
                         ) : item.discountPercent ? <p className="mt-1 text-xs font-bold text-green-700">{item.discountPercent}% pallet savings · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</p> : null}
                       </div>
                       <div className="whitespace-nowrap text-right">
-                        {item.listUnitPrice && item.listUnitPrice > item.unitPrice ? <p className="text-xs text-stone-400 line-through">{fmt(item.listUnitPrice * item.quantity)}</p> : null}
-                        <p className="text-base font-bold text-[#264027]">{fmt(item.unitPrice * item.quantity)}</p>
+                        {lineRegularUnit(item) > lineUnit(item) ? <p className="text-xs text-stone-400 line-through">{fmt(lineRegularUnit(item) * item.quantity)}</p> : null}
+                        <p className="text-base font-bold text-[#264027]">{fmt(lineUnit(item) * item.quantity)}</p>
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3">
@@ -1772,14 +1806,19 @@ const Checkout: React.FC = () => {
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold leading-tight text-stone-950">{item.productName}</p>
                             <p className="mt-1 text-sm text-stone-600">{item.format}{item.quantity > 1 && ` · Qty ${item.quantity}`}</p>
-                            {item.listUnitPrice && item.listUnitPrice > item.unitPrice ? (
+                            {lineOnSale(item) ? (
+                              <p className="mt-1 text-xs text-stone-500">
+                                <span className="line-through">{fmt(lineRegularUnit(item) * item.quantity)}</span>
+                                <span className="font-semibold text-emerald-700">{` · Black Friday ${BLACK_FRIDAY_PROMO.percent}% off`}</span>
+                              </p>
+                            ) : item.listUnitPrice && item.listUnitPrice > item.unitPrice ? (
                               <p className="mt-1 text-xs text-stone-500">
                                 <span className="line-through">{fmt(item.listUnitPrice * item.quantity)}</span>
                                 {item.discountPercent ? ` · ${item.discountPercent}% pallet savings` : ""}
                               </p>
                             ) : null}
                           </div>
-                          {payItems.length > 1 && <span className="text-sm font-semibold tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>}
+                          {payItems.length > 1 && <span className="text-sm font-semibold tabular-nums">{fmt(lineUnit(item) * item.quantity)}</span>}
                         </div>
                         {preview ? (
                           <p className="mt-2 flex min-w-0 items-baseline gap-2 text-sm text-stone-600">
@@ -1801,8 +1840,14 @@ const Checkout: React.FC = () => {
                     );
                   })}
                 </ul>
-                {(flatbedOff > 0 || schoolOff > 0 || volumeOff > 0 || fulfillment === "delivery" || appliedDiscount?.kind === "test") && (
-                  <div className="flex justify-between py-1 text-sm text-stone-600"><span>Products</span><span>{fmt(productSubtotalGross)}</span></div>
+                {(saleOff > 0 || flatbedOff > 0 || schoolOff > 0 || volumeOff > 0 || fulfillment === "delivery" || appliedDiscount?.kind === "test") && (
+                  <div className="flex justify-between py-1 text-sm text-stone-600"><span>Products</span><span>{fmt(productsShown)}</span></div>
+                )}
+                {saleOff > 0 && (
+                  <div className="flex items-center justify-between text-sm font-semibold text-emerald-700">
+                    <span>Black Friday savings ({BLACK_FRIDAY_PROMO.percent}% off {BLACK_FRIDAY_PROMO.scopeLabel}, included above)</span>
+                    <span>{fmt(saleSavingsVsRegular)}</span>
+                  </div>
                 )}
                 {flatbedOff > 0 && (
                   <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
@@ -1856,8 +1901,14 @@ const Checkout: React.FC = () => {
                   )}
                   <div className="flex items-center justify-between text-sm text-stone-600">
                     <span>Products</span>
-                    <span>{fmt(productSubtotalGross)}</span>
+                    <span>{fmt(productsShown)}</span>
                   </div>
+                  {saleOff > 0 && (
+                    <div className="flex items-center justify-between text-sm font-semibold text-emerald-700">
+                      <span>Black Friday savings ({BLACK_FRIDAY_PROMO.percent}% off {BLACK_FRIDAY_PROMO.scopeLabel}, included above)</span>
+                      <span>{fmt(saleSavingsVsRegular)}</span>
+                    </div>
+                  )}
                   {flatbedOff > 0 && (
                     <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
                       <span>Full flatbed (10% off)</span>
@@ -1903,7 +1954,9 @@ const Checkout: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
                         <CheckCircle2 className="h-4 w-4" />
-                        {pricedDiscounts.choice.winner === "volume" && appliedDiscount.kind === "school"
+                        {saleApplies && appliedDiscount.kind === "school"
+                          ? `Code ${appliedDiscount.code} was not used. The Black Friday sale saves more, so your code stays unused.`
+                          : pricedDiscounts.choice.winner === "volume" && appliedDiscount.kind === "school"
                           ? `Code ${appliedDiscount.code} was not combined. The bag discount saves more.`
                           : appliedDiscount.kind === "school"
                           ? `Code ${appliedDiscount.code} applied · 30% off bagged products`
@@ -1948,7 +2001,7 @@ const Checkout: React.FC = () => {
                       </div>
                     )}
                     {discountError && <p id="discount-error" role="alert" className="mt-1 text-xs text-red-600">{discountError}</p>}
-                    <p className="mt-2 text-xs leading-relaxed text-stone-500">A code and the bag discount do not combine. The larger savings is used.</p>
+                    <p className="mt-2 text-xs leading-relaxed text-stone-500">Discounts do not combine{blackFriday?.active ? ", including the Black Friday sale" : ""}. The larger savings is used.</p>
                   </div>
                 )}
               </CardContent>

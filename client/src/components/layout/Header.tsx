@@ -9,6 +9,7 @@ import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { isCallTrackingExcludedPath } from "@/lib/callTracking";
+import BlackFridayBanner from "@/components/layout/BlackFridayBanner";
 
 const MENU_PRODUCTS = [
   {
@@ -114,10 +115,18 @@ const Header = () => {
 
   useLayoutEffect(() => {
     updateHeaderHeight();
+    // The promo banner expands and collapses inside the header; keep the
+    // page offset in sync with the header's real height.
+    const observer =
+      typeof ResizeObserver !== "undefined" && headerRef.current
+        ? new ResizeObserver(() => updateHeaderHeight())
+        : null;
+    if (observer && headerRef.current) observer.observe(headerRef.current);
     window.addEventListener("resize", updateHeaderHeight);
     window.addEventListener("orientationchange", updateHeaderHeight);
 
     return () => {
+      observer?.disconnect();
       window.removeEventListener("resize", updateHeaderHeight);
       window.removeEventListener("orientationchange", updateHeaderHeight);
     };
@@ -139,6 +148,7 @@ const Header = () => {
         isScrolled ? "shadow-[0_8px_24px_rgba(24,58,35,0.08)]" : ""
       }`}
     >
+      <BlackFridayBanner onLayoutChange={updateHeaderHeight} />
       <div className="h-[3px] bg-[#b38a58]" />
       <div className="mx-auto max-w-7xl px-4 lg:px-6">
         <div className="flex h-[4.25rem] items-center gap-3 lg:gap-5">
