@@ -20,6 +20,7 @@ import { generateProductSlug } from "@/utils/generateSlug";
 import { extractYouTubeVideoId, YouTubePlayer } from "@/components/YouTubePlayer";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
+import { useInventoryStock, stockForLine, stockLabel } from "@/hooks/useInventoryStock";
 import { ToastAction } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription, getPayPickupProductType } from "@/data/payPickupProductContent";
@@ -1477,6 +1478,12 @@ const ProductDetail = () => {
 
   const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
   const canPayOnline = product ? isPayOnlineProduct(product.id) : false;
+  const { data: stockMap } = useInventoryStock([product?.id]);
+  const selectedStock = product && selectedChoice
+    ? stockForLine(stockMap, { productId: product.id, productName: product.displayTitle, format: selectedChoice.cartLabel })
+    : null;
+  const selectedStockLabel = stockLabel(selectedStock);
+  const exceedsStock = Boolean(selectedStock && quantity > selectedStock.available);
   const phoenixYardPickupOk = product
     ? cartItemAllowsPhoenixYardPickup({
         productId: product.id,
@@ -1710,6 +1717,16 @@ const ProductDetail = () => {
   ) => {
     if (!product || !selectedChoice) return;
     // Truckload can + to cart or go Deliver without ZIP first — checkout prices delivery.
+    if (selectedStock && quantity > selectedStock.available) {
+      toast({
+        title: selectedStock.available > 0 ? `Only ${selectedStock.available} in stock` : "Sold out",
+        description: selectedStock.available > 0
+          ? "Lower the quantity to add this to your order."
+          : `This size is sold out right now. Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY} for the next delivery.`,
+        duration: 4500,
+      });
+      return;
+    }
 
     trackEvent(
       next === "checkout"
@@ -1830,6 +1847,7 @@ const ProductDetail = () => {
     scrollBuyIntoView,
     selectedCategory?.label,
     selectedChoice,
+    selectedStock,
     toast,
   ]);
 
@@ -2560,6 +2578,19 @@ const ProductDetail = () => {
                                   </button>
                                 </div>
                               </div>
+                              {selectedStockLabel && (
+                                <span
+                                  data-testid="stock-badge"
+                                  className={cn(
+                                    "rounded-full px-2.5 py-1 text-xs font-semibold",
+                                    selectedStockLabel.tone === "out" ? "bg-red-50 text-red-700 ring-1 ring-red-200"
+                                      : selectedStockLabel.tone === "low" ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200"
+                                      : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200",
+                                  )}
+                                >
+                                  {exceedsStock && selectedStock && selectedStock.available > 0 ? `Only ${selectedStock.available} left` : selectedStockLabel.text}
+                                </span>
+                              )}
                               {needsChoice && (
                                 <p className="text-right text-xl font-bold text-primary">
                                   {fmt(selectedTotal)}
