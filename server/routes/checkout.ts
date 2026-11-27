@@ -34,6 +34,12 @@ import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '
 import { resolvePromoBundle } from '../../shared/promoBundles.js';
 import { chargeCheckoutTotals, salesTaxLineItem } from '../../shared/salesTax.js';
 import {
+  checkoutCartFingerprint,
+  checkoutIdempotencyKey,
+  checkoutKeyMarker,
+  findPendingCheckoutOrder,
+} from '../../shared/checkoutIdempotency.js';
+import {
   cartAllowsPhoenixYardPickup,
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
 } from '../../shared/phoenixYardPickup.js';
@@ -260,7 +266,7 @@ router.post('/create-session', async (req, res) => {
       }
     }
 
-    const customerNotes = [
+    let customerNotes = [
       blackFridayOrderNote(blackFriday),
       orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
       customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
@@ -345,6 +351,50 @@ router.post('/create-session', async (req, res) => {
     const totalCents = charge.totalCents;
     const isFreeOrder = charge.isFreeOrder;
 
+    let stripeIdempotencyKey: string | null = null;
+    let reusedOrder: any = null;
+    if (!isFreeOrder) {
+      const checkoutPhone = String(customerInfo.phone || '').trim();
+      const cartFingerprint = checkoutCartFingerprint({
+        phone: checkoutPhone,
+        items,
+        fulfillment: isDelivery ? 'delivery' : 'pickup',
+        deliveryZip: isDelivery ? deliveryAddress?.zip : null,
+        deliveryStreet: isDelivery ? deliveryAddress?.street : null,
+        roughAccess: isDelivery ? !!deliveryAddress?.roughAccess : false,
+        semiAccess: isDelivery ? deliveryAddress?.semiAccess !== false : true,
+        discountCode,
+        locationId: checkoutLocationId,
+        pickupTime: isDelivery ? null : pickupTime,
+        deliveryCents: isDelivery && truckingQuote ? truckingQuote.costCents : 0,
+        schoolDiscountCents,
+        volumeDiscountCents,
+      });
+      const baseKey = checkoutIdempotencyKey(cartFingerprint);
+      stripeIdempotencyKey = baseKey;
+      customerNotes = [customerNotes, checkoutKeyMarker(baseKey)].filter(Boolean).join('\n');
+      try {
+        const pending = await findPendingCheckoutOrder(supabase, { phone: checkoutPhone, idempotencyKey: baseKey });
+        if (pending?.stripe_checkout_session_id && process.env.STRIPE_SECRET_KEY) {
+          const lookupClient = getStripe();
+          const existingSession = await lookupClient.checkout.sessions.retrieve(pending.stripe_checkout_session_id);
+          if (existingSession?.status === 'open' && existingSession.url) {
+            return res.json({
+              sessionId: existingSession.id,
+              orderId: pending.id,
+              confirmationCode: pending.confirmation_code,
+              url: existingSession.url,
+            });
+          }
+          stripeIdempotencyKey = `${baseKey}:${existingSession?.id || pending.stripe_checkout_session_id}`.slice(0, 255);
+        }
+        if (pending) reusedOrder = pending;
+      } catch (lookupError) {
+        console.error('[checkout] idempotency lookup failed:', lookupError);
+        reusedOrder = null;
+      }
+    }
+
     // Create order in database with pending status
     const orderData: any = {
       brand_id: orderBrandId,
@@ -410,30 +460,31 @@ router.post('/create-session', async (req, res) => {
       "OSW Customer";
     orderData.order_type = isDelivery ? "delivery" : isQuickOrder ? "pickup" : "regular";
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert(orderData)
-      .select()
-      .single();
-
-    if (orderError) throw orderError;
+    let order = reusedOrder;
+    if (!order) {
+      const inserted = await supabase.from('orders').insert(orderData).select().single();
+      if (inserted.error) throw inserted.error;
+      order = inserted.data;
+    }
 
     // Create order items
-    const orderItems = items.map((item: any) => ({
-      order_id: order.id,
-      product_id: item.productId,
-      quantity: item.quantity,
-      unit_price: item.price,
-      total_price: item.price * item.quantity,
-      size_option: item.sizeOption,
-      status: 'pending'
-    }));
+    if (!reusedOrder) {
+      const orderItems = items.map((item: any) => ({
+        order_id: order.id,
+        product_id: item.productId,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity,
+        size_option: item.sizeOption,
+        status: 'pending'
+      }));
 
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
 
-    if (itemsError) throw itemsError;
+      if (itemsError) throw itemsError;
+    }
 
     // Free order path — skip Stripe entirely. Mark the order paid and fan out to
     // MOS so yard reps see the test order in the iOS sales portal exactly like a
@@ -581,7 +632,7 @@ router.post('/create-session', async (req, res) => {
       metadata: schoolHold ? schoolHold.metadata : baseMetadata,
       ...(schoolHold ? { payment_intent_data: schoolHold.payment_intent_data } : {}),
       customer_email: customerInfo.email || undefined,
-    });
+    }, stripeIdempotencyKey ? { idempotencyKey: stripeIdempotencyKey } : undefined);
     schoolSession = session;
 
     // Update order with Stripe session ID

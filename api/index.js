@@ -55,6 +55,12 @@ import {
 import { chargeOrderDiscounts, volumeStripeCouponParams } from '../shared/baggedVolumeDiscount.js';
 import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '../shared/blackFridayPromo.js';
 import { chargeCheckoutTotals, salesTaxLineItem } from '../shared/salesTax.js';
+import {
+  checkoutCartFingerprint,
+  checkoutIdempotencyKey,
+  checkoutKeyMarker,
+  findPendingCheckoutOrder,
+} from '../shared/checkoutIdempotency.js';
 import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRedeem.js';
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import { resolvePickupProductName } from '../shared/pickupProductName.js';
@@ -7240,7 +7246,7 @@ ${pages}
           }
         }
 
-        const customerNotes = [
+        let customerNotes = [
           blackFridayOrderNote(blackFriday),
           orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
           customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
@@ -7284,6 +7290,53 @@ ${pages}
         const totalDollars = charge.totalDollars;
         const totalCents = charge.totalCents;
         const isFreeOrder = charge.isFreeOrder;
+
+        let stripeIdempotencyKey = null;
+        let reusedOrder = null;
+        if (!isFreeOrder) {
+          const cartFingerprint = checkoutCartFingerprint({
+            phone: checkoutPhone,
+            items,
+            fulfillment: isDelivery ? 'delivery' : 'pickup',
+            deliveryZip: isDelivery ? deliveryAddress?.zip : null,
+            deliveryStreet: isDelivery ? deliveryAddress?.street : null,
+            roughAccess: isDelivery ? !!deliveryAddress?.roughAccess : false,
+            semiAccess: isDelivery ? deliveryAddress?.semiAccess !== false : true,
+            discountCode,
+            locationId: checkoutLocationId,
+            pickupTime: isDelivery ? null : pickupTime,
+            deliveryCents: isDelivery && truckingQuote ? truckingQuote.costCents : 0,
+            schoolDiscountCents,
+            volumeDiscountCents,
+          });
+          const baseKey = checkoutIdempotencyKey(cartFingerprint);
+          stripeIdempotencyKey = baseKey;
+          customerNotes = [customerNotes, checkoutKeyMarker(baseKey)].filter(Boolean).join('\n');
+          try {
+            const pending = await findPendingCheckoutOrder(db, { phone: checkoutPhone, idempotencyKey: baseKey });
+            if (pending?.stripe_checkout_session_id && process.env.STRIPE_SECRET_KEY) {
+              const StripeLookup = (await import('stripe')).default;
+              const lookupClient = new StripeLookup(process.env.STRIPE_SECRET_KEY, {
+                httpClient: StripeLookup.createFetchHttpClient(),
+                maxNetworkRetries: 2,
+              });
+              const existingSession = await lookupClient.checkout.sessions.retrieve(pending.stripe_checkout_session_id);
+              if (existingSession?.status === 'open' && existingSession.url) {
+                return res.json({
+                  sessionId: existingSession.id,
+                  orderId: pending.id,
+                  confirmationCode: pending.confirmation_code,
+                  url: existingSession.url,
+                });
+              }
+              stripeIdempotencyKey = `${baseKey}:${existingSession?.id || pending.stripe_checkout_session_id}`.slice(0, 255);
+            }
+            if (pending) reusedOrder = pending;
+          } catch (lookupError) {
+            console.error('[checkout] idempotency lookup failed:', lookupError?.message || lookupError);
+            reusedOrder = null;
+          }
+        }
 
         // Create order
         const orderData = {
@@ -7352,13 +7405,15 @@ ${pages}
           })),
         };
 
-        const { data: order, error: orderError } = await db
-          .from('orders')
-          .insert(orderData)
-          .select()
-          .single();
+        let order = reusedOrder;
+        let orderError = null;
+        if (!order) {
+          const inserted = await db.from('orders').insert(orderData).select().single();
+          order = inserted.data;
+          orderError = inserted.error;
+        }
 
-        if (orderError) {
+        if (orderError || !order) {
           console.error('Order insert error:', orderError);
           return res.status(500).json({ error: 'Failed to create order' });
         }
@@ -7384,8 +7439,10 @@ ${pages}
           status: isFreeOrder ? 'reserved' : 'pending',
         }));
 
-        const { error: itemsError } = await db.from('order_items').insert(orderItems);
-        if (itemsError) console.error('order_items insert error:', itemsError);
+        if (!reusedOrder) {
+          const { error: itemsError } = await db.from('order_items').insert(orderItems);
+          if (itemsError) console.error('order_items insert error:', itemsError);
+        }
 
         if (isFreeOrder) {
           // Fan out to MOS so yard reps see the test order in the iOS portal.
@@ -7584,7 +7641,7 @@ ${pages}
             },
           },
           customer_email: customerInfo?.email || undefined,
-        });
+        }, stripeIdempotencyKey ? { idempotencyKey: stripeIdempotencyKey } : undefined);
         schoolSession = session;
 
         await db
