@@ -33,6 +33,7 @@ import { isSchoolDiscountCode, resolveDiscountCode, schoolLineCaption } from "@s
 import { baggedVolumeHint, baggedVolumeSavingsLabel, chargeOrderDiscounts } from "@shared/baggedVolumeDiscount.js";
 import { BLACK_FRIDAY_PROMO, blackFridayQuote, isBlackFridayEligibleLine } from "@shared/blackFridayPromo.js";
 import { checkoutSalesTax, salesTaxPercentLabel } from "@shared/salesTax.js";
+import { formatDisplayLabel } from "@shared/formatDisplayLabel.js";
 import {
   cartAllowsPhoenixYardPickup,
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
@@ -1309,7 +1310,7 @@ const Checkout: React.FC = () => {
                       )}
                       <div className="min-w-0">
                         <p className="text-base font-bold leading-tight text-stone-950">{item.productName}</p>
-                        <p className="mt-0.5 text-sm leading-tight text-stone-500">{item.format}</p>
+                        <p className="mt-0.5 text-sm leading-tight text-stone-500">{formatDisplayLabel(item.productId, item.format)}</p>
                         {lineStockNote(stockMap, item) ? (
                           <p data-testid="cart-stock-note" className="mt-0.5 text-xs font-semibold text-stone-500">{lineStockNote(stockMap, item)}</p>
                         ) : null}
@@ -1788,8 +1789,8 @@ const Checkout: React.FC = () => {
                 <CardTitle className="text-lg font-semibold tracking-tight text-stone-900">Your order</CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-5 pt-0">
-                {hasFlatbedSpots && (
-                  <p className="mt-3 text-xs leading-snug text-stone-500">Pallets and totes need a scheduled pickup.</p>
+                {hasFlatbedSpots && fulfillment !== "delivery" && (
+                  <p className="mt-3 text-xs leading-snug text-stone-500">Pallets and Super Sacks need a scheduled pickup time.</p>
                 )}
                 <ul className="divide-y divide-stone-200">
                   {groupedPayItems.map((item) => {
@@ -1819,7 +1820,7 @@ const Checkout: React.FC = () => {
                           ) : <Package aria-hidden="true" className="h-12 w-12 shrink-0 text-stone-400" />}
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold leading-tight text-stone-950">{item.productName}</p>
-                            <p className="mt-1 text-sm text-stone-600">{item.format}{item.quantity > 1 && ` · Qty ${item.quantity}`}</p>
+                            <p className="mt-1 text-sm text-stone-600">{formatDisplayLabel(item.productId, item.format)}{item.quantity > 1 && ` · Qty ${item.quantity}`}</p>
                             {lineStockNote(stockMap, item) ? (
                               <p data-testid="cart-stock-note" className="mt-0.5 text-xs font-semibold text-stone-500">{lineStockNote(stockMap, item)}</p>
                             ) : null}
@@ -1919,8 +1920,8 @@ const Checkout: React.FC = () => {
               <CardContent className="space-y-4 p-4 sm:p-5">
                 {/* Totals */}
                 <div className="space-y-2">
-                  {hasFlatbedSpots && (
-                    <p className="text-xs leading-snug text-stone-500">Pallets and totes need a scheduled pickup.</p>
+                  {hasFlatbedSpots && fulfillment !== "delivery" && (
+                    <p className="text-xs leading-snug text-stone-500">Pallets and Super Sacks need a scheduled pickup time.</p>
                   )}
                   <div className="flex items-center justify-between text-sm text-stone-600">
                     <span>Products</span>
