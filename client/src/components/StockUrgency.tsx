@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { stockForLine, stockKey, type StockMap } from "@shared/inventoryStock.js";
 import {
   cardStockBadge,
-  cartStockNote,
   primaryBagSizeOption,
   saleAppliesToSize,
+  checkoutStockNote,
   saleCountdownLabel,
   stockLineCopy,
 } from "@shared/stockUrgency.js";
@@ -87,6 +87,7 @@ export function StockLeftBadge({
   );
 }
 
-export function lineStockNote(stockMap: StockMap | null | undefined, item: { productId?: number; format?: string; productName?: string }) {
-  return cartStockNote(stockForLine(stockMap, item));
+export function lineStockNote(stockMap: StockMap | null | undefined, item: { productId?: number; format?: string; sizeOption?: string; productName?: string }) {
+  const size = item?.format || item?.sizeOption;
+  return checkoutStockNote(stockForLine(stockMap, item), size);
 }

@@ -85,6 +85,11 @@ export function cardStockBadge(entry) {
   return { text: `${available.toLocaleString("en-US")} left`, tone: "ok" };
 }
 
+/** Checkout and cart use the same sentence as the product page, including size and sale. */
+export function checkoutStockNote(entry, sizeOption, now = new Date()) {
+  return stockLineCopy(entry, sizeOption, now)?.text ?? null;
+}
+
 /** One short note under a cart line. */
 export function cartStockNote(entry) {
   const tier = scarcityTier(entry);

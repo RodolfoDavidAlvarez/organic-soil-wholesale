@@ -5,6 +5,7 @@ import { inventoryCheckItems, inventoryKeyForLine, stockForLine, stockKey, stock
 import {
   cardStockBadge,
   cartStockNote,
+  checkoutStockNote,
   primaryBagSizeOption,
   saleCountdownLabel,
   stockLineCopy,
@@ -63,6 +64,14 @@ test('scarcity tiers: selling fast under 25% of the confirmed start, only-n unde
   assert.equal(cardStockBadge({ available: 165, provisional: false, baseline: 165 }).text, '165 left');
   assert.equal(cardStockBadge({ available: 0, provisional: false }).text, 'Sold out');
   assert.equal(cartStockNote({ available: 165, provisional: false }), '165 left');
+  assert.equal(
+    checkoutStockNote({ available: 864, provisional: false, baseline: 864 }, '9lb Bag', duringSale),
+    '864 bags of 9 lb left at 30% off',
+  );
+  assert.equal(
+    checkoutStockNote({ available: 4, provisional: false, baseline: 4 }, 'Tote', duringSale),
+    'Only 4 totes left',
+  );
   assert.equal(cartStockNote(null), null);
   assert.equal(stockLineCopy({ available: 0, provisional: false, baseline: 165 }, '1.5CF Bag', duringSale).text, 'Sold out');
 });
