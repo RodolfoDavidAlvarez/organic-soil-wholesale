@@ -31,7 +31,8 @@ import { settleSchoolCheckout } from '../../shared/schoolRedeem.js';
 import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 import { chargeOrderDiscounts, volumeStripeCouponParams } from '../../shared/baggedVolumeDiscount.js';
 import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '../../shared/blackFridayPromo.js';
-import { nonBundleProductSubtotal, resolvePromoBundle } from '../../shared/promoBundles.js';
+import { resolvePromoBundle } from '../../shared/promoBundles.js';
+import { chargeCheckoutTotals, salesTaxLineItem } from '../../shared/salesTax.js';
 import {
   cartAllowsPhoenixYardPickup,
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
@@ -329,18 +330,20 @@ router.post('/create-session', async (req, res) => {
       }
     }
 
-    // Total in cents — `orders.total` is integer (legacy schema stores cents)
-    const productSubtotalDollars = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-    const truckingDollars = isDelivery && truckingQuote ? truckingQuote.costDollars : 0;
-    const rawSubtotal = productSubtotalDollars + truckingDollars;
-    const discountBase = discountPercent === 100
-      ? rawSubtotal
-      : nonBundleProductSubtotal(items);
+    // Total in cents — `orders.total` is integer (legacy schema stores cents).
+    // Tax is recomputed from canonical prices. A client-supplied tax amount is ignored.
     const schoolDiscountCents = charged.choice.groupCents;
     const volumeDiscountCents = charged.choice.volumeCents;
-    const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100) - schoolDiscountCents / 100 - volumeDiscountCents / 100);
-    const totalCents = Math.round(totalDollars * 100);
-    const isFreeOrder = totalCents === 0 && discountPercent > 0;
+    const charge = chargeCheckoutTotals({
+      items,
+      deliveryCents: isDelivery && truckingQuote ? truckingQuote.costCents : 0,
+      discountPercent,
+      schoolDiscountCents,
+      volumeDiscountCents,
+    });
+    const totalDollars = charge.totalDollars;
+    const totalCents = charge.totalCents;
+    const isFreeOrder = charge.isFreeOrder;
 
     // Create order in database with pending status
     const orderData: any = {
@@ -352,7 +355,8 @@ router.post('/create-session', async (req, res) => {
       delivery_type: isDelivery ? 'delivery' : 'pickup',
       fulfillment_type: isDelivery ? 'delivery' : 'pickup',
       pickup_scheduled_at: isDelivery ? null : (pickupTime || null),
-      subtotal: totalCents,
+      subtotal: charge.taxableCents,
+      tax_amount: charge.taxDollars,
       total: totalCents,
       total_amount: totalDollars,
       location_id: checkoutLocationId,
@@ -524,6 +528,9 @@ router.post('/create-session', async (req, res) => {
         quantity: 1,
       });
     }
+
+    const taxLine = salesTaxLineItem(charge.taxCents);
+    if (taxLine) lineItems.push(taxLine);
 
     // Stripe requires absolute URLs with explicit scheme. Fall back to the public
     // domain when the request has no Origin header (e.g., server-to-server).

@@ -39,7 +39,7 @@ import {
   normalizeV5CheckoutItems,
   normalizeV5ProductRecord,
 } from '../shared/oswPricing.js';
-import { nonBundleProductSubtotal, resolvePromoBundle } from '../shared/promoBundles.js';
+import { resolvePromoBundle } from '../shared/promoBundles.js';
 import {
   checkoutDiscountNotes,
   fetchSchoolQuote,
@@ -54,6 +54,7 @@ import {
 } from '../shared/checkoutDiscount.js';
 import { chargeOrderDiscounts, volumeStripeCouponParams } from '../shared/baggedVolumeDiscount.js';
 import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '../shared/blackFridayPromo.js';
+import { chargeCheckoutTotals, salesTaxLineItem } from '../shared/salesTax.js';
 import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRedeem.js';
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import { resolvePickupProductName } from '../shared/pickupProductName.js';
@@ -7270,17 +7271,19 @@ ${pages}
 
         const checkoutLocationId = locationId || 1;
 
-        const productSubtotalDollars = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const truckingDollars = isDelivery && truckingQuote ? truckingQuote.costDollars : 0;
-        const rawSubtotal = productSubtotalDollars + truckingDollars;
-        const discountBase = discountPercent === 100
-          ? rawSubtotal
-          : nonBundleProductSubtotal(items);
         const schoolDiscountCents = charged.choice.groupCents;
         const volumeDiscountCents = charged.choice.volumeCents;
-        const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100) - schoolDiscountCents / 100 - volumeDiscountCents / 100);
-        const totalCents = Math.round(totalDollars * 100);
-        const isFreeOrder = totalCents === 0 && discountPercent > 0;
+        // Tax is recomputed here from canonical prices. A client tax field is ignored.
+        const charge = chargeCheckoutTotals({
+          items,
+          deliveryCents: isDelivery && truckingQuote ? truckingQuote.costCents : 0,
+          discountPercent,
+          schoolDiscountCents,
+          volumeDiscountCents,
+        });
+        const totalDollars = charge.totalDollars;
+        const totalCents = charge.totalCents;
+        const isFreeOrder = charge.isFreeOrder;
 
         // Create order
         const orderData = {
@@ -7292,7 +7295,8 @@ ${pages}
           delivery_type: isDelivery ? 'delivery' : 'pickup',
           fulfillment_type: isDelivery ? 'delivery' : 'pickup',
           pickup_scheduled_at: isDelivery ? null : (pickupTime || null),
-          subtotal: totalCents,
+          subtotal: charge.taxableCents,
+          tax_amount: charge.taxDollars,
           total: totalCents,
           total_amount: totalDollars,
           location_id: checkoutLocationId,
@@ -7512,6 +7516,9 @@ ${pages}
             quantity: 1,
           });
         }
+
+        const taxLine = salesTaxLineItem(charge.taxCents);
+        if (taxLine) lineItems.push(taxLine);
 
         if (schoolQuote?.ok && charged.choice.winner === 'group') {
           const heldQuote = await reserveSchoolCheckoutQuote(schoolQuote, items, order.id);
