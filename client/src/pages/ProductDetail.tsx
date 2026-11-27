@@ -2529,7 +2529,10 @@ const ProductDetail = () => {
                             </div>
                           )}
 
-                          {needsChoice && selectedCategory.choices.some((choice) => presentChoice(product.id, choice).active) && (
+                          {needsChoice && selectedCategory.choices.some((choice) => {
+                            const shown = presentChoice(product.id, choice);
+                            return Boolean(shown.onSale || shown.notOnSale);
+                          }) && (
                             <p className="text-xs leading-snug text-stone-500">
                               Discounts don&apos;t stack. The larger savings applies: Black Friday {BLACK_FRIDAY_PROMO.percent}% off the regular price, or the usual pallet discount, not both.
                             </p>
