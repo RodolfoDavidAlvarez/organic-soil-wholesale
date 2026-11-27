@@ -4,6 +4,7 @@ import {
   cardStockBadge,
   cartStockNote,
   primaryBagSizeOption,
+  saleAppliesToSize,
   saleCountdownLabel,
   stockLineCopy,
 } from "@shared/stockUrgency.js";
@@ -45,7 +46,7 @@ export function StockUrgencyLine({
   if (!entry || !sizeOption) return null;
   const line = stockLineCopy(entry, sizeOption, now);
   if (!line) return null;
-  const countdown = saleCountdownLabel(now);
+  const countdown = saleAppliesToSize(sizeOption, now) ? saleCountdownLabel(now) : null;
   return (
     <div data-testid="stock-line" className="mb-3 flex min-h-5 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
       <p className={cn("text-sm font-semibold leading-snug", toneClass[line.tone])}>{line.text}</p>
