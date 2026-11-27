@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { inventoryCheckItems, inventoryKeyForLine, stockForLine, stockKey, stockShortageMessage } from '../shared/inventoryStock.js';
+import { inventoryCheckItems, inventoryKeyForLine, missingTrackedStock, stockForLine, stockKey, stockShortageMessage } from '../shared/inventoryStock.js';
 import {
   cardStockBadge,
   cartStockNote,
@@ -26,6 +26,17 @@ test('check payload skips quote lines and zero quantities', () => {
     { productId: 1000, format: '1CF Bag', quantity: 2, mode: 'quote' },
   ]);
   assert.deepEqual(items, [{ product_id: 111, size_option: '1.5CF Bag', quantity: 3 }]);
+});
+
+test('a mapped SKU with no stock row is not treated as in stock', () => {
+  const items = [{ product_id: 1001, size_option: '9lb Bag', quantity: 6 }];
+  const maps = [{ product_id: 1001, size_option: '9lb Bag', sku_code: 'MWP-9LB' }];
+  assert.equal(missingTrackedStock(items, maps, [{ sku_code: 'MWP-9LB' }]).length, 0);
+  const missing = missingTrackedStock(items, maps, []);
+  assert.equal(missing.length, 1);
+  assert.equal(missing[0].on_hand, 0);
+  assert.equal(missingTrackedStock(items, [], []).length, 0);
+  assert.match(stockShortageMessage(missing), /0 left/);
 });
 
 test('stock lookup and shortage copy', () => {
@@ -100,5 +111,8 @@ test('checkout guards stock before charging and the stock endpoint exists', () =
   const api = readFileSync(new URL('../api/index.js', import.meta.url), 'utf8');
   assert.match(api, /path === '\/api\/inventory\/stock'/);
   assert.match(api, /rpc\('inventory_check_cart'/);
-  assert.ok(api.indexOf("rpc('inventory_check_cart'") < api.indexOf("from('orders')\n          .insert(orderData)"));
+  assert.match(api, /findMissingTrackedStock/);
+  const guardAt = api.indexOf("rpc('inventory_check_cart'");
+  const insertAt = api.indexOf(".from('orders').insert(orderData)");
+  assert.ok(guardAt >= 0 && insertAt > guardAt);
 });

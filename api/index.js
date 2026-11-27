@@ -64,7 +64,7 @@ import {
 import { schoolPaymentIntentId, settleSchoolCheckout } from '../shared/schoolRedeem.js';
 import { CheckoutConfirmationError, confirmPaidCheckout } from '../shared/checkoutConfirmation.js';
 import { resolvePickupProductName } from '../shared/pickupProductName.js';
-import { inventoryCheckItems, stockKey, stockShortageMessage } from '../shared/inventoryStock.js';
+import { findMissingTrackedStock, inventoryCheckItems, stockKey, stockShortageMessage } from '../shared/inventoryStock.js';
 import { variantBaselines } from '../shared/stockUrgency.js';
 import {
   JOB_APPLICATION_BUCKET,
@@ -7208,6 +7208,10 @@ ${pages}
                 console.error('[checkout] inventory check failed (allowing order):', stockError.message);
               } else if (Array.isArray(shortages) && shortages.length) {
                 return res.status(409).json({ error: stockShortageMessage(shortages), stockShortages: shortages });
+              }
+              const missingRows = await findMissingTrackedStock(db, checkItems);
+              if (missingRows.length) {
+                return res.status(409).json({ error: stockShortageMessage(missingRows), stockShortages: missingRows });
               }
             }
           } catch (stockErr) {

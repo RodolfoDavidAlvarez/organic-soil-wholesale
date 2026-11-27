@@ -32,6 +32,7 @@ import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 import { chargeOrderDiscounts, volumeStripeCouponParams } from '../../shared/baggedVolumeDiscount.js';
 import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '../../shared/blackFridayPromo.js';
 import { resolvePromoBundle } from '../../shared/promoBundles.js';
+import { findMissingTrackedStock, inventoryCheckItems, stockShortageMessage } from '../../shared/inventoryStock.js';
 import { chargeCheckoutTotals, salesTaxLineItem } from '../../shared/salesTax.js';
 import {
   checkoutCartFingerprint,
@@ -298,6 +299,13 @@ router.post('/create-session', async (req, res) => {
     // Validate inventory availability — skipped on TEST discount so QA flows don't
     // get blocked by zero inventory rows in dev.
     if (discountPercent < 100) {
+      const missingRows = await findMissingTrackedStock(supabase, inventoryCheckItems(items));
+      if (missingRows.length) {
+        return res.status(409).json({
+          error: stockShortageMessage(missingRows),
+          stockShortages: missingRows,
+        });
+      }
       const inventoryChecks = await Promise.all(
         items.map(async (item: any) => {
           if (resolvePromoBundle(item)) {
@@ -320,8 +328,9 @@ router.post('/create-session', async (req, res) => {
             productId: item.productId,
             requested: item.quantity,
             available: data?.quantity_available || 0,
-            // Treat missing inventory rows as "ok to sell" — many products don't
-            // have per-size inventory rows yet but are still actively offered.
+            // A missing legacy inventory row is not a stock count. Tracked SKUs
+            // with no inventory_stock row are refused above. Untracked variants
+            // (no variant map) stay sellable so a product we do not count is not blocked.
             canFulfill: data == null ? true : (data.quantity_available ?? 0) >= item.quantity,
           };
         })
