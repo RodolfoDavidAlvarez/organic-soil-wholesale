@@ -32,6 +32,8 @@ import { getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { isSchoolDiscountCode, resolveDiscountCode, schoolLineCaption } from "@shared/checkoutDiscount.js";
 import { baggedVolumeHint, baggedVolumeSavingsLabel, chargeOrderDiscounts } from "@shared/baggedVolumeDiscount.js";
 import { BLACK_FRIDAY_PROMO, blackFridayQuote, isBlackFridayEligibleLine } from "@shared/blackFridayPromo.js";
+import { checkoutSalesTax, salesTaxPercentLabel } from "@shared/salesTax.js";
+import { formatDisplayLabel } from "@shared/formatDisplayLabel.js";
 import {
   cartAllowsPhoenixYardPickup,
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
@@ -549,7 +551,14 @@ const Checkout: React.FC = () => {
   const deliveryFee = fulfillment === "delivery" && deliveryQuote ? deliveryQuote.costDollars : 0;
   const subtotal = productSubtotal + deliveryFee;
   const discountAmount = appliedDiscount?.kind === "test" ? subtotal : 0;
-  const total = Math.max(0, subtotal - discountAmount);
+  // Same integer-cent formula the server charges. The Pay request does not send this amount.
+  const salesTax = checkoutSalesTax({
+    productCents: Math.round(productSubtotal * 100),
+    discountCents: appliedDiscount?.kind === "test" ? Math.round(subtotal * 100) : 0,
+    deliveryCents: Math.round(deliveryFee * 100),
+  });
+  const taxAmount = salesTax.taxCents / 100;
+  const total = salesTax.totalCents / 100;
 
   useEffect(() => {
     if (checkoutEntryTracked.current || payItems.length === 0) return;
@@ -1301,7 +1310,7 @@ const Checkout: React.FC = () => {
                       )}
                       <div className="min-w-0">
                         <p className="text-base font-bold leading-tight text-stone-950">{item.productName}</p>
-                        <p className="mt-0.5 text-sm leading-tight text-stone-500">{item.format}</p>
+                        <p className="mt-0.5 text-sm leading-tight text-stone-500">{formatDisplayLabel(item.productId, item.format)}</p>
                         {lineStockNote(stockMap, item) ? (
                           <p data-testid="cart-stock-note" className="mt-0.5 text-xs font-semibold text-stone-500">{lineStockNote(stockMap, item)}</p>
                         ) : null}
@@ -1473,6 +1482,11 @@ const Checkout: React.FC = () => {
                               {fmt(deliveryQuote.costDollars).replace(/\.00$/, "")}
                             </span>
                           </p>
+                          {productSubtotal > 0 && deliveryQuote.costDollars > productSubtotal && (
+                            <p className="mt-2 text-xs font-semibold leading-snug text-amber-900">
+                              Pickup is cheaper for this order. Delivery is {fmt(deliveryQuote.costDollars)} and the products are {fmt(productSubtotal)}.
+                            </p>
+                          )}
                           <p className="mt-0.5 text-xs text-stone-600">
                             {deliveryQuote.truckLabel} · Congress, AZ →{" "}
                             {[
@@ -1780,8 +1794,8 @@ const Checkout: React.FC = () => {
                 <CardTitle className="text-lg font-semibold tracking-tight text-stone-900">Your order</CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-5 pt-0">
-                {hasFlatbedSpots && (
-                  <p className="mt-3 text-xs leading-snug text-stone-500">Pallets and totes need a scheduled pickup.</p>
+                {hasFlatbedSpots && fulfillment !== "delivery" && (
+                  <p className="mt-3 text-xs leading-snug text-stone-500">Pallets and Super Sacks need a scheduled pickup time.</p>
                 )}
                 <ul className="divide-y divide-stone-200">
                   {groupedPayItems.map((item) => {
@@ -1811,7 +1825,7 @@ const Checkout: React.FC = () => {
                           ) : <Package aria-hidden="true" className="h-12 w-12 shrink-0 text-stone-400" />}
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold leading-tight text-stone-950">{item.productName}</p>
-                            <p className="mt-1 text-sm text-stone-600">{item.format}{item.quantity > 1 && ` · Qty ${item.quantity}`}</p>
+                            <p className="mt-1 text-sm text-stone-600">{formatDisplayLabel(item.productId, item.format)}{item.quantity > 1 && ` · Qty ${item.quantity}`}</p>
                             {lineStockNote(stockMap, item) ? (
                               <p data-testid="cart-stock-note" className="mt-0.5 text-xs font-semibold text-stone-500">{lineStockNote(stockMap, item)}</p>
                             ) : null}
@@ -1835,7 +1849,12 @@ const Checkout: React.FC = () => {
                             <Link href={`/products/${item.productSlug}`} className="shrink-0 font-semibold text-[#264027] underline underline-offset-2">See more</Link>
                           </p>
                         ) : null}
-                        {walkingFloor ? <p className="mt-2 text-sm text-stone-600">Qty {item.quantity} · walking-floor load</p> : (
+                        {walkingFloor ? (
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <p className="text-sm text-stone-600">Qty {item.quantity} · walking-floor load</p>
+                            <button type="button" aria-label={`Remove ${item.productName}`} className="inline-flex min-h-11 items-center gap-1 px-2 text-stone-600 hover:text-red-700" onClick={remove}><Trash2 className="h-4 w-4" /> Remove</button>
+                          </div>
+                        ) : (
                           <div className="mt-3 flex items-center justify-between gap-2">
                             <div className="inline-flex items-center rounded-xl border border-stone-200">
                               <button type="button" aria-label={`Decrease quantity of ${item.productName}`} className="grid h-11 w-11 place-items-center disabled:opacity-40" disabled={item.quantity <= 1} onClick={() => changeQuantity(item.quantity - 1)}><Minus className="h-4 w-4" /></button>
@@ -1885,6 +1904,12 @@ const Checkout: React.FC = () => {
                 {appliedDiscount?.kind === "test" && (
                   <div className="flex justify-between py-1 text-sm text-emerald-700"><span>Discount</span><span>−{fmt(discountAmount)}</span></div>
                 )}
+                {salesTax.taxCents > 0 && (
+                  <div data-testid="sales-tax-line" className="flex items-center justify-between text-sm text-stone-600">
+                    <span>Sales tax ({salesTaxPercentLabel()})</span>
+                    <span>{fmt(taxAmount)}</span>
+                  </div>
+                )}
                 <div className="mt-2 flex items-baseline justify-between border-t border-stone-200 pt-3 font-semibold text-stone-950">
                   <span>{fulfillment === "delivery" && !deliveryQuote ? "Subtotal" : "Total"}</span>
                   <span className="text-xl tabular-nums">{fmt(total)}</span>
@@ -1905,8 +1930,8 @@ const Checkout: React.FC = () => {
               <CardContent className="space-y-4 p-4 sm:p-5">
                 {/* Totals */}
                 <div className="space-y-2">
-                  {hasFlatbedSpots && (
-                    <p className="text-xs leading-snug text-stone-500">Pallets and totes need a scheduled pickup.</p>
+                  {hasFlatbedSpots && fulfillment !== "delivery" && (
+                    <p className="text-xs leading-snug text-stone-500">Pallets and Super Sacks need a scheduled pickup time.</p>
                   )}
                   <div className="flex items-center justify-between text-sm text-stone-600">
                     <span>Products</span>
@@ -1949,6 +1974,12 @@ const Checkout: React.FC = () => {
                     <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
                       <span>Discount ({appliedDiscount.code})</span>
                       <span>−{fmt(discountAmount)}</span>
+                    </div>
+                  )}
+                  {salesTax.taxCents > 0 && (
+                    <div data-testid="sales-tax-line" className="flex items-center justify-between text-sm text-stone-600">
+                      <span>Sales tax ({salesTaxPercentLabel()})</span>
+                      <span>{fmt(taxAmount)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between border-t border-stone-200 pt-3 text-xl font-bold text-stone-950">

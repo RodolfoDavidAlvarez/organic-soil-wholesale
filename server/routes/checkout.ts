@@ -31,7 +31,15 @@ import { settleSchoolCheckout } from '../../shared/schoolRedeem.js';
 import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 import { chargeOrderDiscounts, volumeStripeCouponParams } from '../../shared/baggedVolumeDiscount.js';
 import { applyBlackFridayPrices, blackFridayOrderNote, blackFridayQuote } from '../../shared/blackFridayPromo.js';
-import { nonBundleProductSubtotal, resolvePromoBundle } from '../../shared/promoBundles.js';
+import { resolvePromoBundle } from '../../shared/promoBundles.js';
+import { findMissingTrackedStock, inventoryCheckItems, stockShortageMessage } from '../../shared/inventoryStock.js';
+import { chargeCheckoutTotals, salesTaxLineItem } from '../../shared/salesTax.js';
+import {
+  checkoutCartFingerprint,
+  checkoutIdempotencyKey,
+  checkoutKeyMarker,
+  findPendingCheckoutOrder,
+} from '../../shared/checkoutIdempotency.js';
 import {
   cartAllowsPhoenixYardPickup,
   PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
@@ -259,7 +267,7 @@ router.post('/create-session', async (req, res) => {
       }
     }
 
-    const customerNotes = [
+    let customerNotes = [
       blackFridayOrderNote(blackFriday),
       orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
       customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
@@ -291,6 +299,13 @@ router.post('/create-session', async (req, res) => {
     // Validate inventory availability — skipped on TEST discount so QA flows don't
     // get blocked by zero inventory rows in dev.
     if (discountPercent < 100) {
+      const missingRows = await findMissingTrackedStock(supabase, inventoryCheckItems(items));
+      if (missingRows.length) {
+        return res.status(409).json({
+          error: stockShortageMessage(missingRows),
+          stockShortages: missingRows,
+        });
+      }
       const inventoryChecks = await Promise.all(
         items.map(async (item: any) => {
           if (resolvePromoBundle(item)) {
@@ -313,8 +328,9 @@ router.post('/create-session', async (req, res) => {
             productId: item.productId,
             requested: item.quantity,
             available: data?.quantity_available || 0,
-            // Treat missing inventory rows as "ok to sell" — many products don't
-            // have per-size inventory rows yet but are still actively offered.
+            // A missing legacy inventory row is not a stock count. Tracked SKUs
+            // with no inventory_stock row are refused above. Untracked variants
+            // (no variant map) stay sellable so a product we do not count is not blocked.
             canFulfill: data == null ? true : (data.quantity_available ?? 0) >= item.quantity,
           };
         })
@@ -329,18 +345,64 @@ router.post('/create-session', async (req, res) => {
       }
     }
 
-    // Total in cents — `orders.total` is integer (legacy schema stores cents)
-    const productSubtotalDollars = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-    const truckingDollars = isDelivery && truckingQuote ? truckingQuote.costDollars : 0;
-    const rawSubtotal = productSubtotalDollars + truckingDollars;
-    const discountBase = discountPercent === 100
-      ? rawSubtotal
-      : nonBundleProductSubtotal(items);
+    // Total in cents — `orders.total` is integer (legacy schema stores cents).
+    // Tax is recomputed from canonical prices. A client-supplied tax amount is ignored.
     const schoolDiscountCents = charged.choice.groupCents;
     const volumeDiscountCents = charged.choice.volumeCents;
-    const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100) - schoolDiscountCents / 100 - volumeDiscountCents / 100);
-    const totalCents = Math.round(totalDollars * 100);
-    const isFreeOrder = totalCents === 0 && discountPercent > 0;
+    const charge = chargeCheckoutTotals({
+      items,
+      deliveryCents: isDelivery && truckingQuote ? truckingQuote.costCents : 0,
+      discountPercent,
+      schoolDiscountCents,
+      volumeDiscountCents,
+    });
+    const totalDollars = charge.totalDollars;
+    const totalCents = charge.totalCents;
+    const isFreeOrder = charge.isFreeOrder;
+
+    let stripeIdempotencyKey: string | null = null;
+    let reusedOrder: any = null;
+    if (!isFreeOrder) {
+      const checkoutPhone = String(customerInfo.phone || '').trim();
+      const cartFingerprint = checkoutCartFingerprint({
+        phone: checkoutPhone,
+        items,
+        fulfillment: isDelivery ? 'delivery' : 'pickup',
+        deliveryZip: isDelivery ? deliveryAddress?.zip : null,
+        deliveryStreet: isDelivery ? deliveryAddress?.street : null,
+        roughAccess: isDelivery ? !!deliveryAddress?.roughAccess : false,
+        semiAccess: isDelivery ? deliveryAddress?.semiAccess !== false : true,
+        discountCode,
+        locationId: checkoutLocationId,
+        pickupTime: isDelivery ? null : pickupTime,
+        deliveryCents: isDelivery && truckingQuote ? truckingQuote.costCents : 0,
+        schoolDiscountCents,
+        volumeDiscountCents,
+      });
+      const baseKey = checkoutIdempotencyKey(cartFingerprint);
+      stripeIdempotencyKey = baseKey;
+      customerNotes = [customerNotes, checkoutKeyMarker(baseKey)].filter(Boolean).join('\n');
+      try {
+        const pending = await findPendingCheckoutOrder(supabase, { phone: checkoutPhone, idempotencyKey: baseKey });
+        if (pending?.stripe_checkout_session_id && process.env.STRIPE_SECRET_KEY) {
+          const lookupClient = getStripe();
+          const existingSession = await lookupClient.checkout.sessions.retrieve(pending.stripe_checkout_session_id);
+          if (existingSession?.status === 'open' && existingSession.url) {
+            return res.json({
+              sessionId: existingSession.id,
+              orderId: pending.id,
+              confirmationCode: pending.confirmation_code,
+              url: existingSession.url,
+            });
+          }
+          stripeIdempotencyKey = `${baseKey}:${existingSession?.id || pending.stripe_checkout_session_id}`.slice(0, 255);
+        }
+        if (pending) reusedOrder = pending;
+      } catch (lookupError) {
+        console.error('[checkout] idempotency lookup failed:', lookupError);
+        reusedOrder = null;
+      }
+    }
 
     // Create order in database with pending status
     const orderData: any = {
@@ -352,7 +414,8 @@ router.post('/create-session', async (req, res) => {
       delivery_type: isDelivery ? 'delivery' : 'pickup',
       fulfillment_type: isDelivery ? 'delivery' : 'pickup',
       pickup_scheduled_at: isDelivery ? null : (pickupTime || null),
-      subtotal: totalCents,
+      subtotal: charge.taxableCents,
+      tax_amount: charge.taxDollars,
       total: totalCents,
       total_amount: totalDollars,
       location_id: checkoutLocationId,
@@ -406,30 +469,31 @@ router.post('/create-session', async (req, res) => {
       "OSW Customer";
     orderData.order_type = isDelivery ? "delivery" : isQuickOrder ? "pickup" : "regular";
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert(orderData)
-      .select()
-      .single();
-
-    if (orderError) throw orderError;
+    let order = reusedOrder;
+    if (!order) {
+      const inserted = await supabase.from('orders').insert(orderData).select().single();
+      if (inserted.error) throw inserted.error;
+      order = inserted.data;
+    }
 
     // Create order items
-    const orderItems = items.map((item: any) => ({
-      order_id: order.id,
-      product_id: item.productId,
-      quantity: item.quantity,
-      unit_price: item.price,
-      total_price: item.price * item.quantity,
-      size_option: item.sizeOption,
-      status: 'pending'
-    }));
+    if (!reusedOrder) {
+      const orderItems = items.map((item: any) => ({
+        order_id: order.id,
+        product_id: item.productId,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity,
+        size_option: item.sizeOption,
+        status: 'pending'
+      }));
 
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
 
-    if (itemsError) throw itemsError;
+      if (itemsError) throw itemsError;
+    }
 
     // Free order path — skip Stripe entirely. Mark the order paid and fan out to
     // MOS so yard reps see the test order in the iOS sales portal exactly like a
@@ -525,6 +589,9 @@ router.post('/create-session', async (req, res) => {
       });
     }
 
+    const taxLine = salesTaxLineItem(charge.taxCents);
+    if (taxLine) lineItems.push(taxLine);
+
     // Stripe requires absolute URLs with explicit scheme. Fall back to the public
     // domain when the request has no Origin header (e.g., server-to-server).
     const stripeOrigin = (req.headers.origin as string)
@@ -574,7 +641,7 @@ router.post('/create-session', async (req, res) => {
       metadata: schoolHold ? schoolHold.metadata : baseMetadata,
       ...(schoolHold ? { payment_intent_data: schoolHold.payment_intent_data } : {}),
       customer_email: customerInfo.email || undefined,
-    });
+    }, stripeIdempotencyKey ? { idempotencyKey: stripeIdempotencyKey } : undefined);
     schoolSession = session;
 
     // Update order with Stripe session ID

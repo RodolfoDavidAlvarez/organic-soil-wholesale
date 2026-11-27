@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { stockForLine, stockKey, type StockMap } from "@shared/inventoryStock.js";
 import {
   cardStockBadge,
-  cartStockNote,
   primaryBagSizeOption,
+  saleAppliesToSize,
+  checkoutStockNote,
   saleCountdownLabel,
   stockLineCopy,
 } from "@shared/stockUrgency.js";
@@ -45,7 +46,7 @@ export function StockUrgencyLine({
   if (!entry || !sizeOption) return null;
   const line = stockLineCopy(entry, sizeOption, now);
   if (!line) return null;
-  const countdown = saleCountdownLabel(now);
+  const countdown = saleAppliesToSize(sizeOption, now) ? saleCountdownLabel(now) : null;
   return (
     <div data-testid="stock-line" className="mb-3 flex min-h-5 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
       <p className={cn("text-sm font-semibold leading-snug", toneClass[line.tone])}>{line.text}</p>
@@ -86,6 +87,7 @@ export function StockLeftBadge({
   );
 }
 
-export function lineStockNote(stockMap: StockMap | null | undefined, item: { productId?: number; format?: string; productName?: string }) {
-  return cartStockNote(stockForLine(stockMap, item));
+export function lineStockNote(stockMap: StockMap | null | undefined, item: { productId?: number; format?: string; sizeOption?: string; productName?: string }) {
+  const size = item?.format || item?.sizeOption;
+  return checkoutStockNote(stockForLine(stockMap, item), size);
 }

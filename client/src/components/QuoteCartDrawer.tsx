@@ -15,6 +15,7 @@ import { promoBundleHref, getPromoBundleByProductId } from "@shared/promoBundles
 import { getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { baggedVolumeHint, baggedVolumeQuote, baggedVolumeSavingsLabel } from "@shared/baggedVolumeDiscount.js";
 import { BLACK_FRIDAY_PROMO, blackFridayQuote } from "@shared/blackFridayPromo.js";
+import { formatDisplayLabel } from "@shared/formatDisplayLabel.js";
 import { partitionPayCartItems } from "@shared/cartLoadGroups.js";
 import { cn } from "@/lib/utils";
 import { useInventoryStock } from "@/hooks/useInventoryStock";
@@ -111,7 +112,7 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer, showPrice, sa
           <span className="text-sm font-semibold tabular-nums">{fmt(lineTotal)}</span>
         </div>
       </Link>
-      <p className="mt-1 text-sm text-stone-600">{item.format}</p>
+      <p className="mt-1 text-sm text-stone-600">{formatDisplayLabel(item.productId, item.format)}</p>
       {lineStockNote(stockMap, item) ? (
         <p data-testid="cart-stock-note" className="mt-0.5 text-xs font-semibold text-stone-500">{lineStockNote(stockMap, item)}</p>
       ) : null}

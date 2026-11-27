@@ -24,6 +24,7 @@ import { useInventoryStock } from "@/hooks/useInventoryStock";
 import { StockUrgencyLine } from "@/components/StockUrgency";
 import { inventoryKeyForLine, stockKey } from "@shared/inventoryStock.js";
 import { primaryBagSizeOption } from "@shared/stockUrgency.js";
+import { BLACK_FRIDAY_PROMO, retailOfferPrice } from "@shared/blackFridayPromo.js";
 import { ToastAction } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription, getPayPickupProductType } from "@/data/payPickupProductContent";
@@ -138,7 +139,28 @@ type SizeChoice = PriceTier & {
   /** Strikethrough list price when a volume discount applies */
   compareAtPrice?: number;
   badge?: string;
+  onSale?: boolean;
+  notOnSale?: boolean;
   secondaryPriceLabel?: string;
+};
+
+const presentChoice = (productId: number, choice: SizeChoice): SizeChoice => {
+  const offer = retailOfferPrice({
+    productId,
+    format: choice.size,
+    unitPrice: choice.displayPrice,
+    listUnitPrice: choice.compareAtPrice ?? choice.displayPrice,
+  });
+  if (!offer.active) return choice;
+  if (!offer.onSale) return { ...choice, onSale: false, notOnSale: true };
+  return {
+    ...choice,
+    displayPrice: offer.price,
+    compareAtPrice: offer.compareAt ?? choice.compareAtPrice,
+    badge: offer.badge || choice.badge,
+    onSale: true,
+    notOnSale: false,
+  };
 };
 
 type SizeCategory = {
@@ -1479,7 +1501,8 @@ const ProductDetail = () => {
             ? "bulk_pickup"
             : "yard_pickup";
 
-  const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
+  const presentedChoice = selectedChoice && product ? presentChoice(product.id, selectedChoice) : null;
+  const selectedTotal = (presentedChoice?.displayPrice ?? 0) * quantity;
   const canPayOnline = product ? isPayOnlineProduct(product.id) : false;
   const { data: stockMap } = useInventoryStock([product?.id]);
   const selectedInventory = product && selectedChoice
@@ -1540,7 +1563,7 @@ const ProductDetail = () => {
         ? selectedChoice.subLabel
         : needsChoice
         ? selectedChoice.kind === "pallet"
-          ? `${selectedChoice.subLabel} · 20% off`
+          ? `${selectedChoice.subLabel} · ${presentedChoice?.onSale ? `${BLACK_FRIDAY_PROMO.percent}% off list` : "20% off"}`
           : selectedChoice.subLabel
         : selectedChoice.secondaryPriceLabel || undefined;
       const rawUnit = selectedChoice.unit?.replace(/^per\s/i, "") ?? "";
@@ -1552,12 +1575,12 @@ const ProductDetail = () => {
       return {
         key: `choice-${selectedChoice.size}-${quantity}`,
         eyebrow: "Your selection",
-        price: fmt(selectedChoice.displayPrice),
+        price: fmt(presentedChoice?.displayPrice ?? selectedChoice.displayPrice),
         unitSuffix,
         subtitle: formatLine,
         detail,
         totalLine:
-          quantity > 1 ? `${quantity} × ${fmt(selectedChoice.displayPrice)} = ${fmt(selectedTotal)}` : undefined,
+          quantity > 1 ? `${quantity} × ${fmt(presentedChoice?.displayPrice ?? selectedChoice.displayPrice)} = ${fmt(selectedTotal)}` : undefined,
       };
     }
 
@@ -2254,6 +2277,12 @@ const ProductDetail = () => {
                       {buyStep === "sizes" && sizeCategories.length > 0 && (
                         <div className="divide-y divide-[#264027]/10 border-y border-[#264027]/10">
                           {sizeCategories.map((category) => {
+                            const rowOffer = retailOfferPrice({
+                              productId: product.id,
+                              format: category.key,
+                              unitPrice: category.price,
+                              listUnitPrice: category.price,
+                            });
                             const shortLabel =
                               category.label.replace(/\s*\([^)]*\)\s*$/, "") || category.label;
                             const parenDetail = category.label.match(/\(([^)]+)\)/)?.[1];
@@ -2312,9 +2341,15 @@ const ProductDetail = () => {
                                   )}
                                 </span>
                                 <span className="shrink-0 text-right">
+                                  {rowOffer.onSale && (
+                                    <span className="block text-xs text-stone-400 line-through">{fmt(category.price)}</span>
+                                  )}
                                   <span className="block text-[15px] font-extrabold text-primary sm:text-base">
-                                    {category.priceLabel}
+                                    {rowOffer.onSale ? fmt(rowOffer.price) : category.priceLabel}
                                   </span>
+                                  {rowOffer.notOnSale && (
+                                    <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-400">Not on this sale</span>
+                                  )}
                                   <span className="mt-0.5 block text-xs font-semibold text-[#b38a58] opacity-0 transition group-hover:opacity-100 sm:opacity-100">
                                     Select →
                                   </span>
@@ -2372,7 +2407,8 @@ const ProductDetail = () => {
                                     ? choice.size === selectedChoiceSize
                                     : true,
                                 )
-                                .map((choice) => {
+                                .map((catalogChoice) => {
+                                const choice = presentChoice(product.id, catalogChoice);
                                 const isSelected = choice.size === selectedChoiceSize;
                                 const choiceImage = imageForChoice(choice, selectedCategory.image, product.id);
                                 return (
@@ -2450,7 +2486,9 @@ const ProductDetail = () => {
                                         )}
                                       >
                                         {choice.subLabel}
-                                        {choice.kind === "pallet" ? " · volume discount" : ""}
+                                        {choice.kind === "pallet" && !choice.onSale ? " · volume discount" : ""}
+                                        {choice.onSale ? " · discounts don't stack; the larger applies" : ""}
+                                        {choice.notOnSale ? " · not on this sale" : ""}
                                       </span>
                                     </span>
                                     <span className="flex shrink-0 flex-col items-end gap-1.5">
@@ -2489,6 +2527,15 @@ const ProductDetail = () => {
                                 );
                               })}
                             </div>
+                          )}
+
+                          {needsChoice && selectedCategory.choices.some((choice) => {
+                            const shown = presentChoice(product.id, choice);
+                            return Boolean(shown.onSale || shown.notOnSale);
+                          }) && (
+                            <p className="text-xs leading-snug text-stone-500">
+                              Discounts don&apos;t stack. The larger savings applies: Black Friday {BLACK_FRIDAY_PROMO.percent}% off the regular price, or the usual pallet discount, not both.
+                            </p>
                           )}
 
                           {isBulkPickupSelected && (
@@ -2592,7 +2639,7 @@ const ProductDetail = () => {
                                   {fmt(selectedTotal)}
                                   {quantity > 1 ? (
                                     <span className="mt-0.5 block text-xs font-medium text-muted-foreground">
-                                      {quantity} × {fmt(selectedChoice.displayPrice)}
+                                      {quantity} × {fmt(presentedChoice?.displayPrice ?? selectedChoice.displayPrice)}
                                     </span>
                                   ) : null}
                                 </p>

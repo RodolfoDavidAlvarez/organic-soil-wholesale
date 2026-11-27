@@ -97,6 +97,47 @@ export function blackFridayUnitCents(item, promo = BLACK_FRIDAY_PROMO) {
 }
 
 /**
+ * Price one PDP bag or pallet card. Catalog `unitPrice` stays the regular
+ * charge (pallet cards pass the 20% price). When the sale is the larger
+ * savings, the card shows 30% off list instead. The two discounts do not stack.
+ */
+export function retailOfferPrice({ productId, format, unitPrice, listUnitPrice, now = new Date(), promo = BLACK_FRIDAY_PROMO } = {}) {
+  const current = Number(unitPrice);
+  const list = Number(listUnitPrice ?? unitPrice);
+  const item = {
+    productId,
+    format,
+    sizeOption: format,
+    unitPrice: current,
+    price: current,
+    listUnitPrice: Number.isFinite(list) && list > current ? list : current,
+    quantity: 1,
+    mode: "pay",
+  };
+  const active = isBlackFridaySaleActive(now, promo);
+  if (!active || !Number.isFinite(current) || current < 0) {
+    return { active, onSale: false, price: current, compareAt: null, badge: null };
+  }
+  if (!isBlackFridayEligibleLine(item)) {
+    return { active, onSale: false, price: current, compareAt: null, badge: null, notOnSale: true };
+  }
+  const saleCents = blackFridayUnitCents(item, promo);
+  const currentCents = Math.round((current + Number.EPSILON) * 100);
+  if (!Number.isFinite(saleCents) || saleCents >= currentCents) {
+    return { active, onSale: false, price: current, compareAt: null, badge: null };
+  }
+  const compareCents = Math.round(((Number.isFinite(list) && list > saleCents / 100 ? list : current) + Number.EPSILON) * 100);
+  return {
+    active,
+    onSale: true,
+    notOnSale: false,
+    price: saleCents / 100,
+    compareAt: compareCents / 100,
+    badge: `${promo.percent}% off`,
+  };
+}
+
+/**
  * Decide sale vs. existing discounts for one cart.
  *
  * `items` are the catalog-priced lines BEFORE any flatbed adjustment (the

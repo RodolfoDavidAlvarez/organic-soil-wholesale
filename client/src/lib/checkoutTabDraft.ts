@@ -30,7 +30,11 @@ function read() {
 export function readCheckoutDraft(cart: string) {
   try {
     const saved = read();
-    return saved?.cart === cart ? saved.fields : null;
+    // Adding or changing a line used to miss this lookup, because the key
+    // includes quantity, and checkout booted back at step 1. Keep the saved
+    // step, fulfillment, and customer fields for any cart in this tab.
+    void cart;
+    return saved?.fields ?? null;
   } catch { return null; }
 }
 
