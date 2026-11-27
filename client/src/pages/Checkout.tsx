@@ -1844,7 +1844,12 @@ const Checkout: React.FC = () => {
                             <Link href={`/products/${item.productSlug}`} className="shrink-0 font-semibold text-[#264027] underline underline-offset-2">See more</Link>
                           </p>
                         ) : null}
-                        {walkingFloor ? <p className="mt-2 text-sm text-stone-600">Qty {item.quantity} · walking-floor load</p> : (
+                        {walkingFloor ? (
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <p className="text-sm text-stone-600">Qty {item.quantity} · walking-floor load</p>
+                            <button type="button" aria-label={`Remove ${item.productName}`} className="inline-flex min-h-11 items-center gap-1 px-2 text-stone-600 hover:text-red-700" onClick={remove}><Trash2 className="h-4 w-4" /> Remove</button>
+                          </div>
+                        ) : (
                           <div className="mt-3 flex items-center justify-between gap-2">
                             <div className="inline-flex items-center rounded-xl border border-stone-200">
                               <button type="button" aria-label={`Decrease quantity of ${item.productName}`} className="grid h-11 w-11 place-items-center disabled:opacity-40" disabled={item.quantity <= 1} onClick={() => changeQuantity(item.quantity - 1)}><Minus className="h-4 w-4" /></button>
