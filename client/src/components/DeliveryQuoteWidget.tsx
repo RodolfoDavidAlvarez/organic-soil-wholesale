@@ -230,11 +230,19 @@ export function DeliveryQuoteWidget({
               type="button"
               onClick={handleGetPrice}
               disabled={loading || zip.length !== 5}
+              aria-describedby={zip.length !== 5 ? "delivery-zip-hint" : undefined}
               className="h-11 px-4"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Get price"}
             </Button>
           </div>
+          {!loading && zip.length !== 5 && (
+            <p id="delivery-zip-hint" className="mt-1 text-xs text-stone-500">
+              {zip.length === 0
+                ? "Enter a 5-digit ZIP to get a delivery price."
+                : `Enter all 5 digits. ${zip.length} so far.`}
+            </p>
+          )}
         </div>
 
         {/* Pre-checked positive question: we assume semi access by default.
@@ -318,6 +326,11 @@ export function DeliveryQuoteWidget({
                 {deliveredTotal !== null && (
                   <p className="mt-1 text-xs text-stone-600">
                     Products {fmt$(productSubtotal!)} + delivery {fmt$(quote.costDollars)}. Delivery is itemized on your receipt.
+                  </p>
+                )}
+                {productSubtotal != null && productSubtotal > 0 && quote.costDollars > productSubtotal && (
+                  <p className="mt-2 text-xs font-semibold leading-snug text-amber-900">
+                    Pickup is cheaper for this order. Delivery is {fmt$(quote.costDollars)} and the products are {fmt$(productSubtotal)}.
                   </p>
                 )}
                 {quote.breakdown.loadCount && quote.breakdown.loadCount > 1 ? (

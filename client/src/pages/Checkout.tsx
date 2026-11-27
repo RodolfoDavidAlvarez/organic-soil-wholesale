@@ -1482,6 +1482,11 @@ const Checkout: React.FC = () => {
                               {fmt(deliveryQuote.costDollars).replace(/\.00$/, "")}
                             </span>
                           </p>
+                          {productSubtotal > 0 && deliveryQuote.costDollars > productSubtotal && (
+                            <p className="mt-2 text-xs font-semibold leading-snug text-amber-900">
+                              Pickup is cheaper for this order. Delivery is {fmt(deliveryQuote.costDollars)} and the products are {fmt(productSubtotal)}.
+                            </p>
+                          )}
                           <p className="mt-0.5 text-xs text-stone-600">
                             {deliveryQuote.truckLabel} · Congress, AZ →{" "}
                             {[
